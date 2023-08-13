@@ -1,13 +1,39 @@
 <script setup lang="ts">
 const audioRef = ref<HTMLAudioElement>()
-const { playing } = useMediaControls(audioRef, { src: 'https://sound.vueuse.org/sounds/909-drums.mp3' })
+const { playing, duration, currentTime } = useMediaControls(audioRef, { src: 'http://codeskulptor-demos.commondatastorage.googleapis.com/pang/paza-moduless.mp3' })
+const progress = computed(() => duration.value === 0 ? 0 : currentTime.value / duration.value)
+
+const scrubbing = ref(false)
+const progressBarRef = ref<HTMLDivElement>()
+useEventListener('mouseup', () => scrubbing.value = false)
+const { elementX, elementWidth } = useMouseInElement(progressBarRef)
+// TODO: more smooth scrubbing
+watchEffect(() => {
+  if (!scrubbing.value)
+    return
+  const _elementX = elementX.value < 0
+    ? 0
+    : elementX.value > elementWidth.value
+      ? elementWidth.value
+      : elementX.value
+  const currentProgress = _elementX / elementWidth.value
+  currentTime.value = currentProgress * duration.value
+})
 </script>
 
 <template>
   <div fixed inset-x-0 bottom-0 z-50 flex="~ col">
     <!-- Process bar -->
-    <div h="4px" hover="h-[6px] cursor-pointer" transition-height>
-      <div w="1/2" h-full bg-blue />
+    <div
+      ref="progressBarRef"
+      h="4px" hover="h-[6px] cursor-pointer"
+      flex justify-start transition-height
+      @mousedown="scrubbing = true"
+    >
+      <div
+        transition="transform duration-10" h-full w-full transform-origin-left animate-ease-linear bg-blue
+        :style="{ transform: `scaleX(${progress})` }"
+      />
     </div>
 
     <!-- Music player -->
@@ -28,7 +54,6 @@ const { playing } = useMediaControls(audioRef, { src: 'https://sound.vueuse.org/
       <div class="btn-wrapper" flex="~" items-center justify-between gap-2 px-2 font-size-6>
         <span class="i-material-symbols:skip-previous-rounded" />
         <span :class="playing ? 'i-material-symbols:pause-rounded' : 'i-material-symbols:play-arrow-rounded'" @click="playing = !playing" />
-        <!-- <span class="i-material-symbols:play-arrow-rounded" /> -->
         <span class="i-material-symbols:skip-next-rounded" />
       </div>
     </div>
