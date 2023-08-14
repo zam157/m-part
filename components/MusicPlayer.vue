@@ -7,7 +7,6 @@ const scrubbing = ref(false)
 const progressBarRef = ref<HTMLDivElement>()
 useEventListener('mouseup', () => scrubbing.value = false)
 const { elementX, elementWidth } = useMouseInElement(progressBarRef)
-// TODO: more smooth scrubbing
 watchEffect(() => {
   if (!scrubbing.value)
     return
@@ -22,7 +21,7 @@ watchEffect(() => {
 </script>
 
 <template>
-  <div fixed inset-x-0 bottom-0 z-50 flex="~ col">
+  <div :class="{ 'select-none': scrubbing }" fixed inset-x-0 bottom-0 z-50 flex="~ col">
     <!-- Process bar -->
     <div
       ref="progressBarRef"
@@ -31,7 +30,7 @@ watchEffect(() => {
       @mousedown="scrubbing = true"
     >
       <div
-        transition="transform duration-10" h-full w-full transform-origin-left animate-ease-linear bg-blue
+        h-full w-full transform-origin-left bg-blue
         :style="{ transform: `scaleX(${progress})` }"
       />
     </div>
