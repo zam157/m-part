@@ -4,6 +4,18 @@ const { playing, duration, currentTime } = useMediaControls(audioRef, { src: 'ht
 const progress = computed(() => duration.value === 0 ? 0 : currentTime.value / duration.value)
 
 const scrubbing = ref(false)
+// Pause the music when scrubbing
+const isPlayingBeforeScrub = ref(false)
+watch(scrubbing, (value) => {
+  if (value) {
+    isPlayingBeforeScrub.value = playing.value
+    playing.value = false
+  }
+  else {
+    playing.value = isPlayingBeforeScrub.value
+  }
+})
+
 const progressBarRef = ref<HTMLDivElement>()
 useEventListener('mouseup', () => scrubbing.value = false)
 const { elementX, elementWidth } = useMouseInElement(progressBarRef)
