@@ -5,14 +5,14 @@ const progress = computed(() => duration.value === 0 ? 0 : currentTime.value / d
 
 const scrubbing = ref(false)
 // Pause the music when scrubbing
-const isPlayingBeforeScrub = ref(false)
+let isPlayingBeforeScrub = false
 watch(scrubbing, (value) => {
   if (value) {
-    isPlayingBeforeScrub.value = playing.value
+    isPlayingBeforeScrub = playing.value
     playing.value = false
   }
   else {
-    playing.value = isPlayingBeforeScrub.value
+    playing.value = isPlayingBeforeScrub
   }
 })
 
@@ -58,7 +58,9 @@ watchEffect(() => {
         <!-- Song name -->
         <span font-bold text-black dark:text-white>Chaff & Dust</span>
         <!-- Artist name -->
-        <span text-xs text-gray:80>HYONNA</span>
+        <span text-xs text-gray:80>
+          HYONNA
+        </span>
       </div>
 
       <!-- Play button -->
