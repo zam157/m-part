@@ -28,6 +28,11 @@ export default defineNuxtConfig({
     classSuffix: '',
   },
 
+  components: [
+    { path: '~/components/shadcn', prefix: 'Sc', extensions: ['.vue'] },
+    '~/components',
+  ],
+
   nitro: {
     esbuild: {
       options: {
