@@ -2,7 +2,7 @@
 </script>
 
 <template>
-  <div text-gray:80>
-    Hello World!
+  <div>
+    <MusicPlayer />
   </div>
 </template>
