@@ -28,6 +28,7 @@ catalogs:
     '@antfu/eslint-config': ^4.13.1
     '@iconify-json/lucide': ^1.2.44
     '@iconify-json/material-symbols': ^1.2.21
+    '@iconify-json/solar': ^1.2.2
     '@vue-macros/volar': ^3.0.0-beta.12
     '@vue/test-utils': ^2.4.6
     cypress: ^14.3.3
