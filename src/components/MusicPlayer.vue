@@ -1,38 +1,76 @@
 <script setup lang="ts">
 import VolumeSlider from './VolumeSlider.vue'
 
-const audioRef = ref<HTMLAudioElement>()
+const audioRef = useTemplateRef('audioRef')
 const { playing, duration, currentTime, volume } = useMediaControls(audioRef, { src: 'http://codeskulptor-demos.commondatastorage.googleapis.com/pang/paza-moduless.mp3' })
 
-const progress = computed(() => duration.value === 0 ? 0 : currentTime.value / duration.value)
+const tempProgress = ref<number | null>(null)
+const progress = computed(() => {
+  if (tempProgress.value !== null)
+    return tempProgress.value
+
+  return duration.value === 0 ? 0 : currentTime.value / duration.value
+})
 
 const scrubbing = ref(false)
-// Pause the music when scrubbing
-let isPlayingBeforeScrub = false
-watch(scrubbing, (value) => {
-  if (value) {
-    isPlayingBeforeScrub = playing.value
-    playing.value = false
-  }
-  else {
-    playing.value = isPlayingBeforeScrub
-  }
-})
-
 const progressBarRef = useTemplateRef('progressBarRef')
-useEventListener('mouseup', () => scrubbing.value = false)
-const { elementX, elementWidth } = useMouseInElement(progressBarRef)
-watchEffect(() => {
+
+// 统一处理进度更新逻辑
+function updateTempProgress(clientX: number) {
+  if (!progressBarRef.value)
+    return
+  const rect = progressBarRef.value.getBoundingClientRect()
+  tempProgress.value = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+}
+
+// 处理鼠标事件
+function handleMouseDown(e: MouseEvent) {
+  scrubbing.value = true
+  updateTempProgress(e.clientX)
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', onMouseUp)
+}
+function onMouseMove(e: MouseEvent) {
   if (!scrubbing.value)
     return
-  const _elementX = elementX.value < 0
-    ? 0
-    : elementX.value > elementWidth.value
-      ? elementWidth.value
-      : elementX.value
-  const currentProgress = _elementX / elementWidth.value
-  currentTime.value = currentProgress * duration.value
-})
+  updateTempProgress(e.clientX)
+}
+
+function onMouseUp() {
+  if (!scrubbing.value)
+    return
+  scrubbing.value = false
+  if (tempProgress.value !== null) {
+    const newTime = tempProgress.value * duration.value
+    currentTime.value = newTime
+    tempProgress.value = null
+  }
+  window.removeEventListener('mousemove', onMouseMove)
+  window.removeEventListener('mouseup', onMouseUp)
+}
+
+// 处理触摸事件
+function handleTouchStart(e: TouchEvent) {
+  scrubbing.value = true
+  updateTempProgress(e.touches[0].clientX)
+}
+
+function handleTouchMove(e: TouchEvent) {
+  if (!scrubbing.value)
+    return
+  updateTempProgress(e.touches[0].clientX)
+}
+
+function handleTouchEnd() {
+  if (!scrubbing.value)
+    return
+  scrubbing.value = false
+  if (tempProgress.value !== null) {
+    const newTime = tempProgress.value * duration.value
+    currentTime.value = newTime
+    tempProgress.value = null
+  }
+}
 </script>
 
 <template>
@@ -40,8 +78,11 @@ watchEffect(() => {
     <!-- Process bar -->
     <div
       ref="progressBarRef"
-      class="flex h-0.5 transition-height justify-start hover:h-1.5 hover:cursor-pointer"
-      @mousedown="scrubbing = true"
+      class="bg-light-500/80 flex h-1 transition-height justify-start dark:bg-gray-500/70 hover:h-1.5 hover:cursor-pointer"
+      @mousedown="handleMouseDown"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend.prevent="handleTouchEnd"
     >
       <div
         class="bg-blue h-full w-full origin-left"
