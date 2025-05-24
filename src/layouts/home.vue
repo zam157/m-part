@@ -4,7 +4,7 @@
     text="center gray-700 dark:gray-200"
   >
     <RouterView />
-    <div mx-auto mt-5 text-center text-sm opacity-50>
+    <div class="text-sm mx-auto mt-5 text-center opacity-50" @click="toggleDark()">
       [Home Layout]
     </div>
   </main>
