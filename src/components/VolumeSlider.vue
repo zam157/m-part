@@ -8,6 +8,8 @@ const volumeIconRef = useTemplateRef('volumeIconRef')
 const sliderRef = useTemplateRef('sliderRef')
 const isDragging = ref(false)
 const isHovering = ref(false)
+const volumeBeforeMuted = ref(0)
+
 let closeTimer: ReturnType<typeof setTimeout> | null = null
 function setTimer() {
   closeTimer = setTimeout(() => {
@@ -15,69 +17,15 @@ function setTimer() {
     closeTimer = null
   }, 300)
 }
-const volumeBeforeMuted = ref(0)
-function dragStart(e: MouseEvent | TouchEvent) {
-  isDragging.value = true
-  // 注册mouseup和touchend事件监听器
-  function dragEnd(e2: MouseEvent | TouchEvent) {
-    isDragging.value = false
-    // 如果鼠标位置在容器外部, 关闭hover状态
-    if (containerRef.value && !containerRef.value.contains(e2.target as Node)) {
-      setTimer()
-    }
-    if (e instanceof MouseEvent) {
-      removeEventListener('mouseup', dragEnd)
-    }
-    else if (e instanceof TouchEvent) {
-      removeEventListener('touchend', dragEnd)
-    }
-  }
-  if (e instanceof MouseEvent) {
-    addEventListener('mouseup', dragEnd)
-  }
-  else if (e instanceof TouchEvent) {
-    addEventListener('touchend', dragEnd)
-  }
-}
-
-function handleVolumeIconClick() {
-  if (value.value === 0) {
-    value.value = volumeBeforeMuted.value
-  }
-  else {
-    volumeBeforeMuted.value = value.value
-    value.value = 0
-  }
-}
-
-function handleVolumeIconTouchStart() {
-  isHovering.value = !isHovering.value
-  function closeEvent(event: MouseEvent) {
-    if (!volumeIconRef.value || event.target === volumeIconRef.value || containerRef.value?.contains(event.target as Node))
-      return
-    isHovering.value = false
-  }
-  if (isHovering.value) {
-    addEventListener('click', closeEvent)
-  }
-  else {
-    if (closeEvent) {
-      removeEventListener('click', closeEvent)
-    }
-  }
-}
-
-// 处理拖动逻辑
-const { elementY, elementHeight } = useMouseInElement(sliderRef)
-watchEffect(() => {
-  if (!isDragging.value)
+function updateVolume(clientY: number) {
+  if (!sliderRef.value)
     return
-
-  const progress = 1 - Math.max(0, Math.min(1, (elementY.value / elementHeight.value) || 0))
+  const rect = sliderRef.value.getBoundingClientRect()
+  const progress = 1 - Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))
   value.value = progress
-})
+}
 
-// 更新鼠标移入移出处理
+// #region 弹窗事件处理
 function handleMouseEnter() {
   if (closeTimer) {
     clearTimeout(closeTimer)
@@ -94,6 +42,65 @@ function handleMouseLeave() {
     closeTimer = null
   }
   setTimer()
+}
+function handleVolumeIconClick(e: PointerEvent) {
+  const pointerType = e.pointerType
+  if (pointerType === 'mouse') {
+    if (value.value === 0) {
+      value.value = volumeBeforeMuted.value
+    }
+    else {
+      volumeBeforeMuted.value = value.value
+      value.value = 0
+    }
+  }
+  else if (pointerType === 'touch') {
+    handleVolumeIconTouchStart()
+  }
+  else if (pointerType === 'pen') {
+    handleVolumeIconTouchStart()
+  }
+}
+function handleVolumeIconTouchStart() {
+  isHovering.value = !isHovering.value
+  function closeEvent(event: MouseEvent) {
+    if (!volumeIconRef.value || event.target === volumeIconRef.value || containerRef.value?.contains(event.target as Node))
+      return
+    isHovering.value = false
+  }
+  if (isHovering.value) {
+    addEventListener('click', closeEvent)
+  }
+  else {
+    removeEventListener('click', closeEvent)
+  }
+}
+// #endregion
+
+function dragStart(e: PointerEvent) {
+  isDragging.value = true
+
+  // 捕获确保即使指针离开元素也能继续接收事件
+  ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  updateVolume(e.clientY)
+}
+
+function onPointerMove(e: PointerEvent) {
+  if (!isDragging.value)
+    return
+  updateVolume(e.clientY)
+}
+
+function onPointerUp(e: PointerEvent) {
+  if (!isDragging.value)
+    return
+  isDragging.value = false
+
+  // 释放捕获
+  ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+
+  if (containerRef.value && !containerRef.value.contains(e.target as Node))
+    setTimer()
 }
 
 const volumeIcon = computed(() => {
@@ -116,8 +123,7 @@ const volumeIcon = computed(() => {
       ref="volumeIconRef"
       :class="volumeIcon"
       class="text-5 cursor-pointer"
-      @click="handleVolumeIconClick"
-      @touchstart.prevent.stop="handleVolumeIconTouchStart"
+      @pointerup="handleVolumeIconClick"
     />
 
     <Transition
@@ -134,17 +140,18 @@ const volumeIcon = computed(() => {
       >
         <div
           ref="sliderRef"
-          class="rounded-full bg-gray/20 h-24 w-1.5 cursor-pointer relative"
-          @mousedown="dragStart"
-          @touchstart="dragStart"
+          class="rounded-full bg-gray/20 h-24 w-1.5 cursor-pointer relative touch-none"
+          @pointerdown="dragStart"
+          @pointermove="onPointerMove"
+          @pointerup="onPointerUp"
         >
           <div
-            class="rounded-full bg-blue w-full transition-height duration-50 transition-ease-linear bottom-0 absolute"
+            class="rounded-full bg-blue/70 w-full transition-height duration-50 transition-ease-linear bottom-0 absolute"
             :style="{ height: `${value * 100}%` }"
           />
           <div
-            class="rounded-full bg-blue h-3 w-3 transition-transform left-1/2 absolute hover:scale-110"
-            :style="{ bottom: `${value * 100}%`, transform: `translateX(-50%) translateY(50%)` }"
+            class="rounded-full bg-blue h-3 w-3 shadow-2xl translate-y-1/2 transition-transform left-1/2 absolute -translate-x-1/2 hover:scale-110"
+            :style="{ bottom: `${value * 100}%` }"
           />
         </div>
         <div class="text-2.5 mt-1">

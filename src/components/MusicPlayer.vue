@@ -23,48 +23,26 @@ function updateTempProgress(clientX: number) {
   tempProgress.value = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
 }
 
-// 处理鼠标事件
-function handleMouseDown(e: MouseEvent) {
+function handlePointerDown(e: PointerEvent) {
   scrubbing.value = true
   updateTempProgress(e.clientX)
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('mouseup', onMouseUp)
+  // 捕获确保即使指针离开元素也能继续接收事件
+  ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
 }
-function onMouseMove(e: MouseEvent) {
+
+function handlePointerMove(e: PointerEvent) {
   if (!scrubbing.value)
     return
   updateTempProgress(e.clientX)
 }
 
-function onMouseUp() {
+function handlePointerUp(e: PointerEvent) {
   if (!scrubbing.value)
     return
   scrubbing.value = false
-  if (tempProgress.value !== null) {
-    const newTime = tempProgress.value * duration.value
-    currentTime.value = newTime
-    tempProgress.value = null
-  }
-  window.removeEventListener('mousemove', onMouseMove)
-  window.removeEventListener('mouseup', onMouseUp)
-}
+  // 释放捕获
+  ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
 
-// 处理触摸事件
-function handleTouchStart(e: TouchEvent) {
-  scrubbing.value = true
-  updateTempProgress(e.touches[0].clientX)
-}
-
-function handleTouchMove(e: TouchEvent) {
-  if (!scrubbing.value)
-    return
-  updateTempProgress(e.touches[0].clientX)
-}
-
-function handleTouchEnd() {
-  if (!scrubbing.value)
-    return
-  scrubbing.value = false
   if (tempProgress.value !== null) {
     const newTime = tempProgress.value * duration.value
     currentTime.value = newTime
@@ -78,16 +56,16 @@ function handleTouchEnd() {
     <!-- Process bar -->
     <div
       ref="progressBarRef"
-      class="bg-light-500/80 flex h-1 transition-height justify-start dark:bg-gray-500/70 hover:h-1.5 hover:cursor-pointer"
-      @mousedown="handleMouseDown"
-      @touchstart="handleTouchStart"
-      @touchmove="handleTouchMove"
-      @touchend.prevent="handleTouchEnd"
+      class="progress-bar bg-light-500/80 flex h-1 transition-height justify-start relative touch-none dark:bg-gray-500/70 hover:h-1.5 hover:cursor-pointer"
+      @pointerdown="handlePointerDown"
+      @pointermove="handlePointerMove"
+      @pointerup="handlePointerUp"
     >
       <div
-        class="bg-blue h-full w-full origin-left"
-        :style="{ transform: `scaleX(${progress})` }"
+        class="rounded-r-full bg-blue/80 h-full origin-left"
+        :style="{ width: `${progress * 100}%` }"
       />
+      <div class="thumb rounded-full bg-blue h-3 w-3 transition-[opacity,visibility] duration-500 transition-discrete top-1/2 absolute -translate-x-1/2 -translate-y-1/2" :style="{ left: `${progress * 100}%` }" />
     </div>
 
     <!-- Music player -->
@@ -97,11 +75,11 @@ function handleTouchEnd() {
       <div class="bg-gray h-full aspect-1" />
 
       <!-- Music info -->
-      <div class="px-4 flex flex-1 flex-col gap-2 items-start justify-center">
+      <div class="mx-4 flex flex-1 flex-col gap-2 min-w-0 items-start justify-center">
         <!-- Song name -->
-        <span class="text-black font-bold dark:text-white">Chaff & Dust</span>
+        <span class="text-black font-bold max-w-full min-w-0 truncate dark:text-white">Chaff & Dust</span>
         <!-- Artist name -->
-        <span class="text-xs text-gray/80">
+        <span class="text-xs text-gray/80 max-w-full min-w-0 truncate">
           HYONNA
         </span>
       </div>
@@ -122,4 +100,14 @@ function handleTouchEnd() {
 </template>
 
 <style scoped>
+.progress-bar {
+  > .thumb {
+    visibility: hidden;
+    opacity: 0;
+  }
+  &:hover > .thumb {
+    visibility: visible;
+    opacity: 1;
+  }
+}
 </style>
