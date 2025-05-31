@@ -8,10 +8,10 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    MusicPlayer: typeof import('./components/MusicPlayer.vue')['default']
+    MusicPlayer: typeof import('./components/MusicPlayer/MusicPlayer.vue')['default']
     README: typeof import('./components/README.md')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    VolumeSlider: typeof import('./components/VolumeSlider.vue')['default']
+    VolumeSlider: typeof import('./components/MusicPlayer/VolumeSlider.vue')['default']
   }
 }

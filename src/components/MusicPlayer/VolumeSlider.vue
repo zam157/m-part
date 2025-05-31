@@ -53,13 +53,10 @@ function handleVolumeIconClick(e: PointerEvent) {
       volumeBeforeMuted.value = value.value
       value.value = 0
     }
+
+    return
   }
-  else if (pointerType === 'touch') {
-    handleVolumeIconTouchStart()
-  }
-  else if (pointerType === 'pen') {
-    handleVolumeIconTouchStart()
-  }
+  handleVolumeIconTouchStart()
 }
 function handleVolumeIconTouchStart() {
   isHovering.value = !isHovering.value
