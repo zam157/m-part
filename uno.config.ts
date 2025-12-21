@@ -3,7 +3,7 @@ import {
 } from '@unocss/preset-web-fonts/local'
 import {
   defineConfig,
-  presetAttributify,
+  // presetAttributify,
   presetIcons,
   presetTypography,
   presetWebFonts,
@@ -21,7 +21,7 @@ export default defineConfig({
     presetWind4({
       reset: true,
     }),
-    presetAttributify(),
+    // presetAttributify(),
     presetIcons({
       // scale: 1.2,
     }),
