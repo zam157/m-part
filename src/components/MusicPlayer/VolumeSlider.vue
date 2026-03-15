@@ -113,6 +113,9 @@ const volumeIcon = computed(() => {
   <div
     ref="containerRef"
     class="flex relative"
+    :style="{
+      '--volume-percent': `${value * 100}%`,
+    }"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
@@ -143,12 +146,12 @@ const volumeIcon = computed(() => {
           @pointerup="onPointerUp"
         >
           <div
-            class="rounded-full bg-blue/70 w-full transition-height duration-50 transition-ease-linear bottom-0 absolute"
-            :style="{ height: `${value * 100}%` }"
+            class="rounded-full bg-blue/70 w-full bottom-0 absolute"
+            :style="{ height: `var(--volume-percent)` }"
           />
           <div
-            class="rounded-full bg-blue h-3 w-3 shadow-2xl translate-y-1/2 transition-transform left-1/2 absolute -translate-x-1/2 hover:scale-110"
-            :style="{ bottom: `${value * 100}%` }"
+            class="rounded-full bg-blue h-3 w-3 shadow-2xl translate-y-1/2 left-1/2 absolute -translate-x-1/2 hover:scale-110"
+            :style="{ bottom: `var(--volume-percent)` }"
           />
         </div>
         <div class="text-2.5 mt-1">
