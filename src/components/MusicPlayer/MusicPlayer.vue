@@ -52,20 +52,29 @@ function handlePointerUp(e: PointerEvent) {
 </script>
 
 <template>
-  <div class="flex flex-col select-none inset-x-0 bottom-0 fixed z-50">
-    <!-- Process bar -->
+  <div
+    :style="{
+      '--progress-percent': `${progress * 100}%`,
+    }"
+    class="flex flex-col select-none inset-x-0 bottom-0 fixed z-50"
+  >
+    <!-- Progress bar -->
     <div
       ref="progressBarRef"
-      class="progress-bar bg-light-500/80 flex h-1 transition-height justify-start relative touch-none dark:bg-gray-500/70 hover:h-1.5 hover:cursor-pointer"
+      class="progress-bar-wrapper py-2 cursor-pointer relative z-1 -my-2"
       @pointerdown="handlePointerDown"
       @pointermove="handlePointerMove"
       @pointerup="handlePointerUp"
     >
       <div
-        class="rounded-r-full bg-blue/80 h-full origin-left"
-        :style="{ width: `${progress * 100}%` }"
-      />
-      <div class="thumb rounded-full bg-blue h-3 w-3 transition-[opacity,visibility] duration-500 transition-discrete top-1/2 absolute -translate-x-1/2 -translate-y-1/2" :style="{ left: `${progress * 100}%` }" />
+        class="progress-bar bg-light-500/80 flex h-1 transition-height justify-start relative touch-none dark:bg-gray-500/70"
+      >
+        <div
+          class="rounded-r-full bg-blue/80 h-full origin-left"
+          :style="{ width: `var(--progress-percent)` }"
+        />
+        <div class="thumb rounded-full bg-blue h-3 w-3 transition-[opacity,visibility] duration-500 transition-discrete top-1/2 absolute -translate-x-1/2 -translate-y-1/2" :style="{ left: `var(--progress-percent)` }" />
+      </div>
     </div>
 
     <!-- Music player -->
@@ -100,14 +109,19 @@ function handlePointerUp(e: PointerEvent) {
 </template>
 
 <style scoped>
-.progress-bar {
-  > .thumb {
-    visibility: hidden;
-    opacity: 0;
+.progress-bar-wrapper {
+  .progress-bar {
+    > .thumb {
+      visibility: hidden;
+      opacity: 0;
+    }
   }
-  &:hover > .thumb {
-    visibility: visible;
-    opacity: 1;
+  &:hover .progress-bar {
+    @apply h-1.5;
+    > .thumb {
+      visibility: visible;
+      opacity: 1;
+    }
   }
 }
 </style>

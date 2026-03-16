@@ -1,9 +1,7 @@
-// import type { UserModule } from './types'
-
 import { createPinia } from 'pinia'
-import { createI18n } from 'vue-i18n'
+import { createApp } from 'vue'
 
-// import { ViteSSG } from 'vite-ssg'
+import { createI18n } from 'vue-i18n'
 import { createRouter, createWebHistory } from 'vue-router'
 import { routes } from 'vue-router/auto-routes'
 import App from './App.vue'
