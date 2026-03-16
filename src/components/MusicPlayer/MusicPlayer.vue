@@ -14,6 +14,44 @@ const progress = computed(() => {
 
 const scrubbing = ref(false)
 const progressBarRef = useTemplateRef('progressBarRef')
+const timeTooltipRef = useTemplateRef('timeTooltipRef')
+
+// 格式化时间为 MM:SS 格式
+function formatTime(seconds: number): string {
+  const totalSeconds = Math.floor(seconds)
+  const minutes = Math.floor(totalSeconds / 60)
+  const secs = totalSeconds % 60
+  return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
+// 计算当前显示的时间（拖动时使用 tempProgress，否则使用 currentTime）
+const displayTime = computed(() => {
+  const timeInSeconds = tempProgress.value !== null
+    ? tempProgress.value * duration.value
+    : currentTime.value
+  return formatTime(timeInSeconds)
+})
+
+// 完整的时间显示字符串
+const timeDisplay = computed(() => {
+  return `${displayTime.value} / ${formatTime(duration.value)}`
+})
+
+// 计算 tooltip 的位置
+const tooltipPosition = computed(() => {
+  // 确保 tooltip 在视口范围内
+  if (timeTooltipRef.value) {
+    const tooltipRect = timeTooltipRef.value.getBoundingClientRect()
+    const progressBarRect = progressBarRef.value?.getBoundingClientRect()
+    if (progressBarRect) {
+      const halfTooltipWidth = tooltipRect.width / 2
+      const left = (progress.value * progressBarRect.width) + progressBarRect.left
+      const clampedLeft = Math.max(halfTooltipWidth, Math.min(window.innerWidth - halfTooltipWidth, left))
+      return `${clampedLeft}px`
+    }
+  }
+  return `${progress.value * 100}%`
+})
 
 // 统一处理进度更新逻辑
 function updateTempProgress(clientX: number) {
@@ -66,6 +104,15 @@ function handlePointerUp(e: PointerEvent) {
       @pointermove="handlePointerMove"
       @pointerup="handlePointerUp"
     >
+      <!-- Tooltip -->
+      <div
+        ref="timeTooltipRef"
+        class="tooltip text-sm text-white px-2 py-1 rounded-lg bg-black/80 opacity-0 invisible pointer-events-none whitespace-nowrap transition-[opacity,visibility] duration-200 absolute tabular-nums -translate-x-1/2 -translate-y-[calc(100%+0.5rem)]"
+        :style="{ left: tooltipPosition }"
+      >
+        {{ timeDisplay }}
+      </div>
+
       <div
         class="progress-bar bg-light-500/80 flex h-1 transition-height justify-start relative touch-none dark:bg-gray-500/70"
       >
@@ -122,6 +169,10 @@ function handlePointerUp(e: PointerEvent) {
       visibility: visible;
       opacity: 1;
     }
+  }
+  &:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
   }
 }
 </style>
