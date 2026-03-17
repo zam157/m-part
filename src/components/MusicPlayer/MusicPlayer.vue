@@ -14,7 +14,6 @@ const progress = computed(() => {
 
 const scrubbing = ref(false)
 const progressBarRef = useTemplateRef('progressBarRef')
-const timeTooltipRef = useTemplateRef('timeTooltipRef')
 
 // 格式化时间为 MM:SS 格式
 function formatTime(seconds: number): string {
@@ -35,22 +34,6 @@ const displayTime = computed(() => {
 // 完整的时间显示字符串
 const timeDisplay = computed(() => {
   return `${displayTime.value} / ${formatTime(duration.value)}`
-})
-
-// 计算 tooltip 的位置
-const tooltipPosition = computed(() => {
-  // 确保 tooltip 在视口范围内
-  if (timeTooltipRef.value) {
-    const tooltipRect = timeTooltipRef.value.getBoundingClientRect()
-    const progressBarRect = progressBarRef.value?.getBoundingClientRect()
-    if (progressBarRect) {
-      const halfTooltipWidth = tooltipRect.width / 2
-      const left = (progress.value * progressBarRect.width) + progressBarRect.left
-      const clampedLeft = Math.max(halfTooltipWidth, Math.min(window.innerWidth - halfTooltipWidth, left))
-      return `${clampedLeft}px`
-    }
-  }
-  return `${progress.value * 100}%`
 })
 
 // 统一处理进度更新逻辑
@@ -106,9 +89,7 @@ function handlePointerUp(e: PointerEvent) {
     >
       <!-- Tooltip -->
       <div
-        ref="timeTooltipRef"
-        class="tooltip text-sm text-white px-2 py-1 rounded-lg bg-black/80 opacity-0 invisible pointer-events-none whitespace-nowrap transition-[opacity,visibility] duration-200 absolute tabular-nums -translate-x-1/2 -translate-y-[calc(100%+0.5rem)]"
-        :style="{ left: tooltipPosition }"
+        class="time-tooltip text-sm text-white px-2 py-1 rounded-lg bg-black/80 opacity-0 invisible pointer-events-none whitespace-nowrap transition-[opacity,visibility] duration-200 absolute tabular-nums -translate-y-full"
       >
         {{ timeDisplay }}
       </div>
@@ -117,10 +98,13 @@ function handlePointerUp(e: PointerEvent) {
         class="progress-bar bg-light-500/80 flex h-1 transition-height justify-start relative touch-none dark:bg-gray-500/70"
       >
         <div
-          class="rounded-r-full bg-blue/80 h-full origin-left"
+          class="rounded-r-full bg-blue/80 h-full"
           :style="{ width: `var(--progress-percent)` }"
         />
-        <div class="thumb rounded-full bg-blue h-3 w-3 transition-[opacity,visibility] duration-500 transition-discrete top-1/2 absolute -translate-x-1/2 -translate-y-1/2" :style="{ left: `var(--progress-percent)` }" />
+        <div
+          class="thumb rounded-full bg-blue h-3 w-3 transition-[opacity,visibility] duration-500 transition-discrete top-1/2 absolute -translate-x-1/2 -translate-y-1/2"
+          :style="{ left: `var(--progress-percent)` }"
+        />
       </div>
     </div>
 
@@ -157,8 +141,14 @@ function handlePointerUp(e: PointerEvent) {
 
 <style scoped>
 .progress-bar-wrapper {
+  .time-tooltip {
+    position: absolute;
+    position-anchor: --thumb;
+    position-area: top center;
+  }
   .progress-bar {
     > .thumb {
+      anchor-name: --thumb;
       visibility: hidden;
       opacity: 0;
     }
@@ -170,7 +160,7 @@ function handlePointerUp(e: PointerEvent) {
       opacity: 1;
     }
   }
-  &:hover .tooltip {
+  &:hover .time-tooltip {
     opacity: 1;
     visibility: visible;
   }
