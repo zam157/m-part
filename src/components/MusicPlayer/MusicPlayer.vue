@@ -45,6 +45,8 @@ function updateTempProgress(clientX: number) {
 }
 
 function handlePointerDown(e: PointerEvent) {
+  if (e.pointerType === 'mouse' && e.button !== 0)
+    return
   scrubbing.value = true
   updateTempProgress(e.clientX)
   // 捕获确保即使指针离开元素也能继续接收事件
@@ -58,6 +60,8 @@ function handlePointerMove(e: PointerEvent) {
 }
 
 function handlePointerUp(e: PointerEvent) {
+  if (e.pointerType === 'mouse' && e.button !== 0)
+    return
   if (!scrubbing.value)
     return
   scrubbing.value = false
@@ -86,6 +90,7 @@ function handlePointerUp(e: PointerEvent) {
       @pointerdown="handlePointerDown"
       @pointermove="handlePointerMove"
       @pointerup="handlePointerUp"
+      @contextmenu.prevent
     >
       <!-- Tooltip -->
       <div

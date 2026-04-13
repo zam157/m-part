@@ -75,6 +75,8 @@ function handleVolumeIconTouchStart() {
 // #endregion
 
 function dragStart(e: PointerEvent) {
+  if (e.pointerType === 'mouse' && e.button !== 0)
+    return
   isDragging.value = true
 
   // 捕获确保即使指针离开元素也能继续接收事件
@@ -89,6 +91,8 @@ function onPointerMove(e: PointerEvent) {
 }
 
 function onPointerUp(e: PointerEvent) {
+  if (e.pointerType === 'mouse' && e.button !== 0)
+    return
   if (!isDragging.value)
     return
   isDragging.value = false
@@ -136,7 +140,7 @@ const volumeIcon = computed(() => {
     >
       <div
         v-show="isHovering"
-        class="mb-2 pb-1.5 pt-3 rounded-lg bg-white flex flex-col w-9 shadow-lg items-center bottom-full left-1/2 justify-center absolute dark:bg-dark -translate-x-1/2"
+        class="mb-2 pb-1.5 pt-3 rounded-lg bg-white flex flex-col w-9 shadow-lg items-center bottom-full left-1/2 justify-center absolute z-2 dark:bg-dark -translate-x-1/2"
       >
         <div
           ref="sliderRef"
@@ -144,6 +148,7 @@ const volumeIcon = computed(() => {
           @pointerdown="dragStart"
           @pointermove="onPointerMove"
           @pointerup="onPointerUp"
+          @contextmenu.prevent
         >
           <div
             class="rounded-full bg-blue/70 w-full bottom-0 absolute"
