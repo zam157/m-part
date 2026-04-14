@@ -32,6 +32,12 @@ export default defineConfig({
       },
     }),
   ],
+  theme: {
+    property: {
+      'display': 'display',
+      '[display,opacity]': 'display,opacity',
+    },
+  },
   transformers: [
     transformerDirectives(),
     transformerVariantGroup(),
