@@ -6,6 +6,7 @@ const value = defineModel<number>({
 const containerRef = useTemplateRef('containerRef')
 const volumeIconRef = useTemplateRef('volumeIconRef')
 const sliderRef = useTemplateRef('sliderRef')
+
 const isDragging = ref(false)
 const isHovering = ref(false)
 const volumeBeforeMuted = ref(0)
