@@ -121,13 +121,14 @@ function handlePointerUp(e: PointerEvent) {
           :style="{ width: `var(--progress-percent)` }"
         />
         <div
-          class="thumb rounded-full bg-blue flex h-3 w-3 transition-[opacity,visibility] duration-500 transition-discrete items-center top-1/2 justify-center absolute -translate-x-1/2 -translate-y-1/2"
+          class="thumb rounded-full bg-blue flex h-3 w-3 transition-[opacity,visibility] duration-500 items-center top-1/2 justify-center absolute -translate-x-1/2 -translate-y-1/2"
           :style="{ left: `var(--progress-percent)` }"
         >
           <div
-            :class="[
-              showSpinner ? 'opacity-100 block' : 'opacity-0 hidden',
-            ]" class="i-solar-refresh-bold text-2.5 text-white animate-spin"
+            :class="{
+              'invisible opacity-0': !showSpinner,
+            }"
+            class="i-solar-refresh-bold text-2.5 text-white transition-[opacity,visibility] animate-spin"
           />
         </div>
       </div>
@@ -175,14 +176,6 @@ function handlePointerUp(e: PointerEvent) {
       anchor-name: --thumb;
       visibility: hidden;
       opacity: 0;
-      > .i-solar-refresh-bold {
-        transition:
-          opacity 0.25s,
-          display 0.25s allow-discrete;
-        @starting-style {
-          opacity: 0;
-        }
-      }
     }
   }
   &:hover .progress-bar {
