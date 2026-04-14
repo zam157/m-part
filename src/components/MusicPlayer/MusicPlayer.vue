@@ -1,21 +1,27 @@
 <script setup lang="ts">
+import {
+  currentTime,
+  duration,
+  loading,
+  playing,
+  progress,
+  seeking,
+  setCurrentTime,
+  setPlaying,
+  setSrc,
+  volume,
+} from '~/composables/player'
 import VolumeSlider from './VolumeSlider.vue'
 
-const audioRef = useTemplateRef('audioRef')
-const { playing, duration, currentTime, volume } = useMediaControls(audioRef, { src: 'http://codeskulptor-demos.commondatastorage.googleapis.com/pang/paza-moduless.mp3' })
-
-const tempProgress = ref<number | null>(null)
-const progress = computed(() => {
-  if (tempProgress.value !== null)
-    return tempProgress.value
-
-  return duration.value === 0 ? 0 : currentTime.value / duration.value
-})
-
-const scrubbing = ref(false)
 const progressBarRef = useTemplateRef('progressBarRef')
+const tempProgress = ref<number | null>(null)
+const scrubbing = ref(false)
 
-// 格式化时间为 MM:SS 格式
+const showSpinner = computed(() => loading.value || seeking.value)
+
+/**
+ * 格式化时间为 MM:SS 格式
+ */
 function formatTime(seconds: number): string {
   const totalSeconds = Math.floor(seconds)
   const minutes = Math.floor(totalSeconds / 60)
@@ -23,33 +29,40 @@ function formatTime(seconds: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 }
 
-// 计算当前显示的时间（拖动时使用 tempProgress，否则使用 currentTime）
+// 计算显示的进度（拖动时使用 tempProgress）
+const displayProgress = computed(() => {
+  if (tempProgress.value !== null)
+    return tempProgress.value
+  return progress.value
+})
+
+// 计算显示的时间（拖动时显示拖动位置的时间）
 const displayTime = computed(() => {
-  const timeInSeconds = tempProgress.value !== null
-    ? tempProgress.value * duration.value
-    : currentTime.value
-  return formatTime(timeInSeconds)
+  if (tempProgress.value !== null)
+    return `${formatTime(tempProgress.value * duration.value)} / ${formatTime(duration.value)}`
+  return `${formatTime(currentTime.value)} / ${formatTime(duration.value)}`
 })
 
-// 完整的时间显示字符串
-const timeDisplay = computed(() => {
-  return `${displayTime.value} / ${formatTime(duration.value)}`
+// 初始化音频源
+onMounted(() => {
+  setSrc('http://codeskulptor-demos.commondatastorage.googleapis.com/pang/paza-moduless.mp3')
 })
 
-// 统一处理进度更新逻辑
 function updateTempProgress(clientX: number) {
-  if (!progressBarRef.value)
-    return
-  const rect = progressBarRef.value.getBoundingClientRect()
-  tempProgress.value = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+  const rect = progressBarRef.value!.getBoundingClientRect()
+  const progressBarWidth = rect.width
+  const progressBarLeft = rect.left
+
+  tempProgress.value = Math.max(0, Math.min(1, (clientX - progressBarLeft) / progressBarWidth))
 }
 
 function handlePointerDown(e: PointerEvent) {
+  if (loading.value)
+    return
   if (e.pointerType === 'mouse' && e.button !== 0)
     return
   scrubbing.value = true
   updateTempProgress(e.clientX)
-  // 捕获确保即使指针离开元素也能继续接收事件
   ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
 }
 
@@ -60,17 +73,18 @@ function handlePointerMove(e: PointerEvent) {
 }
 
 function handlePointerUp(e: PointerEvent) {
+  if (loading.value)
+    return
   if (e.pointerType === 'mouse' && e.button !== 0)
     return
   if (!scrubbing.value)
     return
   scrubbing.value = false
-  // 释放捕获
   ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
 
   if (tempProgress.value !== null) {
     const newTime = tempProgress.value * duration.value
-    currentTime.value = newTime
+    setCurrentTime(newTime)
     tempProgress.value = null
   }
 }
@@ -79,7 +93,7 @@ function handlePointerUp(e: PointerEvent) {
 <template>
   <div
     :style="{
-      '--progress-percent': `${progress * 100}%`,
+      '--progress-percent': `${displayProgress * 100}%`,
     }"
     class="flex flex-col select-none inset-x-0 bottom-0 fixed z-50"
   >
@@ -96,7 +110,7 @@ function handlePointerUp(e: PointerEvent) {
       <div
         class="time-tooltip text-sm text-white px-2 py-1 rounded-lg bg-black/80 opacity-0 invisible pointer-events-none whitespace-nowrap transition-[opacity,visibility] duration-200 absolute tabular-nums -translate-y-full"
       >
-        {{ timeDisplay }}
+        {{ displayTime }}
       </div>
 
       <div
@@ -107,15 +121,20 @@ function handlePointerUp(e: PointerEvent) {
           :style="{ width: `var(--progress-percent)` }"
         />
         <div
-          class="thumb rounded-full bg-blue h-3 w-3 transition-[opacity,visibility] duration-500 transition-discrete top-1/2 absolute -translate-x-1/2 -translate-y-1/2"
+          class="thumb rounded-full bg-blue flex h-3 w-3 transition-[opacity,visibility] duration-500 transition-discrete items-center top-1/2 justify-center absolute -translate-x-1/2 -translate-y-1/2"
           :style="{ left: `var(--progress-percent)` }"
-        />
+        >
+          <div
+            :class="[
+              showSpinner ? 'opacity-100 block' : 'opacity-0 hidden',
+            ]" class="i-solar-refresh-bold text-2.5 text-white animate-spin"
+          />
+        </div>
       </div>
     </div>
 
     <!-- Music player -->
-    <div class="flex h-19">
-      <audio ref="audioRef" />
+    <div class="@container flex h-19">
       <!-- Music image -->
       <div class="bg-gray h-full aspect-1" />
 
@@ -135,9 +154,9 @@ function handlePointerUp(e: PointerEvent) {
       </div>
 
       <!-- Play button -->
-      <div class="btn-wrapper px-2 flex gap-2 items-center">
+      <div class="btn-wrapper ml-2 mr-2 flex gap-2 items-center @lg:mr-6 @md:mr-4 @lg:gap-4 @md:gap-3">
         <div class="i-solar:skip-previous-bold text-5 transition-opacity hover:opacity-80" />
-        <div class="text-9 transition-[transform,opacity] hover:opacity-90 hover:scale-110" :class="playing ? 'i-solar:pause-circle-bold' : 'i-solar:play-circle-bold'" @click="playing = !playing" />
+        <div class="text-9 transition-[transform,opacity] hover:opacity-90 hover:scale-110" :class="playing ? 'i-solar:pause-circle-bold' : 'i-solar:play-circle-bold'" @click="setPlaying(!playing)" />
         <div class="i-solar:skip-next-bold text-5 transition-opacity hover:opacity-80" />
       </div>
     </div>
@@ -156,6 +175,14 @@ function handlePointerUp(e: PointerEvent) {
       anchor-name: --thumb;
       visibility: hidden;
       opacity: 0;
+      > .i-solar-refresh-bold {
+        transition:
+          opacity 0.25s,
+          display 0.25s allow-discrete;
+        @starting-style {
+          opacity: 0;
+        }
+      }
     }
   }
   &:hover .progress-bar {

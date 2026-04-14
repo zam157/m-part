@@ -19,7 +19,6 @@ export default defineConfig({
   },
 
   plugins: [
-    // https://github.com/posva/unplugin-vue-router
     VueRouter({
       extensions: ['.vue', '.md'],
       dts: 'src/typed-router.d.ts',
@@ -45,8 +44,8 @@ export default defineConfig({
       ],
       dts: 'src/auto-imports.d.ts',
       dirs: [
-        'src/composables',
-        'src/stores',
+        // 'src/composables',
+        // 'src/stores',
       ],
       vueTemplate: true,
     }),

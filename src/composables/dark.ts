@@ -1,4 +1,5 @@
-// these APIs are auto-imported from @vueuse/core
-export const isDark = useDark()
-export const toggleDark = useToggle(isDark)
-export const preferredDark = usePreferredDark()
+const colorMode = useColorMode()
+
+export function switchColorMode(mode: typeof colorMode.value) {
+  colorMode.value = mode
+}
