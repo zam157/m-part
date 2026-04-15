@@ -1,3 +1,15 @@
+// #region types
+export interface PlayListItem {
+  name: string
+  src?: string
+  artist?: string
+  album?: {
+    name?: string
+    cover?: string
+  }
+}
+// #endregion
+
 // #region states
 export const audio = shallowRef(new Audio())
 export const playing = shallowRef(false)
@@ -5,27 +17,33 @@ export const duration = shallowRef(0)
 export const currentTime = shallowRef(0)
 export const volume = shallowRef(1)
 export const seeking = shallowRef(false)
-export const loading = shallowRef(false)
+export const waiting = shallowRef(false)
+export const playlist = shallowRef<PlayListItem[]>([])
+export const currentIndex = shallowRef<number | null>(null)
 // #endregion
 
 // #region initialize listeners
 audio.value.addEventListener('play', () => {
-  setPlaying(true)
+  playing.value = true
+})
+audio.value.addEventListener('playing', () => {
+  waiting.value = false
+  playing.value = true
 })
 audio.value.addEventListener('pause', () => {
-  setPlaying(false)
+  playing.value = false
+})
+audio.value.addEventListener('durationchange', () => {
+  duration.value = audio.value.duration
+})
+audio.value.addEventListener('waiting', () => {
+  waiting.value = true
 })
 audio.value.addEventListener('loadstart', () => {
-  loading.value = true
+  waiting.value = true
 })
 audio.value.addEventListener('loadeddata', () => {
-  loading.value = false
-})
-audio.value.addEventListener('canplay', () => {
-  loading.value = false
-})
-audio.value.addEventListener('loadedmetadata', () => {
-  duration.value = audio.value.duration
+  waiting.value = false
 })
 audio.value.addEventListener('timeupdate', () => {
   currentTime.value = audio.value.currentTime
@@ -36,6 +54,15 @@ audio.value.addEventListener('seeking', () => {
 audio.value.addEventListener('seeked', () => {
   seeking.value = false
 })
+audio.value.addEventListener('volumechange', () => {
+  volume.value = audio.value.volume
+})
+audio.value.addEventListener('ended', () => {
+  // Auto-play next song when current song ends
+  if (currentIndex.value !== null && currentIndex.value < playlist.value.length - 1) {
+    setCurrentIndex(currentIndex.value + 1, true)
+  }
+})
 // #endregion
 
 // #region getters
@@ -43,25 +70,66 @@ audio.value.addEventListener('seeked', () => {
  * 当前进度（0-1）
  */
 export const progress = computed(() => duration.value === 0 ? 0 : currentTime.value / duration.value)
+export const currentSong = computed(() => {
+  if (currentIndex.value === null)
+    return null
+  return playlist.value[currentIndex.value]
+})
 // #endregion
 
 // #region actions
 /**
- * 设置音频源
+ * 设置播放状态
  */
-export function setSrc(src: string) {
-  audio.value.src = src
+export async function setPlaying(isPlaying: boolean) {
+  if (isPlaying) {
+    try {
+      await audio.value.play()
+    }
+    catch {
+      audio.value.pause()
+      waiting.value = false
+      seeking.value = false
+      playing.value = false
+      duration.value = 0
+    }
+  }
+  else {
+    audio.value.pause()
+  }
+}
+/**
+ * 设置当前播放的歌曲
+ */
+export async function setCurrentIndex(index: number, autoplay?: boolean) {
+  const song = playlist.value[index]
+  if (!song) {
+    const msg = `No song found at index ${index}.`
+    console.warn(msg)
+    return [false, msg] as const
+  }
+  currentIndex.value = index
+  currentTime.value = 0
+  audio.value.src = song.src || ''
+  if (autoplay) {
+    await setPlaying(true)
+  }
 }
 
 /**
- * 设置播放状态
+ * 播放上一首或下一首
+ * @param type 0: prev, 1: next
  */
-export function setPlaying(isPlaying: boolean) {
-  playing.value = isPlaying
-  if (isPlaying)
-    audio.value.play()
-  else
-    audio.value.pause()
+export function prevNext(type: 0 | 1) {
+  if (!playlist.value.length)
+    return
+  const currentIndexVal = currentIndex.value ?? 0
+  if (type === 0) {
+    setCurrentIndex(Math.max(0, currentIndexVal - 1), true)
+  }
+  else if (type === 1) {
+    setCurrentIndex(Math.min(playlist.value.length - 1, currentIndexVal + 1), true)
+  }
 }
 
 /**
@@ -76,7 +144,29 @@ export function setCurrentTime(time: number) {
  * 设置音量
  */
 export function setVolume(vol: number) {
-  volume.value = vol
   audio.value.volume = vol
+}
+
+/**
+ * 覆盖播放列表
+ */
+export function setPlaylist(newPlaylist: PlayListItem[]) {
+  playlist.value = newPlaylist
+}
+
+/**
+ * 添加到播放列表
+ */
+export function addToPlaylist(item: PlayListItem) {
+  playlist.value.push(item)
+  triggerRef(playlist)
+}
+
+/**
+ * 从播放列表中移除
+ */
+export function removeFromPlaylist(index: number) {
+  playlist.value.splice(index, 1)
+  triggerRef(playlist)
 }
 // #endregion

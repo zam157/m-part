@@ -132,12 +132,12 @@ const volumeIcon = computed(() => {
     />
 
     <Transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="transform translate-y-2 opacity-0"
-      enter-to-class="transform translate-y-0 opacity-100"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="transform translate-y-0 opacity-100"
-      leave-to-class="transform translate-y-2 opacity-0"
+      enterActiveClass="transition duration-200 ease-out"
+      enterFromClass="transform translate-y-2 opacity-0"
+      enterToClass="transform translate-y-0 opacity-100"
+      leaveActiveClass="transition duration-150 ease-in"
+      leaveFromClass="transform translate-y-0 opacity-100"
+      leaveToClass="transform translate-y-2 opacity-0"
     >
       <div
         v-show="isHovering"

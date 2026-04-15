@@ -9,5 +9,9 @@ export default antfu(
     ignores: [
       'pnpm-workspace.yaml',
     ],
+    rules: {
+      'vue/attribute-hyphenation': ['warn', 'never'],
+      'vue/v-on-event-hyphenation': ['warn', 'never'],
+    },
   },
 )

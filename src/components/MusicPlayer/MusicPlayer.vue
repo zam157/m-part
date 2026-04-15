@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import {
+  currentSong,
   currentTime,
   duration,
-  loading,
   playing,
+  prevNext,
   progress,
   seeking,
+  setCurrentIndex,
   setCurrentTime,
   setPlaying,
-  setSrc,
+  setPlaylist,
+  setVolume,
   volume,
+  waiting,
 } from '~/composables/player'
 import VolumeSlider from './VolumeSlider.vue'
 
@@ -17,7 +21,7 @@ const progressBarRef = useTemplateRef('progressBarRef')
 const tempProgress = ref<number | null>(null)
 const scrubbing = ref(false)
 
-const showSpinner = computed(() => loading.value || seeking.value)
+const showSpinner = computed(() => waiting.value || seeking.value)
 
 /**
  * 格式化时间为 MM:SS 格式
@@ -45,7 +49,36 @@ const displayTime = computed(() => {
 
 // 初始化音频源
 onMounted(() => {
-  setSrc('http://codeskulptor-demos.commondatastorage.googleapis.com/pang/paza-moduless.mp3')
+  setPlaylist([
+    {
+      name: 'Paza Moduless',
+      artist: 'HYONNA',
+      album: {
+        name: 'Chaff & Dust',
+        cover: '',
+      },
+      src: '/songs/paza-moduless.mp3',
+    },
+    {
+      name: 'Die For You',
+      artist: 'Riot Music',
+      album: {
+        name: 'Chaff & Dust',
+        cover: '',
+      },
+      src: '/songs/die-for-you.mp3',
+    },
+    {
+      name: 'Test Song Without Source',
+      artist: 'Unknown Artist',
+      album: {
+        name: 'Unknown Album',
+        cover: '',
+      },
+      src: '/songs/non-existent-file.mp3',
+    },
+  ])
+  setCurrentIndex(0)
 })
 
 function updateTempProgress(clientX: number) {
@@ -57,7 +90,7 @@ function updateTempProgress(clientX: number) {
 }
 
 function handlePointerDown(e: PointerEvent) {
-  if (loading.value)
+  if (waiting.value)
     return
   if (e.pointerType === 'mouse' && e.button !== 0)
     return
@@ -73,7 +106,7 @@ function handlePointerMove(e: PointerEvent) {
 }
 
 function handlePointerUp(e: PointerEvent) {
-  if (loading.value)
+  if (waiting.value)
     return
   if (e.pointerType === 'mouse' && e.button !== 0)
     return
@@ -137,28 +170,36 @@ function handlePointerUp(e: PointerEvent) {
     <!-- Music player -->
     <div class="@container flex h-19">
       <!-- Music image -->
-      <div class="bg-gray h-full aspect-1" />
+      <div class="bg-gray h-full aspect-1">
+        <img
+          v-if="currentSong?.album?.cover"
+          :src="currentSong.album.cover"
+          class="h-full w-full"
+        >
+      </div>
 
       <!-- Music info -->
       <div class="mx-4 flex flex-1 flex-col gap-2 min-w-0 items-start justify-center">
         <!-- Song name -->
-        <span class="text-black font-bold max-w-full min-w-0 truncate dark:text-white">Chaff & Dust</span>
+        <span class="text-black font-bold max-w-full min-w-0 truncate dark:text-white">
+          {{ currentSong?.name || 'Unknown Song' }}
+        </span>
         <!-- Artist name -->
         <span class="text-xs text-gray/80 max-w-full min-w-0 truncate">
-          HYONNA
+          {{ currentSong?.artist || 'Unknown Artist' }}
         </span>
       </div>
 
       <!-- Volume -->
       <div class="text-6 px-2 flex gap-2 items-center justify-center">
-        <VolumeSlider v-model="volume" />
+        <VolumeSlider :modelValue="volume" @update:modelValue="setVolume" />
       </div>
 
       <!-- Play button -->
       <div class="btn-wrapper ml-2 mr-2 flex gap-2 items-center @lg:mr-6 @md:mr-4 @lg:gap-4 @md:gap-3">
-        <div class="i-solar:skip-previous-bold text-5 transition-opacity hover:opacity-80" />
+        <div class="i-solar:skip-previous-bold text-5 transition-opacity hover:opacity-80" @click="prevNext(0)" />
         <div class="text-9 transition-[transform,opacity] hover:opacity-90 hover:scale-110" :class="playing ? 'i-solar:pause-circle-bold' : 'i-solar:play-circle-bold'" @click="setPlaying(!playing)" />
-        <div class="i-solar:skip-next-bold text-5 transition-opacity hover:opacity-80" />
+        <div class="i-solar:skip-next-bold text-5 transition-opacity hover:opacity-80" @click="prevNext(1)" />
       </div>
     </div>
   </div>
