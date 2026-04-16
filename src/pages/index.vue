@@ -1,14 +1,13 @@
 <script setup lang="ts">
+import { colorMode, switchColorMode } from '~/composables/dark'
+
 defineOptions({
   name: 'IndexPage',
 })
-
-// const { t } = useI18n()
-// useHead({
-//   title: () => t('button.home'),
-// })
 </script>
 
 <template>
-  <MusicPlayer />
+  <div @click="switchColorMode(colorMode === 'light' ? 'dark' : 'light')">
+    colorMode: {{ colorMode }}
+  </div>
 </template>

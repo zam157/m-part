@@ -6,8 +6,10 @@
     <meta name="msapplication-TileColor" content="#00aba9" />
     <script>
       ;(function () {
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-        const setting = localStorage.getItem('vueuse-color-scheme') || 'auto'
+        if (!window.matchMedia) return
+        const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+        const prefersDark = darkModeMediaQuery ? darkModeMediaQuery.matches : false
+        const setting = localStorage.getItem('mpart-color-mode') || 'system'
         if (setting === 'dark' || (prefersDark && setting !== 'light'))
           document.documentElement.classList.toggle('dark', true)
       })()

@@ -127,44 +127,39 @@ const volumeIcon = computed(() => {
     <div
       ref="volumeIconRef"
       :class="volumeIcon"
-      class="text-5 cursor-pointer"
+      class="text-5 text-gray-600 transition-color hover:text-gray-800"
       @pointerup="handleVolumeIconClick"
     />
 
-    <Transition
-      enterActiveClass="transition duration-200 ease-out"
-      enterFromClass="transform translate-y-2 opacity-0"
-      enterToClass="transform translate-y-0 opacity-100"
-      leaveActiveClass="transition duration-150 ease-in"
-      leaveFromClass="transform translate-y-0 opacity-100"
-      leaveToClass="transform translate-y-2 opacity-0"
+    <div
+      style="transition: opacity 0.2s var(--default-transition-timingFunction), translate 0.2s var(--default-transition-timingFunction), display 0.2s var(--default-transition-timingFunction) allow-discrete;"
+      :class="isHovering ? 'opacity-100' : 'opacity-0 hidden translate-y-2'"
+      class="
+        starting:opacity-0 starting:translate-y-2
+        mb-2 pb-1.5 pt-3 rounded-lg bg-white flex flex-col w-9 shadow-lg items-center bottom-full left-1/2 justify-center absolute z-2 dark:bg-dark -translate-x-1/2
+      "
     >
       <div
-        v-show="isHovering"
-        class="mb-2 pb-1.5 pt-3 rounded-lg bg-white flex flex-col w-9 shadow-lg items-center bottom-full left-1/2 justify-center absolute z-2 dark:bg-dark -translate-x-1/2"
+        ref="sliderRef"
+        class="rounded-full bg-gray/20 h-24 w-1.5 cursor-pointer relative touch-none"
+        @pointerdown="dragStart"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @contextmenu.prevent
       >
         <div
-          ref="sliderRef"
-          class="rounded-full bg-gray/20 h-24 w-1.5 cursor-pointer relative touch-none"
-          @pointerdown="dragStart"
-          @pointermove="onPointerMove"
-          @pointerup="onPointerUp"
-          @contextmenu.prevent
-        >
-          <div
-            class="rounded-full bg-blue/70 w-full bottom-0 absolute"
-            :style="{ height: `var(--volume-percent)` }"
-          />
-          <div
-            class="rounded-full bg-blue h-3 w-3 shadow-2xl translate-y-1/2 left-1/2 absolute -translate-x-1/2 hover:scale-110"
-            :style="{ bottom: `var(--volume-percent)` }"
-          />
-        </div>
-        <div class="text-2.5 mt-1">
-          {{ Math.round(value * 100) }}%
-        </div>
-        <div class="bg-white h-2 w-2 rotate-45 left-1/2 absolute dark:bg-dark -translate-x-1/2 -bottom-1" />
+          class="rounded-full bg-blue/70 w-full bottom-0 absolute"
+          :style="{ height: `var(--volume-percent)` }"
+        />
+        <div
+          class="rounded-full bg-blue h-3 w-3 shadow-2xl translate-y-1/2 left-1/2 absolute -translate-x-1/2 hover:scale-110"
+          :style="{ bottom: `var(--volume-percent)` }"
+        />
       </div>
-    </Transition>
+      <div class="text-2.5 mt-1 font-mono">
+        {{ Math.round(value * 100) }}%
+      </div>
+      <div class="bg-white h-2 w-2 rotate-45 left-1/2 absolute dark:bg-dark -translate-x-1/2 -bottom-1" />
+    </div>
   </div>
 </template>

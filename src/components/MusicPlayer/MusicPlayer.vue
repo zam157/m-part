@@ -15,7 +15,8 @@ import {
   volume,
   waiting,
 } from '~/composables/player'
-import VolumeSlider from './VolumeSlider.vue'
+import PlaylistBtn from './components/PlaylistBtn/PlaylistBtn.vue'
+import VolumeBtn from './components/VolumeBtn.vue'
 
 const progressBarRef = useTemplateRef('progressBarRef')
 const tempProgress = ref<number | null>(null)
@@ -128,7 +129,7 @@ function handlePointerUp(e: PointerEvent) {
     :style="{
       '--progress-percent': `${displayProgress * 100}%`,
     }"
-    class="flex flex-col select-none inset-x-0 bottom-0 fixed z-50"
+    class="flex flex-col select-none"
   >
     <!-- Progress bar -->
     <div
@@ -141,7 +142,11 @@ function handlePointerUp(e: PointerEvent) {
     >
       <!-- Tooltip -->
       <div
-        class="time-tooltip text-sm text-white px-2 py-1 rounded-lg bg-black/80 opacity-0 invisible pointer-events-none whitespace-nowrap transition-[opacity,visibility] duration-200 absolute tabular-nums -translate-y-full"
+        class="
+          time-tooltip
+          absolute text-sm text-white font-mono tabular-nums whitespace-nowrap px-2 py-1 rounded-lg bg-black/80 opacity-0 invisible pointer-events-none
+          transition-[opacity,visibility] duration-200 -translate-y-full
+        "
       >
         {{ displayTime }}
       </div>
@@ -190,16 +195,17 @@ function handlePointerUp(e: PointerEvent) {
         </span>
       </div>
 
-      <!-- Volume -->
-      <div class="text-6 px-2 flex gap-2 items-center justify-center">
-        <VolumeSlider :modelValue="volume" @update:modelValue="setVolume" />
+      <!-- Extra buttons -->
+      <div class="px-2 flex gap-3 items-center justify-center">
+        <PlaylistBtn />
+        <VolumeBtn :modelValue="volume" @update:modelValue="setVolume" />
       </div>
 
       <!-- Play button -->
       <div class="btn-wrapper ml-2 mr-2 flex gap-2 items-center @lg:mr-6 @md:mr-4 @lg:gap-4 @md:gap-3">
-        <div class="i-solar:skip-previous-bold text-5 transition-opacity hover:opacity-80" @click="prevNext(0)" />
-        <div class="text-9 transition-[transform,opacity] hover:opacity-90 hover:scale-110" :class="playing ? 'i-solar:pause-circle-bold' : 'i-solar:play-circle-bold'" @click="setPlaying(!playing)" />
-        <div class="i-solar:skip-next-bold text-5 transition-opacity hover:opacity-80" @click="prevNext(1)" />
+        <div class="i-solar:skip-previous-bold text-5 text-gray-600 transition-color hover:text-gray-800" @click="prevNext(0)" />
+        <div class="text-9 text-gray-600 transition-[transform,color] hover:scale-110 hover:text-gray-800" :class="playing ? 'i-solar:pause-circle-bold' : 'i-solar:play-circle-bold'" @click="setPlaying(!playing)" />
+        <div class="i-solar:skip-next-bold text-5 text-gray-600 transition-color hover:text-gray-800" @click="prevNext(1)" />
       </div>
     </div>
   </div>
