@@ -12,6 +12,7 @@ export default antfu(
     rules: {
       'vue/attribute-hyphenation': ['warn', 'never'],
       'vue/v-on-event-hyphenation': ['warn', 'never'],
+      'unocss/order': 'off',
     },
   },
 )

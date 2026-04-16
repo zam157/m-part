@@ -5,7 +5,7 @@ import { unheadVueComposablesImports } from '@unhead/vue'
 import Vue from '@vitejs/plugin-vue'
 import Unocss from 'unocss/vite'
 import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
+// import Components from 'unplugin-vue-components/vite'
 import { defineConfig } from 'vite'
 // import { VitePWA } from 'vite-plugin-pwa'
 import { VueRouterAutoImports } from 'vue-router/unplugin'
@@ -51,13 +51,13 @@ export default defineConfig({
     }),
 
     // https://github.com/antfu/unplugin-vue-components
-    Components({
-      // allow auto load markdown components under `./src/components/`
-      extensions: ['vue', 'md'],
-      // allow auto import and register components used in markdown
-      include: [/\.vue$/, /\.vue\?vue/, /\.md$/],
-      dts: 'src/components.d.ts',
-    }),
+    // Components({
+    //   // allow auto load markdown components under `./src/components/`
+    //   extensions: ['vue', 'md'],
+    //   // allow auto import and register components used in markdown
+    //   include: [/\.vue$/, /\.vue\?vue/, /\.md$/],
+    //   dts: 'src/components.d.ts',
+    // }),
 
     // https://github.com/antfu/unocss
     // see uno.config.ts for config
