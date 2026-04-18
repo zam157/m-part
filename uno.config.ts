@@ -1,6 +1,5 @@
 import {
   defineConfig,
-  // presetAttributify,
   presetIcons,
   presetTypography,
   presetWebFonts,
@@ -18,11 +17,10 @@ export default defineConfig({
     presetWind4({
       reset: true,
     }),
-    presetShadcn(),
-    // presetAttributify(),
-    presetIcons({
-      // scale: 1.2,
+    presetShadcn({
+      color: 'neutral',
     }),
+    presetIcons(),
     presetTypography(),
     presetWebFonts({
       themeKey: 'font',
@@ -38,10 +36,26 @@ export default defineConfig({
       'display': 'display',
       '[display,opacity]': 'display,opacity',
     },
+    colors: {
+      sidebar: {
+        DEFAULT: 'oklch(var(--sidebar))',
+        background: 'oklch(var(--sidebar))',
+        foreground: 'oklch(var(--sidebar-foreground))',
+        primary: {
+          DEFAULT: 'oklch(var(--sidebar-primary))',
+          foreground: 'oklch(var(--sidebar-primary-foreground))',
+        },
+        accent: {
+          DEFAULT: 'oklch(var(--sidebar-accent))',
+          foreground: 'oklch(var(--sidebar-accent-foreground))',
+        },
+        border: 'oklch(var(--sidebar-border))',
+        ring: 'oklch(var(--sidebar-ring))',
+      },
+    },
   },
   transformers: [
     transformerDirectives(),
     transformerVariantGroup(),
   ],
-  safelist: 'prose prose-sm m-auto text-left'.split(' '),
 })
