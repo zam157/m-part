@@ -20,6 +20,7 @@ export const seeking = shallowRef(false)
 export const waiting = shallowRef(false)
 export const playlist = shallowRef<PlayListItem[]>([])
 export const currentIndex = shallowRef<number | null>(null)
+export const showPlaylist = shallowRef(false)
 // #endregion
 
 // #region initialize listeners

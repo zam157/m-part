@@ -107,10 +107,10 @@ function onPointerUp(e: PointerEvent) {
 
 const volumeIcon = computed(() => {
   if (value.value === 0)
-    return 'i-solar:volume-bold'
+    return 'i-solar:muted-bold'
   if (value.value < 0.5)
-    return 'i-solar:volume-small-bold-duotone'
-  return 'i-solar:volume-loud-bold-duotone'
+    return 'i-solar:volume-small-bold'
+  return 'i-solar:volume-loud-bold'
 })
 </script>
 
@@ -127,7 +127,7 @@ const volumeIcon = computed(() => {
     <div
       ref="volumeIconRef"
       :class="volumeIcon"
-      class="text-5 text-gray-600 transition-color hover:text-gray-800"
+      class="text-5 text-primary transition-color hover:text-primary/80"
       @pointerup="handleVolumeIconClick"
     />
 
@@ -136,30 +136,34 @@ const volumeIcon = computed(() => {
       :class="isHovering ? 'opacity-100' : 'opacity-0 hidden translate-y-2'"
       class="
         starting:opacity-0 starting:translate-y-2
-        mb-2 pb-1.5 pt-3 rounded-lg bg-white flex flex-col w-9 shadow-lg items-center bottom-full left-1/2 justify-center absolute z-2 dark:bg-dark -translate-x-1/2
+        mb-2 pb-1.5 pt-3 rounded-lg bg-popover flex flex-col w-9 shadow-lg items-center bottom-full left-1/2 justify-center absolute z-2 -translate-x-1/2
       "
     >
       <div
         ref="sliderRef"
-        class="rounded-full bg-gray/20 h-24 w-1.5 cursor-pointer relative touch-none"
+        class="rounded-full bg-neutral-200 dark:bg-neutral-500 h-24 w-1.5 cursor-pointer relative touch-none"
         @pointerdown="dragStart"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
         @contextmenu.prevent
       >
         <div
-          class="rounded-full bg-blue/70 w-full bottom-0 absolute"
+          class="rounded-full bg-primary w-full bottom-0 absolute"
           :style="{ height: `var(--volume-percent)` }"
         />
         <div
-          class="rounded-full bg-blue h-3 w-3 shadow-2xl translate-y-1/2 left-1/2 absolute -translate-x-1/2 hover:scale-110"
+          :class="isDragging ? 'scale-110 bg-primary/30 w-3.5 h-5' : ' bg-primary size-3'"
+          class="
+            rounded-full shadow-2xl translate-y-1/2 left-1/2 absolute -translate-x-1/2 transition-[transform,height,width,background-color]
+            hover:scale-110
+          "
           :style="{ bottom: `var(--volume-percent)` }"
         />
       </div>
       <div class="text-2.5 mt-1 font-mono">
         {{ Math.round(value * 100) }}%
       </div>
-      <div class="bg-white h-2 w-2 rotate-45 left-1/2 absolute dark:bg-dark -translate-x-1/2 -bottom-1" />
+      <div class="bg-popover h-2 w-2 rotate-45 left-1/2 absolute -translate-x-1/2 -bottom-1" />
     </div>
   </div>
 </template>

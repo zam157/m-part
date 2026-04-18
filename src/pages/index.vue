@@ -7,7 +7,7 @@ defineOptions({
 </script>
 
 <template>
-  <div @click="switchColorMode(colorMode === 'light' ? 'dark' : 'light')">
+  <div class="flex-1 min-w-0" @click="switchColorMode(colorMode === 'light' ? 'dark' : 'light')">
     colorMode: {{ colorMode }}
   </div>
 </template>

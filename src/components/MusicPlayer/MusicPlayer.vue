@@ -12,10 +12,10 @@ import {
   setPlaying,
   setPlaylist,
   setVolume,
+  showPlaylist,
   volume,
   waiting,
 } from '~/composables/player'
-import PlaylistBtn from './components/PlaylistBtn/PlaylistBtn.vue'
 import VolumeBtn from './components/VolumeBtn.vue'
 
 const progressBarRef = useTemplateRef('progressBarRef')
@@ -44,8 +44,8 @@ const displayProgress = computed(() => {
 // 计算显示的时间（拖动时显示拖动位置的时间）
 const displayTime = computed(() => {
   if (tempProgress.value !== null)
-    return `${formatTime(tempProgress.value * duration.value)} / ${formatTime(duration.value)}`
-  return `${formatTime(currentTime.value)} / ${formatTime(duration.value)}`
+    return `${formatTime(tempProgress.value * duration.value)}/${formatTime(duration.value)}`
+  return `${formatTime(currentTime.value)}/${formatTime(duration.value)}`
 })
 
 // 初始化音频源
@@ -144,7 +144,7 @@ function handlePointerUp(e: PointerEvent) {
       <div
         class="
           time-tooltip
-          absolute text-sm text-white font-mono tabular-nums whitespace-nowrap px-2 py-1 rounded-lg bg-black/80 opacity-0 invisible pointer-events-none
+          absolute text-sm text-neutral-50 font-mono whitespace-nowrap px-2 py-1 rounded-lg bg-neutral-700 opacity-0 invisible pointer-events-none
           transition-[opacity,visibility] duration-200 -translate-y-full
         "
       >
@@ -152,21 +152,30 @@ function handlePointerUp(e: PointerEvent) {
       </div>
 
       <div
-        class="progress-bar bg-light-500/80 flex h-1 transition-height justify-start relative touch-none dark:bg-gray-500/70"
+        class="progress-bar flex h-1 transition-height justify-start relative touch-none bg-neutral-200 dark:bg-neutral-500"
+        :class="{
+          't-loading': showSpinner,
+        }"
       >
         <div
-          class="rounded-r-full bg-blue/80 h-full"
+          class="rounded-r-full bg-primary h-full"
           :style="{ width: `var(--progress-percent)` }"
         />
         <div
-          class="thumb rounded-full bg-blue flex h-3 w-3 transition-[opacity,visibility] duration-500 items-center top-1/2 justify-center absolute -translate-x-1/2 -translate-y-1/2"
+          :class="scrubbing ? 'h-4 w-6 bg-primary/30' : 'bg-primary size-3.5'"
+          class="
+            thumb
+            rounded-full flex items-center justify-center size-3.5 shadow-md
+            transition-[opacity,visibility,height,width,backdrop-filter,background-color] duration-500
+            top-1/2 absolute -translate-x-1/2 -translate-y-1/2
+          "
           :style="{ left: `var(--progress-percent)` }"
         >
           <div
             :class="{
-              'invisible opacity-0': !showSpinner,
+              'hidden opacity-0': !showSpinner,
             }"
-            class="i-solar-refresh-bold text-2.5 text-white transition-[opacity,visibility] animate-spin"
+            class="i-solar-refresh-bold text-2.5 text-primary-foreground transition-[opacity,display] transition-discrete starting:opacity-0 animate-spin"
           />
         </div>
       </div>
@@ -175,7 +184,7 @@ function handlePointerUp(e: PointerEvent) {
     <!-- Music player -->
     <div class="@container flex h-19">
       <!-- Music image -->
-      <div class="bg-gray h-full aspect-1">
+      <div class="dark:bg-neutral-200 bg-neutral-500 h-full aspect-1">
         <img
           v-if="currentSong?.album?.cover"
           :src="currentSong.album.cover"
@@ -186,26 +195,26 @@ function handlePointerUp(e: PointerEvent) {
       <!-- Music info -->
       <div class="mx-4 flex flex-1 flex-col gap-2 min-w-0 items-start justify-center">
         <!-- Song name -->
-        <span class="text-black font-bold max-w-full min-w-0 truncate dark:text-white">
+        <span class="text-primary font-bold max-w-full min-w-0 truncate">
           {{ currentSong?.name || 'Unknown Song' }}
         </span>
         <!-- Artist name -->
-        <span class="text-xs text-gray/80 max-w-full min-w-0 truncate">
+        <span class="text-xs text-zinc-400 max-w-full min-w-0 truncate">
           {{ currentSong?.artist || 'Unknown Artist' }}
         </span>
       </div>
 
       <!-- Extra buttons -->
       <div class="px-2 flex gap-3 items-center justify-center">
-        <PlaylistBtn />
+        <div class="i-solar-playlist-bold text-5 text-primary transition-color hover:text-primary/80" @click="showPlaylist = !showPlaylist" />
         <VolumeBtn :modelValue="volume" @update:modelValue="setVolume" />
       </div>
 
       <!-- Play button -->
       <div class="btn-wrapper ml-2 mr-2 flex gap-2 items-center @lg:mr-6 @md:mr-4 @lg:gap-4 @md:gap-3">
-        <div class="i-solar:skip-previous-bold text-5 text-gray-600 transition-color hover:text-gray-800" @click="prevNext(0)" />
-        <div class="text-9 text-gray-600 transition-[transform,color] hover:scale-110 hover:text-gray-800" :class="playing ? 'i-solar:pause-circle-bold' : 'i-solar:play-circle-bold'" @click="setPlaying(!playing)" />
-        <div class="i-solar:skip-next-bold text-5 text-gray-600 transition-color hover:text-gray-800" @click="prevNext(1)" />
+        <div class="i-solar:skip-previous-bold text-5 text-primary transition-color hover:text-primary/80" @click="prevNext(0)" />
+        <div class="text-9 text-primary transition-[transform,color] hover:scale-110 hover:text-primary/80" :class="playing ? 'i-solar:pause-circle-bold' : 'i-solar:play-circle-bold'" @click="setPlaying(!playing)" />
+        <div class="i-solar:skip-next-bold text-5 text-primary transition-color hover:text-primary/80" @click="prevNext(1)" />
       </div>
     </div>
   </div>
@@ -225,8 +234,9 @@ function handlePointerUp(e: PointerEvent) {
       opacity: 0;
     }
   }
-  &:hover .progress-bar {
-    @apply h-1.5;
+  &:hover .progress-bar,
+  .t-loading.progress-bar {
+    @apply h-2;
     > .thumb {
       visibility: visible;
       opacity: 1;
