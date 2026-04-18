@@ -38,6 +38,7 @@
     "simple-git-hooks": "catalog:dev",
     "typescript": "catalog:dev",
     "unocss": "catalog:build",
+    "unocss-preset-shadcn": "catalog:build",
     "unplugin-auto-import": "catalog:build",
     "unplugin-vue-components": "catalog:build",
     "vite": "catalog:build",
