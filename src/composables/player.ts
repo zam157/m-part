@@ -202,7 +202,7 @@ export function removeFromPlaylist(index: number) {
     }
     else if (index === currentIndex.value) {
       // If the removed song is currently playing, play the next song
-      setCurrentIndex(Math.min(currentIndex.value, playlist.value.length - 1), true)
+      setCurrentIndex(Math.min(currentIndex.value, playlist.value.length - 1), playing.value)
     }
   }
 }
