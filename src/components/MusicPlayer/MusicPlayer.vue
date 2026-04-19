@@ -4,13 +4,12 @@ import {
   currentTime,
   duration,
   playing,
+  playlist,
   prevNext,
   progress,
   seeking,
-  setCurrentIndex,
   setCurrentTime,
   setPlaying,
-  setPlaylist,
   setVolume,
   showPlaylist,
   volume,
@@ -46,40 +45,6 @@ const displayTime = computed(() => {
   if (tempProgress.value !== null)
     return `${formatTime(tempProgress.value * duration.value)}/${formatTime(duration.value)}`
   return `${formatTime(currentTime.value)}/${formatTime(duration.value)}`
-})
-
-// 初始化音频源
-onMounted(() => {
-  setPlaylist([
-    {
-      name: 'Paza Moduless',
-      artist: 'HYONNA',
-      album: {
-        name: 'Chaff & Dust',
-        cover: '',
-      },
-      src: '/songs/paza-moduless.mp3',
-    },
-    {
-      name: 'Die For You',
-      artist: 'Riot Music',
-      album: {
-        name: 'Chaff & Dust',
-        cover: '',
-      },
-      src: '/songs/die-for-you.mp3',
-    },
-    {
-      name: 'Test Song Without Source',
-      artist: 'Unknown Artist',
-      album: {
-        name: 'Unknown Album',
-        cover: '',
-      },
-      src: '/songs/non-existent-file.mp3',
-    },
-  ])
-  setCurrentIndex(0)
 })
 
 function updateTempProgress(clientX: number) {
@@ -129,7 +94,13 @@ function handlePointerUp(e: PointerEvent) {
     :style="{
       '--progress-percent': `${displayProgress * 100}%`,
     }"
-    class="flex flex-col select-none"
+    :class="{
+      'translate-y-full hidden': playlist.length === 0,
+    }"
+    class="
+      flex flex-col select-none
+      transition-[transform,display] transition-discrete starting:translate-y-full
+    "
   >
     <!-- Progress bar -->
     <div

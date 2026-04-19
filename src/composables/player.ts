@@ -79,6 +79,31 @@ export const currentSong = computed(() => {
 // #endregion
 
 // #region actions
+export function resetPlayer() {
+  setSrc(null)
+  currentIndex.value = null
+  currentTime.value = 0
+  duration.value = 0
+  playing.value = false
+  waiting.value = false
+  seeking.value = false
+}
+/**
+ * 设置播放地址
+ */
+export function setSrc(src: string | null) {
+  audio.value.removeAttribute('src')
+  audio.value.querySelectorAll('source')
+    .forEach(source => source.remove())
+  if (!src) {
+    audio.value.load()
+    return
+  }
+  const source = document.createElement('source')
+  source.src = src
+  audio.value.appendChild(source)
+  audio.value.load()
+}
 /**
  * 设置播放状态
  */
@@ -111,7 +136,7 @@ export async function setCurrentIndex(index: number, autoplay?: boolean) {
   }
   currentIndex.value = index
   currentTime.value = 0
-  audio.value.src = song.src || ''
+  setSrc(song.src || null)
   if (autoplay) {
     await setPlaying(true)
   }
@@ -152,6 +177,7 @@ export function setVolume(vol: number) {
  * 覆盖播放列表
  */
 export function setPlaylist(newPlaylist: PlayListItem[]) {
+  resetPlayer()
   playlist.value = newPlaylist
 }
 
@@ -161,6 +187,7 @@ export function setPlaylist(newPlaylist: PlayListItem[]) {
 export function addToPlaylist(item: PlayListItem) {
   playlist.value.push(item)
   triggerRef(playlist)
+  setCurrentIndex(playlist.value.length - 1, true)
 }
 
 /**
@@ -169,5 +196,26 @@ export function addToPlaylist(item: PlayListItem) {
 export function removeFromPlaylist(index: number) {
   playlist.value.splice(index, 1)
   triggerRef(playlist)
+  if (playlist.value.length === 0) {
+    resetPlayer()
+  }
+  else if (currentIndex.value !== null) {
+    if (index < currentIndex.value) {
+      currentIndex.value -= 1
+    }
+    else if (index === currentIndex.value) {
+      // If the removed song is currently playing, play the next song
+      setCurrentIndex(Math.min(currentIndex.value, playlist.value.length - 1), true)
+    }
+  }
+}
+
+/**
+ * 清空播放列表
+ */
+export function clearPlaylist() {
+  playlist.value = []
+  currentIndex.value = null
+  resetPlayer()
 }
 // #endregion

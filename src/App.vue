@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import MusicPlayer from './components/MusicPlayer/MusicPlayer.vue'
-import { playlist, showPlaylist } from './composables/player'
+import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, setCurrentIndex, setPlaying, showPlaylist } from './composables/player'
 </script>
 
 <template>
   <div
     class="
       h-100dvh
-      bg-background text-foreground text-center
+      bg-background text-foreground selection:text-muted selection:bg-muted-foreground
       flex flex-col
     "
   >
@@ -15,18 +15,73 @@ import { playlist, showPlaylist } from './composables/player'
       <RouterView />
       <!-- playlist -->
       <div
-        style="transition: width 0.2s var(--default-transition-timingFunction), display 0.2s var(--default-transition-timingFunction) allow-discrete;"
-        :class="showPlaylist ? 'w-80' : 'w-0 hidden'"
+        :class="{
+          'translate-x-full hidden': !showPlaylist,
+        }"
         class="
-          h-full bg-sidebar text-sidebar-foreground grow-0 shrink-0
-          starting:w-0
+          flex flex-col
+          w-80 h-full gap-0.5 bg-sidebar text-sidebar-foreground grow-0 shrink-0
+          starting:translate-x-full transition-[transform,display] transition-discrete
         "
       >
-        <div class="w-80 h-full of-y-auto">
-          {{ playlist }}
+        <div class="flex-1 min-h-0 p-2 of-y-auto">
+          <div
+            v-for="(i, index) in playlist"
+            :key="index"
+            class="btn flex px-2 h-12 justify-start content-visibility-auto"
+          >
+            <div
+              class="cover-container relative size-9 rounded-md bg-neutral-200 dark:bg-neutral-500 flex-shrink-0"
+              @click="() => {
+                if (currentIndex === index) {
+                  setPlaying(!playing)
+                  return
+                }
+                setCurrentIndex(index, true)
+              }"
+            >
+              <img v-if="i.album?.cover" :src="i.album.cover" class="w-full h-full rounded-md">
+              <div
+                :class="[
+                  playing && currentIndex === index ? 'i-solar:pause-bold' : 'i-solar:play-bold',
+                  { 'opacity-0 hidden': currentIndex !== index },
+                ]"
+                class="play-icon text-3 block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-[opacity,display] transition-discrete"
+              />
+            </div>
+            <div class="flex-1 min-w-0 flex flex-col">
+              <span class="max-w-full truncate">{{ i.name }}</span>
+              <span class="text-xs text-muted-foreground truncate max-w-full truncate">{{ i.artist }}</span>
+            </div>
+            <div
+              class="i-solar:close-circle-bold text-3.5 hover:text-destructive transition-color"
+              @click.stop="removeFromPlaylist(index)"
+            />
+          </div>
+        </div>
+
+        <!-- footer -->
+        <div class="shrink-0 pt-4 pb-2 px-2 flex items-center justify-end">
+          <div
+            class="btn p-2 text-4" @click="() => {
+              clearPlaylist()
+              showPlaylist = false
+            }"
+          >
+            <div class="i-solar:trash-bin-trash-bold" />
+          </div>
         </div>
       </div>
     </main>
     <MusicPlayer class="grow-0 shrink-0" />
   </div>
 </template>
+
+<style scoped>
+.cover-container {
+  &:hover .play-icon {
+    opacity: 1;
+    display: block;
+  }
+}
+</style>
