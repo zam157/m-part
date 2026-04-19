@@ -92,16 +92,12 @@ export function resetPlayer() {
  * 设置播放地址
  */
 export function setSrc(src: string | null) {
-  audio.value.removeAttribute('src')
-  audio.value.querySelectorAll('source')
-    .forEach(source => source.remove())
-  if (!src) {
-    audio.value.load()
-    return
+  if (src) {
+    audio.value.src = src
   }
-  const source = document.createElement('source')
-  source.src = src
-  audio.value.appendChild(source)
+  else {
+    audio.value.removeAttribute('src')
+  }
   audio.value.load()
 }
 /**
@@ -112,12 +108,12 @@ export async function setPlaying(isPlaying: boolean) {
     try {
       await audio.value.play()
     }
-    catch {
-      audio.value.pause()
-      waiting.value = false
-      seeking.value = false
+    catch (err) {
+      console.error('Failed to play audio:', err)
       playing.value = false
-      duration.value = 0
+      seeking.value = false
+      waiting.value = false
+      audio.value.pause()
     }
   }
   else {
@@ -136,6 +132,7 @@ export async function setCurrentIndex(index: number, autoplay?: boolean) {
   }
   currentIndex.value = index
   currentTime.value = 0
+  duration.value = 0
   setSrc(song.src || null)
   if (autoplay) {
     await setPlaying(true)

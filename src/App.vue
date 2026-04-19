@@ -15,13 +15,11 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
       <RouterView />
       <!-- playlist -->
       <div
-        :class="{
-          'translate-x-full hidden': !showPlaylist,
-        }"
+        :class="showPlaylist ? 'w-80' : 'w-0 hidden'"
         class="
           flex flex-col
-          w-80 h-full gap-0.5 bg-sidebar text-sidebar-foreground grow-0 shrink-0
-          starting:translate-x-full transition-[transform,display] transition-discrete
+          gap-0.5 bg-sidebar text-sidebar-foreground grow-0 shrink-0
+          starting:w-0 transition-[width,display] transition-discrete
         "
       >
         <div class="flex-1 min-h-0 p-2 of-y-auto">

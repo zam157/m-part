@@ -13,6 +13,15 @@ function toggleDark() {
 function setMockedPlaylist() {
   setPlaylist([
     {
+      name: 'Test Song Without Source',
+      artist: 'Unknown Artist',
+      album: {
+        name: 'Unknown Album',
+        cover: '',
+      },
+      src: '/songs/non-existent-file.mp3',
+    },
+    {
       name: 'Paza Moduless',
       artist: 'HYONNA',
       album: {
@@ -29,15 +38,6 @@ function setMockedPlaylist() {
         cover: '',
       },
       src: '/songs/die-for-you.mp3',
-    },
-    {
-      name: 'Test Song Without Source',
-      artist: 'Unknown Artist',
-      album: {
-        name: 'Unknown Album',
-        cover: '',
-      },
-      src: '/songs/non-existent-file.mp3',
     },
   ])
   setCurrentIndex(0, true)
