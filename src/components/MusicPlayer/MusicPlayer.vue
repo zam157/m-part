@@ -5,6 +5,7 @@ import {
   duration,
   playing,
   playlist,
+  playMode,
   prevNext,
   progress,
   seeking,
@@ -12,6 +13,7 @@ import {
   setPlaying,
   setVolume,
   showPlaylist,
+  togglePlayMode,
   volume,
   waiting,
 } from '~/composables/player'
@@ -176,8 +178,20 @@ function handlePointerUp(e: PointerEvent) {
       </div>
 
       <!-- Extra buttons -->
-      <div class="px-2 flex gap-3 items-center justify-center">
-        <div class="i-solar-playlist-bold text-5 text-primary transition-color hover:text-primary/80" @click="showPlaylist = !showPlaylist" />
+      <div class="px-2 flex gap-4 items-center justify-center">
+        <div
+          class="i-solar-playlist-bold text-5 text-primary transition-color hover:text-primary/80"
+          @click="showPlaylist = !showPlaylist"
+        />
+        <div
+          :class="{
+            'i-solar-repeat-bold': playMode === 'loop',
+            'i-solar:shuffle-linear': playMode === 'random',
+            'i-solar:list-down-minimalistic-bold': playMode === 'order',
+          }"
+          class="text-5 text-primary transition-color hover:text-primary/80"
+          @click="togglePlayMode"
+        />
         <VolumeBtn :modelValue="volume" @update:modelValue="setVolume" />
       </div>
 

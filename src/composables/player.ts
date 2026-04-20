@@ -1,4 +1,6 @@
 // #region types
+export type PlayMode = 'order' | 'loop' | 'random'
+
 export interface PlayListItem {
   name: string
   src?: string
@@ -21,6 +23,14 @@ export const waiting = shallowRef(false)
 export const playlist = shallowRef<PlayListItem[]>([])
 export const currentIndex = shallowRef<number | null>(null)
 export const showPlaylist = shallowRef(false)
+export const playMode = shallowRef<PlayMode>('order')
+/** 随机播放列表, 存储播放列表中真实的key值 */
+export const randomPlaylist = shallowRef<number[] | null>(null)
+export const randomIndex = computed(() => {
+  if (currentIndex.value === null || !randomPlaylist.value?.length || !playlist.value.length || playMode.value !== 'random')
+    return null
+  return randomPlaylist.value.findIndex(i => i === currentIndex.value)
+})
 // #endregion
 
 // #region initialize listeners
@@ -59,10 +69,7 @@ audio.value.addEventListener('volumechange', () => {
   volume.value = audio.value.volume
 })
 audio.value.addEventListener('ended', () => {
-  // Auto-play next song when current song ends
-  if (currentIndex.value !== null && currentIndex.value < playlist.value.length - 1) {
-    setCurrentIndex(currentIndex.value + 1, true)
-  }
+  prevNext(1)
 })
 // #endregion
 
@@ -79,6 +86,22 @@ export const currentSong = computed(() => {
 // #endregion
 
 // #region actions
+/**
+ * 生成随机播放列表（Fisher-Yates 洗牌算法）
+ */
+function generateRandomPlaylist() {
+  if (playlist.value.length === 0) {
+    randomPlaylist.value = null
+    return
+  }
+  const indices = Array.from({ length: playlist.value.length }, (_, i) => i)
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[indices[i], indices[j]] = [indices[j], indices[i]]
+  }
+  randomPlaylist.value = indices
+}
+
 export function resetPlayer() {
   setSrc(null)
   currentIndex.value = null
@@ -87,6 +110,7 @@ export function resetPlayer() {
   playing.value = false
   waiting.value = false
   seeking.value = false
+  randomPlaylist.value = null
 }
 /**
  * 设置播放地址
@@ -135,7 +159,14 @@ export async function setCurrentIndex(index: number, autoplay?: boolean) {
   duration.value = 0
   setSrc(song.src || null)
   if (autoplay) {
-    await setPlaying(true)
+    try {
+      await setPlaying(true)
+    }
+    catch (err) {
+      const msg = `Failed to play song at index ${index}`
+      console.error(msg, err)
+      return [false, msg] as const
+    }
   }
 }
 
@@ -146,12 +177,41 @@ export async function setCurrentIndex(index: number, autoplay?: boolean) {
 export function prevNext(type: 0 | 1) {
   if (!playlist.value.length)
     return
-  const currentIndexVal = currentIndex.value ?? 0
-  if (type === 0) {
-    setCurrentIndex(Math.max(0, currentIndexVal - 1), true)
+
+  if (currentIndex.value === null || playlist.value.length <= 0)
+    return
+
+  // order or loop
+  if (playMode.value === 'order' || playMode.value === 'loop') {
+    let nextIndex: number
+    if (type === 0) {
+      nextIndex = currentIndex.value - 1
+    }
+    else {
+      nextIndex = currentIndex.value + 1
+    }
+    if (playMode.value === 'loop') {
+      nextIndex = (nextIndex + playlist.value.length) % playlist.value.length
+    }
+    else {
+      if (nextIndex < 0 || nextIndex >= playlist.value.length) {
+        setPlaying(false)
+        setCurrentIndex(0)
+        return
+      }
+    }
+    setCurrentIndex(nextIndex, true)
   }
-  else if (type === 1) {
-    setCurrentIndex(Math.min(playlist.value.length - 1, currentIndexVal + 1), true)
+  // random
+  else if (playMode.value === 'random') {
+    if (randomIndex.value === null) {
+      setPlaying(false)
+      return
+    }
+
+    let nextRandomIndex = type === 0 ? randomIndex.value - 1 : randomIndex.value + 1
+    nextRandomIndex = (nextRandomIndex + randomPlaylist.value!.length) % randomPlaylist.value!.length
+    setCurrentIndex(randomPlaylist.value![nextRandomIndex], true)
   }
 }
 
@@ -176,6 +236,10 @@ export function setVolume(vol: number) {
 export function setPlaylist(newPlaylist: PlayListItem[]) {
   resetPlayer()
   playlist.value = newPlaylist
+  if (playMode.value === 'random') {
+    generateRandomPlaylist()
+    currentIndex.value = randomPlaylist.value![0]
+  }
 }
 
 /**
@@ -184,6 +248,14 @@ export function setPlaylist(newPlaylist: PlayListItem[]) {
 export function addToPlaylist(item: PlayListItem) {
   playlist.value.push(item)
   triggerRef(playlist)
+  if (playMode.value === 'random') {
+    if (!randomPlaylist.value)
+      randomPlaylist.value = []
+    // 随机插入新歌曲在随机列表中的位置
+    const insertPos = Math.floor(Math.random() * (randomPlaylist.value.length + 1))
+    randomPlaylist.value.splice(insertPos, 0, playlist.value.length - 1)
+    triggerRef(randomPlaylist)
+  }
   setCurrentIndex(playlist.value.length - 1, true)
 }
 
@@ -193,17 +265,42 @@ export function addToPlaylist(item: PlayListItem) {
 export function removeFromPlaylist(index: number) {
   playlist.value.splice(index, 1)
   triggerRef(playlist)
-  if (playlist.value.length === 0) {
-    resetPlayer()
+  if (playMode.value === 'random' && randomPlaylist.value) {
+    randomPlaylist.value.splice(randomPlaylist.value.findIndex(i => i === index), 1)
+    triggerRef(randomPlaylist)
   }
-  else if (currentIndex.value !== null) {
-    if (index < currentIndex.value) {
-      currentIndex.value -= 1
-    }
-    else if (index === currentIndex.value) {
-      // If the removed song is currently playing, play the next song
-      setCurrentIndex(Math.min(currentIndex.value, playlist.value.length - 1), playing.value)
-    }
+  if (playlist.value.length === 0 || currentIndex.value === null) {
+    resetPlayer()
+    return
+  }
+  if (index < currentIndex.value) {
+    currentIndex.value -= 1
+  }
+  else if (index === currentIndex.value) {
+    prevNext(1)
+  }
+}
+
+/**
+ * 切换播放模式
+ */
+export function togglePlayMode() {
+  switch (playMode.value) {
+    case 'order':
+      playMode.value = 'loop'
+      break
+    case 'loop':
+      playMode.value = 'random'
+      break
+    case 'random':
+      playMode.value = 'order'
+      break
+  }
+  if (playMode.value === 'random') {
+    generateRandomPlaylist()
+  }
+  else {
+    randomPlaylist.value = null
   }
 }
 

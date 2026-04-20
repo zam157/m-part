@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { colorMode, switchColorMode } from '~/composables/dark'
-import { setCurrentIndex, setPlaylist } from '~/composables/player'
+import { randomIndex, randomPlaylist, setCurrentIndex, setPlaylist } from '~/composables/player'
 
 defineOptions({
   name: 'IndexPage',
@@ -51,6 +51,12 @@ function setMockedPlaylist() {
     </div>
     <div class="btn px-3 py-2" @click="setMockedPlaylist">
       Set Mocked Playlist
+    </div>
+    <div>
+      randomPlaylist: {{ randomPlaylist }}
+    </div>
+    <div>
+      randomIndex: {{ randomIndex }}
     </div>
   </div>
 </template>
