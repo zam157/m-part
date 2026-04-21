@@ -71,6 +71,11 @@ audio.value.addEventListener('volumechange', () => {
 audio.value.addEventListener('ended', () => {
   prevNext(1)
 })
+audio.value.addEventListener('error', (e) => {
+  console.error('Audio error:', e)
+  waiting.value = false
+  playing.value = false
+})
 // #endregion
 
 // #region getters
@@ -147,7 +152,7 @@ export async function setPlaying(isPlaying: boolean) {
 /**
  * 设置当前播放的歌曲
  */
-export async function setCurrentIndex(index: number, autoplay?: boolean) {
+export function setCurrentIndex(index: number) {
   const song = playlist.value[index]
   if (!song) {
     const msg = `No song found at index ${index}.`
@@ -158,49 +163,37 @@ export async function setCurrentIndex(index: number, autoplay?: boolean) {
   currentTime.value = 0
   duration.value = 0
   setSrc(song.src || null)
-  if (autoplay) {
-    try {
-      await setPlaying(true)
-    }
-    catch (err) {
-      const msg = `Failed to play song at index ${index}`
-      console.error(msg, err)
-      return [false, msg] as const
-    }
-  }
 }
 
 /**
  * 播放上一首或下一首
  * @param type 0: prev, 1: next
  */
-export function prevNext(type: 0 | 1) {
+export function prevNext(type: 0 | 1, autoPlay = true) {
   if (!playlist.value.length)
     return
 
   if (currentIndex.value === null || playlist.value.length <= 0)
     return
 
-  // order or loop
-  if (playMode.value === 'order' || playMode.value === 'loop') {
-    let nextIndex: number
-    if (type === 0) {
-      nextIndex = currentIndex.value - 1
+  // order
+  if (playMode.value === 'order') {
+    const nextIndex = type === 0 ? currentIndex.value - 1 : currentIndex.value + 1
+    if (nextIndex < 0 || nextIndex >= playlist.value.length) {
+      setPlaying(false)
+      setCurrentIndex(0)
+      return
     }
-    else {
-      nextIndex = currentIndex.value + 1
-    }
-    if (playMode.value === 'loop') {
-      nextIndex = (nextIndex + playlist.value.length) % playlist.value.length
-    }
-    else {
-      if (nextIndex < 0 || nextIndex >= playlist.value.length) {
-        setPlaying(false)
-        setCurrentIndex(0)
-        return
-      }
-    }
-    setCurrentIndex(nextIndex, true)
+    setCurrentIndex(nextIndex)
+    if (autoPlay)
+      setPlaying(true)
+  }
+  // loop
+  else if (playMode.value === 'loop') {
+    const nextIndex = type === 0 ? currentIndex.value - 1 : currentIndex.value + 1
+    setCurrentIndex((nextIndex + playlist.value.length) % playlist.value.length)
+    if (autoPlay)
+      setPlaying(true)
   }
   // random
   else if (playMode.value === 'random') {
@@ -211,7 +204,9 @@ export function prevNext(type: 0 | 1) {
 
     let nextRandomIndex = type === 0 ? randomIndex.value - 1 : randomIndex.value + 1
     nextRandomIndex = (nextRandomIndex + randomPlaylist.value!.length) % randomPlaylist.value!.length
-    setCurrentIndex(randomPlaylist.value![nextRandomIndex], true)
+    setCurrentIndex(randomPlaylist.value![nextRandomIndex])
+    if (autoPlay)
+      setPlaying(true)
   }
 }
 
@@ -256,7 +251,8 @@ export function addToPlaylist(item: PlayListItem) {
     randomPlaylist.value.splice(insertPos, 0, playlist.value.length - 1)
     triggerRef(randomPlaylist)
   }
-  setCurrentIndex(playlist.value.length - 1, true)
+  setCurrentIndex(playlist.value.length - 1)
+  setPlaying(true)
 }
 
 /**
@@ -269,15 +265,19 @@ export function removeFromPlaylist(index: number) {
     randomPlaylist.value.splice(randomPlaylist.value.findIndex(i => i === index), 1)
     triggerRef(randomPlaylist)
   }
+
   if (playlist.value.length === 0 || currentIndex.value === null) {
+    showPlaylist.value = false
     resetPlayer()
     return
   }
-  if (index < currentIndex.value) {
+
+  if (currentIndex.value > index) {
     currentIndex.value -= 1
   }
-  else if (index === currentIndex.value) {
-    prevNext(1)
+  else if (currentIndex.value === index) {
+    setCurrentIndex(currentIndex.value % playlist.value.length)
+    setPlaying(playing.value)
   }
 }
 
@@ -308,8 +308,6 @@ export function togglePlayMode() {
  * 清空播放列表
  */
 export function clearPlaylist() {
-  playlist.value = []
-  currentIndex.value = null
-  resetPlayer()
+  setPlaylist([])
 }
 // #endregion

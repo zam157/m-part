@@ -116,6 +116,7 @@ function handlePointerUp(e: PointerEvent) {
       >
         <!-- Tooltip -->
         <div
+          v-if="duration"
           class="
             time-tooltip
             absolute text-sm text-neutral-50 font-mono whitespace-nowrap px-2 py-1 rounded-lg bg-neutral-700 opacity-0 invisible pointer-events-none

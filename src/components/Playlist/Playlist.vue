@@ -24,7 +24,8 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
               setPlaying(!playing)
               return
             }
-            setCurrentIndex(index, true)
+            setCurrentIndex(index)
+            setPlaying(true)
           }"
         >
           <img v-if="i.album?.cover" :src="i.album.cover" class="w-full h-full rounded-md">

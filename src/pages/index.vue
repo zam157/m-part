@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { colorMode, switchColorMode } from '~/composables/dark'
-import { randomIndex, randomPlaylist, setCurrentIndex, setPlaylist } from '~/composables/player'
+import { randomIndex, randomPlaylist, setCurrentIndex, setPlaying, setPlaylist } from '~/composables/player'
 
 defineOptions({
   name: 'IndexPage',
@@ -40,7 +40,8 @@ function setMockedPlaylist() {
       src: '/songs/die-for-you.mp3',
     },
   ])
-  setCurrentIndex(0, true)
+  setCurrentIndex(0)
+  setPlaying(true)
 }
 </script>
 
