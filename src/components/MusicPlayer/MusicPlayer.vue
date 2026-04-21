@@ -100,56 +100,58 @@ function handlePointerUp(e: PointerEvent) {
       'translate-y-full hidden': playlist.length === 0,
     }"
     class="
-      flex flex-col select-none
+      flex flex-col select-none relative
       transition-[transform,display] transition-discrete starting:translate-y-full
     "
   >
     <!-- Progress bar -->
-    <div
-      ref="progressBarRef"
-      class="progress-bar-wrapper py-2 cursor-pointer relative z-1 -my-2"
-      @pointerdown="handlePointerDown"
-      @pointermove="handlePointerMove"
-      @pointerup="handlePointerUp"
-      @contextmenu.prevent
-    >
-      <!-- Tooltip -->
+    <div class="relative h-1">
       <div
-        class="
-          time-tooltip
-          absolute text-sm text-neutral-50 font-mono whitespace-nowrap px-2 py-1 rounded-lg bg-neutral-700 opacity-0 invisible pointer-events-none
-          transition-[opacity,visibility] duration-200 -translate-y-full
-        "
+        ref="progressBarRef"
+        class="progress-bar-wrapper cursor-pointer absolute bottom-0 left-0 w-full z-1"
+        @pointerdown="handlePointerDown"
+        @pointermove="handlePointerMove"
+        @pointerup="handlePointerUp"
+        @contextmenu.prevent
       >
-        {{ displayTime }}
-      </div>
-
-      <div
-        class="progress-bar flex h-1 transition-height justify-start relative touch-none bg-neutral-200 dark:bg-neutral-500"
-        :class="{
-          't-loading': showSpinner,
-        }"
-      >
+        <!-- Tooltip -->
         <div
-          class="rounded-r-full bg-primary h-full"
-          :style="{ width: `var(--progress-percent)` }"
-        />
-        <div
-          :class="scrubbing ? 'h-4 w-6 bg-primary/30' : 'bg-primary size-3.5'"
           class="
-            thumb
-            rounded-full flex items-center justify-center size-3.5 shadow-md
-            transition-[opacity,visibility,height,width,backdrop-filter,background-color] duration-500
-            top-1/2 absolute -translate-x-1/2 -translate-y-1/2
+            time-tooltip
+            absolute text-sm text-neutral-50 font-mono whitespace-nowrap px-2 py-1 rounded-lg bg-neutral-700 opacity-0 invisible pointer-events-none
+            transition-[opacity,visibility] duration-200 -translate-y-full
           "
-          :style="{ left: `var(--progress-percent)` }"
+        >
+          {{ displayTime }}
+        </div>
+
+        <div
+          class="progress-bar h-1 transition-height relative touch-none bg-neutral-200 dark:bg-neutral-500"
+          :class="{
+            't-loading': showSpinner,
+          }"
         >
           <div
-            :class="{
-              'hidden opacity-0': !showSpinner,
-            }"
-            class="i-solar-refresh-bold text-2.5 text-primary-foreground transition-[opacity,display] transition-discrete starting:opacity-0 animate-spin"
+            class="rounded-r-full bg-primary h-full"
+            :style="{ width: `var(--progress-percent)` }"
           />
+          <div
+            :class="scrubbing ? 'h-4 w-6 bg-primary/30' : 'bg-primary size-3.5'"
+            class="
+              thumb
+              rounded-full flex items-center justify-center size-3.5 shadow-md
+              transition-[opacity,visibility,height,width,backdrop-filter,background-color] duration-500
+              top-1/2 absolute -translate-x-1/2 -translate-y-1/2
+            "
+            :style="{ left: `var(--progress-percent)` }"
+          >
+            <div
+              :class="{
+                'hidden opacity-0': !showSpinner,
+              }"
+              class="i-solar-refresh-bold text-2.5 text-primary-foreground transition-[opacity,display] transition-discrete starting:opacity-0 animate-spin"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -210,7 +212,8 @@ function handlePointerUp(e: PointerEvent) {
   .time-tooltip {
     position: absolute;
     position-anchor: --thumb;
-    position-area: top center;
+    justify-self: anchor-center;
+    inset-block-start: calc(anchor(top) - 1.5 * var(--spacing));
   }
   .progress-bar {
     > .thumb {
@@ -230,6 +233,16 @@ function handlePointerUp(e: PointerEvent) {
   &:hover .time-tooltip {
     opacity: 1;
     visibility: visible;
+  }
+  /** Extra hover area */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: calc(4 * var(--spacing) + 100%);
+    transform: translateY(-50%);
   }
 }
 </style>
