@@ -8,8 +8,7 @@
     "preview": "vite preview",
     "preview-https": "serve dist",
     "test": "vitest",
-    "test:e2e": "cypress open",
-    "test:unit": "vitest",
+    "test:e2e": "vitest --browser",
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
@@ -28,11 +27,9 @@
     "@intlify/unplugin-vue-i18n": "catalog:build",
     "@unocss/eslint-config": "catalog:build",
     "@vitejs/plugin-vue": "catalog:build",
+    "@vitest/browser-playwright": "catalog:dev",
     "@vue/test-utils": "catalog:dev",
-    "cypress": "catalog:dev",
-    "cypress-vite": "catalog:dev",
     "eslint": "catalog:dev",
-    "eslint-plugin-cypress": "catalog:dev",
     "eslint-plugin-format": "catalog:dev",
     "lint-staged": "catalog:dev",
     "simple-git-hooks": "catalog:dev",

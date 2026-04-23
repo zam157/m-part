@@ -3,6 +3,7 @@ import path from 'node:path'
 import VueI18n from '@intlify/unplugin-vue-i18n/vite'
 import { unheadVueComposablesImports } from '@unhead/vue'
 import Vue from '@vitejs/plugin-vue'
+import { playwright } from '@vitest/browser-playwright'
 import Unocss from 'unocss/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 // import Components from 'unplugin-vue-components/vite'
@@ -105,5 +106,11 @@ export default defineConfig({
   test: {
     include: ['test/**/*.test.ts'],
     environment: 'jsdom',
+    browser: {
+      provider: playwright(),
+      enabled: true,
+      // at least one instance is required
+      instances: [{ browser: 'chromium', headless: true }],
+    },
   },
 })
