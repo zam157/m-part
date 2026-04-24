@@ -25,12 +25,14 @@
     "@iconify-json/material-symbols": "catalog:dev",
     "@iconify-json/solar": "catalog:dev",
     "@intlify/unplugin-vue-i18n": "catalog:build",
+    "@types/node": "catalog:dev",
     "@unocss/eslint-config": "catalog:build",
     "@vitejs/plugin-vue": "catalog:build",
     "@vitest/browser-playwright": "catalog:dev",
     "@vue/test-utils": "catalog:dev",
     "eslint": "catalog:dev",
     "eslint-plugin-format": "catalog:dev",
+    "jsdom": "catalog:dev",
     "lint-staged": "catalog:dev",
     "simple-git-hooks": "catalog:dev",
     "typescript": "catalog:dev",
@@ -41,6 +43,7 @@
     "vite": "catalog:build",
     "vite-plugin-pwa": "catalog:build",
     "vitest": "catalog:dev",
+    "vitest-browser-vue": "catalog:dev",
     "vue-tsc": "catalog:dev"
   },
   "simple-git-hooks": {

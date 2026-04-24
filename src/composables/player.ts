@@ -233,7 +233,7 @@ export function setPlaylist(newPlaylist: PlayListItem[]) {
   playlist.value = newPlaylist
   if (playMode.value === 'random') {
     generateRandomPlaylist()
-    currentIndex.value = randomPlaylist.value![0]
+    currentIndex.value = randomPlaylist.value?.[0] ?? null
   }
 }
 
@@ -263,6 +263,8 @@ export function removeFromPlaylist(index: number) {
   triggerRef(playlist)
   if (playMode.value === 'random' && randomPlaylist.value) {
     randomPlaylist.value.splice(randomPlaylist.value.findIndex(i => i === index), 1)
+    // 调整随机列表中大于被删除索引的值
+    randomPlaylist.value = randomPlaylist.value.map(i => i > index ? i - 1 : i)
     triggerRef(randomPlaylist)
   }
 
@@ -281,26 +283,30 @@ export function removeFromPlaylist(index: number) {
   }
 }
 
+export function setPlayMode(mode: PlayMode) {
+  playMode.value = mode
+  if (mode === 'random') {
+    generateRandomPlaylist()
+  }
+  else {
+    randomPlaylist.value = null
+  }
+}
+
 /**
  * 切换播放模式
  */
 export function togglePlayMode() {
   switch (playMode.value) {
     case 'order':
-      playMode.value = 'loop'
+      setPlayMode('loop')
       break
     case 'loop':
-      playMode.value = 'random'
+      setPlayMode('random')
       break
     case 'random':
-      playMode.value = 'order'
+      setPlayMode('order')
       break
-  }
-  if (playMode.value === 'random') {
-    generateRandomPlaylist()
-  }
-  else {
-    randomPlaylist.value = null
   }
 }
 
