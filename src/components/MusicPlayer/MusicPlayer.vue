@@ -140,7 +140,7 @@ function handlePointerUp(e: PointerEvent) {
         </div>
 
         <div
-          class="progress-bar h-1 transition-height relative touch-none bg-neutral-200 dark:bg-neutral-500"
+          class="progress-bar h-1 transition-height duration-300 relative touch-none bg-neutral-200 dark:bg-neutral-500"
           :class="{
             't-loading': showSpinner,
           }"
@@ -154,7 +154,7 @@ function handlePointerUp(e: PointerEvent) {
             class="
               thumb
               rounded-full flex items-center justify-center size-3.5 shadow-md
-              transition-[opacity,visibility,height,width,backdrop-filter,background-color] duration-500
+              transition-[opacity,visibility,height,width,background-color] duration-500
               top-1/2 absolute -translate-x-1/2 -translate-y-1/2
             "
             :style="{ left: `var(--progress-percent)` }"
@@ -238,7 +238,7 @@ function handlePointerUp(e: PointerEvent) {
   }
   &:hover .progress-bar,
   .t-loading.progress-bar {
-    @apply h-2;
+    height: calc(var(--spacing) * 2);
     > .thumb {
       visibility: visible;
       opacity: 1;

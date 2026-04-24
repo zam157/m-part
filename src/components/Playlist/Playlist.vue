@@ -8,7 +8,7 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
     class="
       flex flex-col
       gap-0.5 bg-sidebar text-sidebar-foreground grow-0 shrink-0
-      starting:w-0 transition-[width,display] transition-discrete
+      starting:w-0 transition-[width,display] duration-300 transition-discrete
     "
   >
     <div class="flex-1 min-h-0 p-2 of-y-auto">
