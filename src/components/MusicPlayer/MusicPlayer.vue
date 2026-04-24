@@ -23,6 +23,9 @@ const progressBarRef = useTemplateRef('progressBarRef')
 const tempProgress = ref<number | null>(null)
 const scrubbing = ref(false)
 
+// 缓存进度条容器元素大小信息
+const progressBarRect = shallowRef<{ width: number, left: number } | null>(null)
+
 const showSpinner = computed(() => waiting.value || seeking.value)
 
 /**
@@ -50,11 +53,12 @@ const displayTime = computed(() => {
 })
 
 function updateTempProgress(clientX: number) {
-  const rect = progressBarRef.value!.getBoundingClientRect()
-  const progressBarWidth = rect.width
-  const progressBarLeft = rect.left
+  const rect = progressBarRect.value
+  if (!rect)
+    return
 
-  tempProgress.value = Math.max(0, Math.min(1, (clientX - progressBarLeft) / progressBarWidth))
+  const { width, left } = rect
+  tempProgress.value = Math.max(0, Math.min(1, (clientX - left) / width))
 }
 
 function handlePointerDown(e: PointerEvent) {
@@ -63,6 +67,12 @@ function handlePointerDown(e: PointerEvent) {
   if (e.pointerType === 'mouse' && e.button !== 0)
     return
   scrubbing.value = true
+  // 在 pointerdown 时缓存进度条位置，避免频繁的 getBoundingClientRect 调用
+  const rect = progressBarRef.value!.getBoundingClientRect()
+  progressBarRect.value = {
+    width: rect.width,
+    left: rect.left,
+  }
   updateTempProgress(e.clientX)
   ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
 }
@@ -88,6 +98,9 @@ function handlePointerUp(e: PointerEvent) {
     setCurrentTime(newTime)
     tempProgress.value = null
   }
+
+  // 清除缓存的位置信息
+  progressBarRect.value = null
 }
 </script>
 
