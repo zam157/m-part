@@ -6,7 +6,7 @@ import Playlist from './components/Playlist/Playlist.vue'
 <template>
   <div
     class="
-      h-100dvh
+      h-100dvh of-hidden
       bg-background text-foreground selection:text-muted selection:bg-muted-foreground
       flex flex-col
     "
@@ -15,6 +15,6 @@ import Playlist from './components/Playlist/Playlist.vue'
       <RouterView />
       <Playlist />
     </main>
-    <MusicPlayer class="grow-0 shrink-0" />
+    <MusicPlayer />
   </div>
 </template>

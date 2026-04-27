@@ -6,7 +6,7 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
   <div
     :class="showPlaylist ? 'w-80' : 'w-0 hidden'"
     class="
-      flex flex-col
+      flex flex-col of-hidden
       gap-0.5 bg-sidebar text-sidebar-foreground grow-0 shrink-0
       starting:w-0 transition-[width,display] duration-300 transition-discrete
     "
@@ -42,7 +42,7 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
           <span class="text-xs text-muted-foreground truncate max-w-full truncate">{{ i.artist }}</span>
         </div>
         <div
-          class="i-solar:close-circle-bold text-3.5 hover:text-destructive transition-color"
+          class="i-solar:close-circle-bold text-3.5 hover:text-destructive transition-color grow-0 shrink-0"
           @click.stop="removeFromPlaylist(index)"
         />
       </div>

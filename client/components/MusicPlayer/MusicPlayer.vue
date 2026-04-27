@@ -113,7 +113,7 @@ function handlePointerUp(e: PointerEvent) {
       'translate-y-full hidden': playlist.length === 0,
     }"
     class="
-      flex flex-col select-none relative
+      grow-0 shrink-0 flex flex-col select-none relative
       transition-[transform,display] transition-discrete starting:translate-y-full
     "
   >
