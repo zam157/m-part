@@ -34,7 +34,7 @@
     "eslint": "catalog:dev",
     "eslint-plugin-format": "catalog:dev",
     "jsdom": "catalog:dev",
-    "lint-staged": "catalog:dev",
+    "nano-staged": "catalog:dev",
     "nitro": "catalog:backend",
     "simple-git-hooks": "catalog:dev",
     "typescript": "catalog:dev",
@@ -49,9 +49,9 @@
     "vue-tsc": "catalog:dev"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged"
+    "pre-commit": "pnpm exec nano-staged"
   },
-  "lint-staged": {
+  "nano-staged": {
     "*": "eslint --fix"
   }
 }
