@@ -1,38 +1,10 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "jsx": "preserve",
-    "lib": ["DOM", "ESNext"],
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "paths": {
-      "~/*": ["./src/*"]
-    },
-    "resolveJsonModule": true,
-    "types": [
-      "node",
-      "vitest",
-      "vite/client",
-      "vite-plugin-pwa/client"
-    ],
-    "allowJs": true,
-    "strict": true,
-    "strictNullChecks": true,
-    "noUnusedLocals": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "skipLibCheck": true
+    "lib": ["ESNext"],
+    "types": ["node"]
   },
-  "vueCompilerOptions": {
-    "plugins": [
-      "vue-router/volar/sfc-route-blocks",
-      "vue-router/volar/sfc-typed-router"
-    ]
-  },
-  "exclude": [
-    "**/dist/**",
-    "**/node_modules/**"
+  "include": [
+    "./*.ts"
   ]
 }

@@ -57,13 +57,13 @@ declare module 'vue-router/auto-routes' {
    * @internal
    */
   export interface _RouteFileInfoMap {
-    'src/pages/index.vue': {
+    'client/pages/index.vue': {
       routes:
         | '/'
       views:
         | never
     }
-    'src/pages/[...all].vue': {
+    'client/pages/[...all].vue': {
       routes:
         | '/[...all]'
       views:

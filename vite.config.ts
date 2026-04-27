@@ -3,7 +3,7 @@ import path from 'node:path'
 import VueI18n from '@intlify/unplugin-vue-i18n/vite'
 import { unheadVueComposablesImports } from '@unhead/vue'
 import Vue from '@vitejs/plugin-vue'
-import { playwright } from '@vitest/browser-playwright'
+// import { playwright } from '@vitest/browser-playwright'
 import { nitro } from 'nitro/vite'
 import Unocss from 'unocss/vite'
 import AutoImport from 'unplugin-auto-import/vite'
@@ -16,14 +16,15 @@ import VueRouter from 'vue-router/vite'
 export default defineConfig({
   resolve: {
     alias: {
-      '~/': `${path.resolve(__dirname, 'src')}/`,
+      '~/': `${path.resolve(__dirname, 'client')}/`,
     },
   },
 
   plugins: [
     VueRouter({
+      routesFolder: 'client/pages',
       extensions: ['.vue', '.md'],
-      dts: 'src/typed-router.d.ts',
+      dts: 'client/typed-router.d.ts',
     }),
 
     Vue({
@@ -44,21 +45,21 @@ export default defineConfig({
           'vue-router/auto': ['useLink'],
         },
       ],
-      dts: 'src/auto-imports.d.ts',
+      dts: 'client/auto-imports.d.ts',
       dirs: [
-        // 'src/composables',
-        // 'src/stores',
+        // 'client/composables',
+        // 'client/stores',
       ],
       vueTemplate: true,
     }),
 
     // https://github.com/antfu/unplugin-vue-components
     // Components({
-    //   // allow auto load markdown components under `./src/components/`
+    //   // allow auto load markdown components under `./client/components/`
     //   extensions: ['vue', 'md'],
     //   // allow auto import and register components used in markdown
     //   include: [/\.vue$/, /\.vue\?vue/, /\.md$/],
-    //   dts: 'src/components.d.ts',
+    //   dts: 'client/components.d.ts',
     // }),
 
     // https://github.com/antfu/unocss
@@ -99,7 +100,7 @@ export default defineConfig({
       runtimeOnly: true,
       compositionOnly: true,
       fullInstall: true,
-      include: [path.resolve(__dirname, 'locales/**')],
+      include: [path.resolve(__dirname, 'client/locales/**')],
     }),
 
     nitro(),
@@ -107,13 +108,30 @@ export default defineConfig({
 
   // https://github.com/vitest-dev/vitest
   test: {
-    include: ['test/**/*.test.ts'],
+    // include: ['test/**/*.test.ts'],
     environment: 'jsdom',
-    browser: {
-      provider: playwright(),
-      enabled: true,
-      // at least one instance is required
-      instances: [{ browser: 'chromium', headless: true }],
-    },
+    // browser: {
+    //   provider: playwright(),
+    //   enabled: true,
+    //   // at least one instance is required
+    //   instances: [{ browser: 'chromium', headless: true }],
+    // },
+    projects: [
+      {
+        test: {
+          name: 'server',
+          environment: 'node',
+          include: ['test/server/**/*.test.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'client',
+          environment: 'jsdom',
+          include: ['test/client/**/*.test.ts'],
+        },
+      },
+    ],
   },
 })
