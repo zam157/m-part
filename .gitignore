@@ -5,6 +5,7 @@
 dist
 dist-ssr
 node_modules
+tsc-output
 .idea/
 *.log
 cypress/downloads

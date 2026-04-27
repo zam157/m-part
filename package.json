@@ -9,9 +9,9 @@
     "preview-https": "serve dist",
     "test": "vitest",
     "test:e2e": "vitest --browser",
-    "typecheck": "pnpm run typecheck:frontend && pnpm run typecheck:backend",
+    "typecheck": "vue-tsc --build --noEmit",
     "typecheck:frontend": "vue-tsc --noEmit --project tsconfig.frontend.json",
-    "typecheck:backend": "vue-tsc --noEmit --project ./server/tsconfig.json"
+    "typecheck:backend": "vue-tsc --noEmit --project tsconfig.backend.json"
   },
   "dependencies": {
     "@unhead/vue": "catalog:frontend",

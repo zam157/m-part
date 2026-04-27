@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "ESNext",
+    "moduleDetection": "force",
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
@@ -9,6 +10,7 @@
     "strictNullChecks": true,
     "noUnusedLocals": true,
     "noEmit": true,
+    "outDir": "./tsc-output",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,

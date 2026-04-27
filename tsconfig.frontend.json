@@ -19,5 +19,17 @@
     "./test/client/**/*.ts",
     "./client/**/*.ts",
     "./client/**/*.vue"
-  ]
+  ],
+  "vueCompilerOptions": {
+    "strictTemplates": true,
+    "plugins": [
+      "vue-router/volar/sfc-route-blocks",
+      {
+        "name": "vue-router/volar/sfc-typed-router",
+        "options": {
+          "rootDir": "./client"
+        }
+      }
+    ]
+  }
 }
