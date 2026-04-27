@@ -1,0 +1,5 @@
+* text=auto
+
+auto-imports.d.ts eol=lf
+typed-router.d.ts eol=lf
+pnpm-lock.yaml eol=lf
