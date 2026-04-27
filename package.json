@@ -8,7 +8,6 @@
     "preview": "vite preview",
     "preview-https": "serve dist",
     "test": "vitest",
-    "test:e2e": "vitest --browser",
     "typecheck": "vue-tsc --build --noEmit",
     "typecheck:frontend": "vue-tsc --noEmit --project tsconfig.frontend.json",
     "typecheck:backend": "vue-tsc --noEmit --project tsconfig.backend.json"
