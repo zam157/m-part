@@ -5,6 +5,7 @@
     "types": ["node"]
   },
   "include": [
-    "./*.ts"
+    "./*.ts",
+    "./*.js"
   ]
 }
