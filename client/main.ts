@@ -1,4 +1,4 @@
-import { createPinia } from 'pinia'
+// import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 
 import { createI18n } from 'vue-i18n'
@@ -17,8 +17,8 @@ const i18n = createI18n({
 })
 app.use(i18n)
 
-const pinia = createPinia()
-app.use(pinia)
+// const pinia = createPinia()
+// app.use(pinia)
 
 const router = createRouter({
   routes,

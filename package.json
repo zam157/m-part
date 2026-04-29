@@ -15,9 +15,11 @@
     "typecheck:backend": "vue-tsc --noEmit --project tsconfig.backend.json"
   },
   "dependencies": {
+    "@neteasecloudmusicapienhanced/api": "catalog:backend",
     "@unhead/vue": "catalog:frontend",
     "@vueuse/core": "catalog:frontend",
-    "pinia": "catalog:frontend",
+    "nitro": "catalog:backend",
+    "valibot": "catalog:shared",
     "vue": "catalog:frontend",
     "vue-i18n": "catalog:frontend",
     "vue-router": "catalog:frontend"
@@ -28,7 +30,6 @@
     "@iconify-json/material-symbols": "catalog:build",
     "@iconify-json/solar": "catalog:build",
     "@intlify/unplugin-vue-i18n": "catalog:build",
-    "@neteasecloudmusicapienhanced/api": "catalog:backend",
     "@types/node": "catalog:dev",
     "@unocss/eslint-config": "catalog:build",
     "@vitejs/plugin-vue": "catalog:build",
@@ -38,7 +39,6 @@
     "eslint-plugin-format": "catalog:dev",
     "jsdom": "catalog:dev",
     "nano-staged": "catalog:dev",
-    "nitro": "catalog:backend",
     "simple-git-hooks": "catalog:dev",
     "typescript": "catalog:dev",
     "unocss": "catalog:build",
