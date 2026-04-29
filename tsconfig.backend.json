@@ -3,7 +3,8 @@
   "compilerOptions": {
     "lib": ["ESNext"],
     "paths": {
-      "#shared/*": ["./shared/*"]
+      "#shared/*": ["./shared/*"],
+      "#server/*": ["./server/*"]
     }
   },
   "types": [
