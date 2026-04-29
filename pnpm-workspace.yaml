@@ -10,6 +10,7 @@ trustPolicyExclude:
   - rollup@2.80.0
 catalogs:
   backend:
+    '@neteasecloudmusicapienhanced/api': ^4.32.0
     nitro: latest
   build:
     '@iconify-json/lucide': ^1.2.102

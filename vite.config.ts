@@ -20,6 +20,10 @@ export default defineConfig({
     },
   },
 
+  build: {
+    outDir: 'dist/client',
+  },
+
   plugins: [
     VueRouter({
       routesFolder: 'client/pages',

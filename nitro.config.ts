@@ -6,4 +6,7 @@ export default defineConfig({
     template: './index.html', // Path to HTML template file
     static: true, // Treat template as static HTML (no rendu processing)
   },
+  output: {
+    dir: 'dist/server',
+  },
 })

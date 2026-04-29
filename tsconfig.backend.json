@@ -3,6 +3,11 @@
   "compilerOptions": {
     "lib": ["ESNext"]
   },
-  "types": ["node"],
-  "include": ["./server/**/*.ts"]
+  "types": [
+    "node"
+  ],
+  "include": [
+    "./server/**/*.ts",
+    "./test/server/**/*.ts"
+  ]
 }

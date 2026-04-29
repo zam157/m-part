@@ -2,12 +2,14 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "vite-ssg build",
+    "build": "vite build",
     "dev": "vite --port 3333",
     "lint": "eslint .",
     "preview": "vite preview",
     "preview-https": "serve dist",
     "test": "vitest",
+    "test:frontend": "vitest client",
+    "test:backend": "vitest server",
     "typecheck": "vue-tsc --build --noEmit",
     "typecheck:frontend": "vue-tsc --noEmit --project tsconfig.frontend.json",
     "typecheck:backend": "vue-tsc --noEmit --project tsconfig.backend.json"
@@ -26,6 +28,7 @@
     "@iconify-json/material-symbols": "catalog:build",
     "@iconify-json/solar": "catalog:build",
     "@intlify/unplugin-vue-i18n": "catalog:build",
+    "@neteasecloudmusicapienhanced/api": "catalog:backend",
     "@types/node": "catalog:dev",
     "@unocss/eslint-config": "catalog:build",
     "@vitejs/plugin-vue": "catalog:build",
