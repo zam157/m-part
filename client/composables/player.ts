@@ -102,7 +102,7 @@ function generateRandomPlaylist() {
   const indices = Array.from({ length: playlist.value.length }, (_, i) => i)
   for (let i = indices.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[indices[i], indices[j]] = [indices[j], indices[i]]
+    ;[indices[i], indices[j]] = [indices[j]!, indices[i]!]
   }
   randomPlaylist.value = indices
 }
@@ -204,7 +204,7 @@ export function prevNext(type: 0 | 1, autoPlay = true) {
 
     let nextRandomIndex = type === 0 ? randomIndex.value - 1 : randomIndex.value + 1
     nextRandomIndex = (nextRandomIndex + randomPlaylist.value!.length) % randomPlaylist.value!.length
-    setCurrentIndex(randomPlaylist.value![nextRandomIndex])
+    setCurrentIndex(randomPlaylist.value![nextRandomIndex]!)
     if (autoPlay)
       setPlaying(true)
   }

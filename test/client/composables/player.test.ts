@@ -87,30 +87,30 @@ describe('player.ts', () => {
   describe('addToPlaylist', () => {
     it('should add song to playlist in order mode', () => {
       setPlayMode('order')
-      setPlaylist([mockSongs[0]])
+      setPlaylist([mockSongs[0]!])
       setCurrentIndex(0)
 
-      addToPlaylist(mockSongs[1])
+      addToPlaylist(mockSongs[1]!)
       expect(playlist.value).toHaveLength(2)
       expect(playlist.value[1]).toEqual(mockSongs[1])
     })
 
     it('should add song to playlist in loop mode', () => {
       setPlayMode('loop')
-      setPlaylist([mockSongs[0]])
+      setPlaylist([mockSongs[0]!])
       setCurrentIndex(0)
 
-      addToPlaylist(mockSongs[1])
+      addToPlaylist(mockSongs[1]!)
       expect(playlist.value).toHaveLength(2)
       expect(playlist.value[1]).toEqual(mockSongs[1])
     })
 
     it('should add song to playlist and update random list in random mode', () => {
       setPlayMode('random')
-      setPlaylist([mockSongs[0]])
+      setPlaylist([mockSongs[0]!])
       const initialLength = randomPlaylist.value!.length
 
-      addToPlaylist(mockSongs[1])
+      addToPlaylist(mockSongs[1]!)
       expect(playlist.value).toHaveLength(2)
       expect(randomPlaylist.value).toHaveLength(initialLength + 1)
       // Verify newly added song index is in random list
@@ -118,16 +118,16 @@ describe('player.ts', () => {
     })
 
     it('should set new song as current song after adding', () => {
-      setPlaylist([mockSongs[0]])
-      addToPlaylist(mockSongs[1])
+      setPlaylist([mockSongs[0]!])
+      addToPlaylist(mockSongs[1]!)
       expect(currentIndex.value).toBe(1)
     })
 
     it('should be able to add multiple songs sequentially', () => {
-      setPlaylist([mockSongs[0]])
-      addToPlaylist(mockSongs[1])
-      addToPlaylist(mockSongs[2])
-      addToPlaylist(mockSongs[3])
+      setPlaylist([mockSongs[0]!])
+      addToPlaylist(mockSongs[1]!)
+      addToPlaylist(mockSongs[2]!)
+      addToPlaylist(mockSongs[3]!)
       expect(playlist.value).toHaveLength(4)
       expect(currentIndex.value).toBe(3)
     })
@@ -219,7 +219,7 @@ describe('player.ts', () => {
     })
 
     it('should reset player after removing all songs', () => {
-      setPlaylist([generateMockPlaylist()[0]])
+      setPlaylist([generateMockPlaylist()[0]!])
       setCurrentIndex(0)
       removeFromPlaylist(0)
       expect(playlist.value).toHaveLength(0)
@@ -284,11 +284,11 @@ describe('player.ts', () => {
     it('should keep songs after adding in random mode and switching modes', () => {
       const generatedPlaylist = generateMockPlaylist()
       setPlayMode('random')
-      setPlaylist([{ ...generatedPlaylist[0] }])
-      addToPlaylist({ ...generatedPlaylist[1] })
+      setPlaylist([{ ...generatedPlaylist[0]! }])
+      addToPlaylist({ ...generatedPlaylist[1]! })
 
       setPlayMode('order')
-      expect(playlist.value).toEqual([generatedPlaylist[0], generatedPlaylist[1]])
+      expect(playlist.value).toEqual([generatedPlaylist[0]!, generatedPlaylist[1]!])
       expect(randomPlaylist.value).toBeNull()
     })
 
@@ -322,7 +322,7 @@ describe('player.ts', () => {
 
     it('should initialize correctly when adding to empty playlist', () => {
       setPlaylist([])
-      addToPlaylist(mockSongs[0])
+      addToPlaylist(mockSongs[0]!)
       expect(playlist.value).toHaveLength(1)
       expect(currentIndex.value).toBe(0)
     })
@@ -331,7 +331,7 @@ describe('player.ts', () => {
       const modes: Array<'order' | 'loop' | 'random'> = ['order', 'loop', 'random']
       modes.forEach((mode) => {
         setPlayMode(mode)
-        setPlaylist([mockSongs[0]])
+        setPlaylist([mockSongs[0]!])
         expect(playlist.value).toHaveLength(1)
         if (mode === 'random') {
           expect(randomPlaylist.value).toHaveLength(1)

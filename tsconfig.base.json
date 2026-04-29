@@ -2,18 +2,23 @@
   "compilerOptions": {
     "target": "ESNext",
     "moduleDetection": "force",
+    "useDefineForClassFields": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
+    "allowArbitraryExtensions": true,
     "allowJs": true,
     "strict": true,
     "strictNullChecks": true,
+    "noImplicitThis": true,
+    "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
     "noEmit": true,
     "outDir": "./tsc-output",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
+    "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
   "exclude": [
