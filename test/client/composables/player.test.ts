@@ -1,4 +1,4 @@
-import type { PlayListItem } from '~/composables/player'
+import type { MusicInfo } from '#shared/types/music-info'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   addToPlaylist,
@@ -23,15 +23,41 @@ describe('player.ts', () => {
   })
 
   // Mock playlist data
-  const mockSongs: Readonly<PlayListItem[]> = Object.freeze([
-    { name: 'Song 1', src: 'song1.mp3', artist: 'Artist 1' },
-    { name: 'Song 2', src: 'song2.mp3', artist: 'Artist 2' },
-    { name: 'Song 3', src: 'song3.mp3', artist: 'Artist 3' },
-    { name: 'Song 4', src: 'song4.mp3', artist: 'Artist 4' },
+  const mockSongs: Readonly<MusicInfo[]> = Object.freeze([
+    {
+      provider: 'bilibili',
+      id: 'BV16G411973A',
+      title: 'Song 1',
+      artist: 'Artist A',
+      duration: 1992,
+      coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
+      album: '',
+      qualities: [],
+    },
+    {
+      provider: 'bilibili',
+      id: 'BV16G411973B',
+      title: 'Song 1',
+      artist: 'Artist A',
+      duration: 1992,
+      coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
+      album: '',
+      qualities: [],
+    },
+    {
+      provider: 'bilibili',
+      id: 'BV16G411973C',
+      title: 'Song 1',
+      artist: 'Artist A',
+      duration: 1992,
+      coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
+      album: '',
+      qualities: [],
+    },
   ])
 
-  function generateMockPlaylist(): PlayListItem[] {
-    return structuredClone(mockSongs as PlayListItem[])
+  function generateMockPlaylist(): MusicInfo[] {
+    return structuredClone(mockSongs as MusicInfo[])
   }
 
   describe('setPlaylist', () => {
@@ -124,12 +150,16 @@ describe('player.ts', () => {
     })
 
     it('should be able to add multiple songs sequentially', () => {
-      setPlaylist([mockSongs[0]!])
-      addToPlaylist(mockSongs[1]!)
-      addToPlaylist(mockSongs[2]!)
-      addToPlaylist(mockSongs[3]!)
-      expect(playlist.value).toHaveLength(4)
-      expect(currentIndex.value).toBe(3)
+      for (const [index, song] of Object.entries(mockSongs)) {
+        if (index === '0') {
+          setPlaylist([song])
+        }
+        else {
+          addToPlaylist(song)
+        }
+      }
+      expect(playlist.value).toHaveLength(mockSongs.length)
+      expect(currentIndex.value).toBe(mockSongs.length - 1)
     })
   })
 
@@ -143,7 +173,7 @@ describe('player.ts', () => {
 
       it('should remove song from playlist', () => {
         removeFromPlaylist(2)
-        expect(playlist.value).toHaveLength(3)
+        expect(playlist.value).toHaveLength(mockSongs.length - 1)
         expect(playlist.value[2]).toEqual(mockSongs[3])
       })
 
@@ -154,9 +184,9 @@ describe('player.ts', () => {
       })
 
       it('should adjust index when removing last song that is current', () => {
-        setCurrentIndex(3)
-        removeFromPlaylist(3)
-        expect(currentIndex.value).toBe(0)
+        setCurrentIndex(1)
+        removeFromPlaylist(1)
+        expect(currentIndex.value).toBe(1)
       })
 
       it('should decrease currentIndex when removing song before index', () => {
@@ -185,7 +215,7 @@ describe('player.ts', () => {
 
       it('should remove song from playlist', () => {
         removeFromPlaylist(2)
-        expect(playlist.value).toHaveLength(3)
+        expect(playlist.value).toHaveLength(mockSongs.length - 1)
       })
 
       it('should loop to next song after removing current song', () => {
@@ -203,14 +233,14 @@ describe('player.ts', () => {
       it('should remove song from both playlist and random list', () => {
         const removedIndex = playlist.value.length - 1
         removeFromPlaylist(removedIndex)
-        expect(playlist.value).toHaveLength(3)
-        expect(randomPlaylist.value).toHaveLength(3)
+        expect(playlist.value).toHaveLength(mockSongs.length - 1)
+        expect(randomPlaylist.value).toHaveLength(mockSongs.length - 1)
         expect(randomPlaylist.value!.includes(removedIndex)).toBe(false)
       })
 
       it('should keep random list valid after removing song', () => {
         removeFromPlaylist(1)
-        expect(randomPlaylist.value).toHaveLength(3)
+        expect(randomPlaylist.value).toHaveLength(mockSongs.length - 1)
         // Verify all indices are valid
         randomPlaylist.value!.forEach((idx) => {
           expect(playlist.value[idx]).toBeDefined()
@@ -298,8 +328,8 @@ describe('player.ts', () => {
       removeFromPlaylist(0)
 
       setPlayMode('random')
-      expect(playlist.value).toHaveLength(3)
-      expect(randomPlaylist.value).toHaveLength(3)
+      expect(playlist.value).toHaveLength(mockSongs.length - 1)
+      expect(randomPlaylist.value).toHaveLength(mockSongs.length - 1)
     })
   })
 

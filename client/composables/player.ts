@@ -1,15 +1,11 @@
+import type { MusicInfo } from '#shared/types/music-info'
+import type { Provider } from '#shared/types/provider'
+import { tRequest } from '#shared/utils/fetch'
+
+const providers = Array.from(Object.values(import.meta.glob('#shared/utils/providers/*.ts', { eager: true, import: 'default' }))) as Provider[]
+
 // #region types
 export type PlayMode = 'order' | 'loop' | 'random'
-
-export interface PlayListItem {
-  name: string
-  src?: string
-  artist?: string
-  album?: {
-    name?: string
-    cover?: string
-  }
-}
 // #endregion
 
 // #region states
@@ -20,7 +16,7 @@ export const currentTime = shallowRef(0)
 export const volume = shallowRef(1)
 export const seeking = shallowRef(false)
 export const waiting = shallowRef(false)
-export const playlist = shallowRef<PlayListItem[]>([])
+export const playlist = shallowRef<MusicInfo[]>([])
 export const currentIndex = shallowRef<number | null>(null)
 export const showPlaylist = shallowRef(false)
 export const playMode = shallowRef<PlayMode>('order')
@@ -34,6 +30,8 @@ export const randomIndex = computed(() => {
 // #endregion
 
 // #region initialize listeners
+// 尝试设置 referrerpolicy 属性
+// audio.value.attributes.referrerpolicy = 'no-referrer'
 audio.value.addEventListener('play', () => {
   playing.value = true
 })
@@ -120,9 +118,31 @@ export function resetPlayer() {
 /**
  * 设置播放地址
  */
-export function setSrc(src: string | null) {
+export async function setSrc(src: string | null, provider?: string) {
   if (src) {
     audio.value.src = src
+  }
+  else if (provider) {
+    // 使用 provider 提供的 getSourceInfo 方法获取带有必要 headers 的播放地址
+    // 以便在需要跨域请求时能够正常播放
+    const providerInstance = providers.find(p => p.name === provider)
+    if (providerInstance?.getSourceInfo && currentSong.value) {
+      try {
+        const { url, headers } = await providerInstance.getSourceInfo(currentSong.value)
+        if (headers) {
+          const res = await tRequest(url, { headers, returnJson: false })
+          if (!res[0]) {
+            throw new Error(`Failed to fetch source URL: ${res[2]}`)
+          }
+          const blob = await res[1].blob()
+          const objectUrl = URL.createObjectURL(blob)
+          audio.value.src = objectUrl
+        }
+      }
+      catch (error) {
+        console.error('Error fetching source info:', error)
+      }
+    }
   }
   else {
     audio.value.removeAttribute('src')
@@ -153,8 +173,8 @@ export async function setPlaying(isPlaying: boolean) {
  * 设置当前播放的歌曲
  */
 export function setCurrentIndex(index: number) {
-  const song = playlist.value[index]
-  if (!song) {
+  const music = playlist.value[index]
+  if (!music) {
     const msg = `No song found at index ${index}.`
     console.warn(msg)
     return [false, msg] as const
@@ -162,7 +182,7 @@ export function setCurrentIndex(index: number) {
   currentIndex.value = index
   currentTime.value = 0
   duration.value = 0
-  setSrc(song.src || null)
+  setSrc(music.srcUrl || null, music.provider)
 }
 
 /**
@@ -228,7 +248,7 @@ export function setVolume(vol: number) {
 /**
  * 覆盖播放列表
  */
-export function setPlaylist(newPlaylist: PlayListItem[]) {
+export function setPlaylist(newPlaylist: MusicInfo[]) {
   resetPlayer()
   playlist.value = newPlaylist
   if (playMode.value === 'random') {
@@ -240,7 +260,7 @@ export function setPlaylist(newPlaylist: PlayListItem[]) {
 /**
  * 添加到播放列表
  */
-export function addToPlaylist(item: PlayListItem) {
+export function addToPlaylist(item: MusicInfo) {
   playlist.value.push(item)
   triggerRef(playlist)
   if (playMode.value === 'random') {

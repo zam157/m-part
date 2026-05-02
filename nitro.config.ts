@@ -8,8 +8,8 @@ export default defineConfig({
     static: true, // Treat template as static HTML (no rendu processing)
   },
   alias: {
-    '#server/*': `${path.resolve(__dirname, 'server')}/`,
-    '#shared/*': `${path.resolve(__dirname, 'shared')}/`,
+    '#server/': `${path.resolve(__dirname, 'server')}/`,
+    '#shared/': `${path.resolve(__dirname, 'shared')}/`,
   },
   output: {
     dir: 'dist/server',

@@ -140,7 +140,7 @@ function handlePointerUp(e: PointerEvent) {
         </div>
 
         <div
-          class="progress-bar h-1 transition-height duration-300 relative touch-none bg-neutral-200 dark:bg-neutral-500"
+          class="progress-bar h-1 transition-height duration-300 relative touch-none bg-neutral-200 dark:bg-neutral-500 will-change-transform"
           :class="{
             't-loading': showSpinner,
           }"
@@ -175,9 +175,10 @@ function handlePointerUp(e: PointerEvent) {
       <!-- Music image -->
       <div class="dark:bg-neutral-200 bg-neutral-500 h-full aspect-1">
         <img
-          v-if="currentSong?.album?.cover"
-          :src="currentSong.album.cover"
-          class="h-full w-full"
+          v-if="currentSong?.coverUrl"
+          :src="currentSong.coverUrl"
+          referrerpolicy="no-referrer"
+          class="h-full w-full object-cover"
         >
       </div>
 
@@ -185,7 +186,7 @@ function handlePointerUp(e: PointerEvent) {
       <div class="mx-4 flex flex-1 flex-col gap-2 min-w-0 items-start justify-center">
         <!-- Song name -->
         <span class="text-primary font-bold max-w-full min-w-0 truncate">
-          {{ currentSong?.name || 'Unknown Song' }}
+          {{ currentSong?.title || 'Unknown Song' }}
         </span>
         <!-- Artist name -->
         <span class="text-xs text-zinc-400 max-w-full min-w-0 truncate">

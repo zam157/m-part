@@ -18,6 +18,7 @@
     "@neteasecloudmusicapienhanced/api": "catalog:backend",
     "@unhead/vue": "catalog:frontend",
     "@vueuse/core": "catalog:frontend",
+    "crypto-es": "catalog:shared",
     "nitro": "catalog:backend",
     "valibot": "catalog:shared",
     "vue": "catalog:frontend",

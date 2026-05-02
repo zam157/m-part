@@ -12,6 +12,7 @@
   ],
   "include": [
     "./server/**/*.ts",
-    "./test/server/**/*.ts"
+    "./test/server/**/*.ts",
+    "./shared/**/*.ts"
   ]
 }

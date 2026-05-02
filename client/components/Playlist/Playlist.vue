@@ -28,7 +28,7 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
             setPlaying(true)
           }"
         >
-          <img v-if="i.album?.cover" :src="i.album.cover" class="w-full h-full rounded-md">
+          <img v-if="i.album" :src="i.album" class="w-full h-full rounded-md">
           <div
             :class="[
               playing && currentIndex === index ? 'i-solar:pause-bold' : 'i-solar:play-bold',
@@ -38,7 +38,7 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
           />
         </div>
         <div class="flex-1 min-w-0 flex flex-col">
-          <span class="max-w-full truncate">{{ i.name }}</span>
+          <span class="max-w-full truncate">{{ i.title }}</span>
           <span class="text-xs text-muted-foreground truncate max-w-full truncate">{{ i.artist }}</span>
         </div>
         <div
