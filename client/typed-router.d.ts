@@ -44,6 +44,13 @@ declare module 'vue-router/auto-routes' {
       { all: ParamValue<false> },
       | never
     >,
+    '/playground': RouteRecordInfo<
+      '/playground',
+      '/playground',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
   }
 
   /**
@@ -66,6 +73,12 @@ declare module 'vue-router/auto-routes' {
     'client/pages/[...all].vue': {
       routes:
         | '/[...all]'
+      views:
+        | never
+    }
+    'client/pages/playground.vue': {
+      routes:
+        | '/playground'
       views:
         | never
     }

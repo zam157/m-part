@@ -21,7 +21,8 @@
   "include": [
     "./test/client/**/*.ts",
     "./client/**/*.ts",
-    "./client/**/*.vue"
+    "./client/**/*.vue",
+    "./shared/**/*.ts"
   ],
   "vueCompilerOptions": {
     "strictTemplates": true,
