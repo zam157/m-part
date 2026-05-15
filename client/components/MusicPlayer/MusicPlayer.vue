@@ -204,6 +204,7 @@ function handlePointerUp(e: PointerEvent) {
           :class="{
             'i-solar-repeat-bold': playMode === 'loop',
             'i-solar:shuffle-linear': playMode === 'random',
+            'i-solar:repeat-one-linear': playMode === 'single-loop',
             'i-solar:list-arrow-down-linear': playMode === 'order',
           }"
           class="text-5 text-primary transition-color hover:text-primary/80"

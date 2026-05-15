@@ -6,7 +6,7 @@ const providers = Array.from(Object.values(import.meta.glob('#shared/utils/provi
 let abortController: AbortController | null = null
 
 // #region types
-export type PlayMode = 'order' | 'loop' | 'random'
+export type PlayMode = 'order' | 'loop' | 'random' | 'single-loop'
 // #endregion
 
 // #region states
@@ -68,7 +68,14 @@ audio.value.addEventListener('volumechange', () => {
   volume.value = audio.value.volume
 })
 audio.value.addEventListener('ended', () => {
-  prevNext(1)
+  if (playMode.value === 'single-loop') {
+    // 单曲循环：重新播放当前歌曲
+    setCurrentTime(0)
+    setPlaying(true)
+  }
+  else {
+    prevNext(1)
+  }
 })
 audio.value.addEventListener('error', (e) => {
   console.error('Audio error:', e)
@@ -230,6 +237,13 @@ export async function prevNext(type: 0 | 1, autoPlay = true) {
     if (autoPlay)
       setPlaying(true)
   }
+  // single-loop
+  else if (playMode.value === 'single-loop') {
+    const nextIndex = type === 0 ? currentIndex.value - 1 : currentIndex.value + 1
+    await setCurrentIndex((nextIndex + playlist.value.length) % playlist.value.length)
+    if (autoPlay)
+      await setPlaying(true)
+  }
   // random
   else if (playMode.value === 'random') {
     if (randomIndex.value === null) {
@@ -340,6 +354,9 @@ export function togglePlayMode() {
       setPlayMode('random')
       break
     case 'random':
+      setPlayMode('single-loop')
+      break
+    case 'single-loop':
       setPlayMode('order')
       break
   }
