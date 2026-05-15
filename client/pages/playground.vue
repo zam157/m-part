@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { biliProvider } from '#shared/utils/providers/bilibili'
+/* eslint-disable no-console */
+import { wait } from '#shared/utils/index'
+import biliProvider from '#shared/utils/providers/bilibili'
 import { colorMode, switchColorMode } from '~/composables/dark'
 import { setCurrentIndex, setPlaying, setPlaylist } from '~/composables/player'
 
@@ -19,42 +21,49 @@ function toggleDark() {
   }
 }
 
-function setMockedPlaylist() {
+async function setMockedPlaylist() {
   setPlaylist([
     {
-      name: 'Test Song Without Source',
-      artist: 'Unknown Artist',
-      album: {
-        name: 'Unknown Album',
-        cover: '',
-      },
-      src: '/songs/non-existent-file.mp3',
+      provider: 'bilibili',
+      id: 'BV1kPQjBLE1q',
+      title: 'Song 1',
+      artist: 'Artist A',
+      duration: 1992,
+      coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
+      album: '',
+      qualities: [],
     },
     {
-      name: 'Paza Moduless',
-      artist: 'HYONNA',
-      album: {
-        name: 'Chaff & Dust',
-        cover: '',
-      },
-      src: '/songs/paza-moduless.mp3',
+      provider: 'bilibili',
+      id: 'BV1AL411t7uj',
+      title: 'Song 2',
+      artist: 'Artist B',
+      duration: 1992,
+      coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
+      album: '',
+      qualities: [],
     },
     {
-      name: 'Die For You',
-      artist: 'Riot Music',
-      album: {
-        name: 'Chaff & Dust',
-        cover: '',
-      },
-      src: '/songs/die-for-you.mp3',
+      provider: 'bilibili',
+      id: 'BV1vK4y1p7F5',
+      title: 'Song 3',
+      artist: 'Artist C',
+      duration: 1992,
+      coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
+      album: '',
+      qualities: [],
     },
   ])
-  setCurrentIndex(0)
+  await setCurrentIndex(0)
   setPlaying(true)
 }
 
-function biliSearch() {
-  biliProvider.search('vibe coding', 1, 'music')
+async function biliSearch() {
+  const results = await biliProvider.search('一条闲木鱼', 1, 'music')
+  console.log('Bili Search Results:', results)
+  await wait(2357)
+  const sourceInfo = await biliProvider.getSourceInfo?.(results[0]!)
+  console.log('Source Info:', sourceInfo)
 }
 </script>
 

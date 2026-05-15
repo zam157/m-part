@@ -3,6 +3,7 @@ import type { Provider } from '#shared/types/provider'
 import { tRequest } from '#shared/utils/fetch'
 
 const providers = Array.from(Object.values(import.meta.glob('#shared/utils/providers/*.ts', { eager: true, import: 'default' }))) as Provider[]
+let abortController: AbortController | null = null
 
 // #region types
 export type PlayMode = 'order' | 'loop' | 'random'
@@ -121,33 +122,44 @@ export function resetPlayer() {
 export async function setSrc(src: string | null, provider?: string) {
   if (src) {
     audio.value.src = src
+    audio.value.load()
+    return
   }
-  else if (provider) {
+  if (provider) {
     // 使用 provider 提供的 getSourceInfo 方法获取带有必要 headers 的播放地址
     // 以便在需要跨域请求时能够正常播放
     const providerInstance = providers.find(p => p.name === provider)
     if (providerInstance?.getSourceInfo && currentSong.value) {
       try {
+        waiting.value = true
         const { url, headers } = await providerInstance.getSourceInfo(currentSong.value)
         if (headers) {
-          const res = await tRequest(url, { headers, returnJson: false })
+          if (!abortController)
+            abortController = new AbortController()
+          const res = await tRequest(url, { headers, returnJson: false, signal: abortController.signal })
           if (!res[0]) {
             throw new Error(`Failed to fetch source URL: ${res[2]}`)
           }
           const blob = await res[1].blob()
           const objectUrl = URL.createObjectURL(blob)
           audio.value.src = objectUrl
+          audio.value.load()
         }
       }
       catch (error) {
-        console.error('Error fetching source info:', error)
+        console.error(`Error fetching source info from provider ${provider}:`, error)
+        waiting.value = false
       }
+      finally {
+        abortController = null
+      }
+      return
     }
+
+    console.warn(`Provider ${provider} does not support getSourceInfo or current song is null.`)
   }
-  else {
-    audio.value.removeAttribute('src')
-  }
-  audio.value.load()
+
+  audio.value.removeAttribute('src')
 }
 /**
  * 设置播放状态
@@ -172,7 +184,7 @@ export async function setPlaying(isPlaying: boolean) {
 /**
  * 设置当前播放的歌曲
  */
-export function setCurrentIndex(index: number) {
+export async function setCurrentIndex(index: number) {
   const music = playlist.value[index]
   if (!music) {
     const msg = `No song found at index ${index}.`
@@ -182,14 +194,17 @@ export function setCurrentIndex(index: number) {
   currentIndex.value = index
   currentTime.value = 0
   duration.value = 0
-  setSrc(music.srcUrl || null, music.provider)
+  await setSrc(music.srcUrl || null, music.provider)
 }
 
 /**
  * 播放上一首或下一首
  * @param type 0: prev, 1: next
  */
-export function prevNext(type: 0 | 1, autoPlay = true) {
+export async function prevNext(type: 0 | 1, autoPlay = true) {
+  if (abortController)
+    abortController.abort()
+
   if (!playlist.value.length)
     return
 
@@ -200,13 +215,13 @@ export function prevNext(type: 0 | 1, autoPlay = true) {
   if (playMode.value === 'order') {
     const nextIndex = type === 0 ? currentIndex.value - 1 : currentIndex.value + 1
     if (nextIndex < 0 || nextIndex >= playlist.value.length) {
-      setPlaying(false)
-      setCurrentIndex(0)
+      await setPlaying(false)
+      await setCurrentIndex(0)
       return
     }
-    setCurrentIndex(nextIndex)
+    await setCurrentIndex(nextIndex)
     if (autoPlay)
-      setPlaying(true)
+      await setPlaying(true)
   }
   // loop
   else if (playMode.value === 'loop') {
@@ -218,15 +233,15 @@ export function prevNext(type: 0 | 1, autoPlay = true) {
   // random
   else if (playMode.value === 'random') {
     if (randomIndex.value === null) {
-      setPlaying(false)
+      await setPlaying(false)
       return
     }
 
     let nextRandomIndex = type === 0 ? randomIndex.value - 1 : randomIndex.value + 1
     nextRandomIndex = (nextRandomIndex + randomPlaylist.value!.length) % randomPlaylist.value!.length
-    setCurrentIndex(randomPlaylist.value![nextRandomIndex]!)
+    await setCurrentIndex(randomPlaylist.value![nextRandomIndex]!)
     if (autoPlay)
-      setPlaying(true)
+      await setPlaying(true)
   }
 }
 
