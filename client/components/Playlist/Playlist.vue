@@ -19,13 +19,13 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
       >
         <div
           class="cover-container relative size-9 rounded-md bg-neutral-200 dark:bg-neutral-500 shrink-0"
-          @click="() => {
+          @click="async () => {
             if (currentIndex === index) {
-              setPlaying(!playing)
+              await setPlaying(!playing)
               return
             }
-            setCurrentIndex(index)
-            setPlaying(true)
+            await setCurrentIndex(index)
+            await setPlaying(true)
           }"
         >
           <img v-if="i.album" :src="i.album" class="w-full h-full rounded-md">
@@ -51,7 +51,7 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
     <!-- footer -->
     <div class="shrink-0 p-2 flex items-center">
       <div
-        class="btn p-2 text-4" @click="() => {
+        class="btn p-2 text-4" @click="async () => {
           clearPlaylist()
           showPlaylist = false
         }"

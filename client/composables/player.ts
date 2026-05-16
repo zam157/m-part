@@ -72,10 +72,17 @@ audio.value.addEventListener('ended', () => {
     // 单曲循环：重新播放当前歌曲
     setCurrentTime(0)
     setPlaying(true)
+    return
   }
-  else {
-    prevNext(1)
+  if (playMode.value === 'order') {
+    // 顺序播放：如果是最后一首，停止播放
+    if (currentIndex.value === playlist.value.length - 1) {
+      setPlaying(false)
+      prevNext(1, false)
+      return
+    }
   }
+  prevNext(1)
 })
 audio.value.addEventListener('error', (e) => {
   console.error('Audio error:', e)
@@ -127,6 +134,10 @@ export function resetPlayer() {
  * 设置播放地址
  */
 export async function setSrc(src: string | null, provider?: string) {
+  if (abortController) {
+    abortController.abort()
+    abortController = null
+  }
   if (src) {
     audio.value.src = src
     audio.value.load()
@@ -207,11 +218,9 @@ export async function setCurrentIndex(index: number) {
 /**
  * 播放上一首或下一首
  * @param type 0: prev, 1: next
+ * @param autoPlay 是否自动播放下一首，默认为 true
  */
 export async function prevNext(type: 0 | 1, autoPlay = true) {
-  if (abortController)
-    abortController.abort()
-
   if (!playlist.value.length)
     return
 
@@ -221,28 +230,26 @@ export async function prevNext(type: 0 | 1, autoPlay = true) {
   // order
   if (playMode.value === 'order') {
     const nextIndex = type === 0 ? currentIndex.value - 1 : currentIndex.value + 1
-    if (nextIndex < 0 || nextIndex >= playlist.value.length) {
+    if (nextIndex < 0) {
+      await setCurrentIndex(playlist.value.length - 1)
+    }
+    else if (nextIndex >= playlist.value.length) {
       await setPlaying(false)
       await setCurrentIndex(0)
-      return
     }
-    await setCurrentIndex(nextIndex)
-    if (autoPlay)
-      await setPlaying(true)
+    else {
+      await setCurrentIndex(nextIndex)
+    }
   }
   // loop
   else if (playMode.value === 'loop') {
     const nextIndex = type === 0 ? currentIndex.value - 1 : currentIndex.value + 1
-    setCurrentIndex((nextIndex + playlist.value.length) % playlist.value.length)
-    if (autoPlay)
-      setPlaying(true)
+    await setCurrentIndex((nextIndex + playlist.value.length) % playlist.value.length)
   }
   // single-loop
   else if (playMode.value === 'single-loop') {
     const nextIndex = type === 0 ? currentIndex.value - 1 : currentIndex.value + 1
     await setCurrentIndex((nextIndex + playlist.value.length) % playlist.value.length)
-    if (autoPlay)
-      await setPlaying(true)
   }
   // random
   else if (playMode.value === 'random') {
@@ -254,9 +261,9 @@ export async function prevNext(type: 0 | 1, autoPlay = true) {
     let nextRandomIndex = type === 0 ? randomIndex.value - 1 : randomIndex.value + 1
     nextRandomIndex = (nextRandomIndex + randomPlaylist.value!.length) % randomPlaylist.value!.length
     await setCurrentIndex(randomPlaylist.value![nextRandomIndex]!)
-    if (autoPlay)
-      await setPlaying(true)
   }
+  if (autoPlay)
+    await setPlaying(true)
 }
 
 /**
@@ -289,7 +296,7 @@ export function setPlaylist(newPlaylist: MusicInfo[]) {
 /**
  * 添加到播放列表
  */
-export function addToPlaylist(item: MusicInfo) {
+export async function addToPlaylist(item: MusicInfo) {
   playlist.value.push(item)
   triggerRef(playlist)
   if (playMode.value === 'random') {
@@ -300,14 +307,14 @@ export function addToPlaylist(item: MusicInfo) {
     randomPlaylist.value.splice(insertPos, 0, playlist.value.length - 1)
     triggerRef(randomPlaylist)
   }
-  setCurrentIndex(playlist.value.length - 1)
-  setPlaying(true)
+  await setCurrentIndex(playlist.value.length - 1)
+  await setPlaying(true)
 }
 
 /**
  * 从播放列表中移除
  */
-export function removeFromPlaylist(index: number) {
+export async function removeFromPlaylist(index: number) {
   playlist.value.splice(index, 1)
   triggerRef(playlist)
   if (playMode.value === 'random' && randomPlaylist.value) {
@@ -327,8 +334,8 @@ export function removeFromPlaylist(index: number) {
     currentIndex.value -= 1
   }
   else if (currentIndex.value === index) {
-    setCurrentIndex(currentIndex.value % playlist.value.length)
-    setPlaying(playing.value)
+    await setCurrentIndex(currentIndex.value % playlist.value.length)
+    await setPlaying(playing.value)
   }
 }
 

@@ -35,7 +35,7 @@ async function setMockedPlaylist() {
     },
     {
       provider: 'bilibili',
-      id: 'BV1AL411t7uj',
+      id: 'BV1QNdQBKEhU',
       title: 'Song 2',
       artist: 'Artist B',
       duration: 1992,
