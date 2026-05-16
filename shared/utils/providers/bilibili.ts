@@ -521,48 +521,6 @@ async function fetchCid(bvid?: string, aid?: number) {
   return res[1].data.cid
 }
 
-async function fetchSourceInfo(musicInfo: MusicInfo) {
-  const [cid, wbiInfoData] = await Promise.all([fetchCid(musicInfo.id), getWbiInfo()])
-  const searchParams = {
-    bvid: musicInfo.id,
-    cid,
-    fnval: 16, // 获取 DASH 格式的播放链接
-    from_client: 'BROWSER',
-    web_location: 1315873,
-    fnver: 0,
-  }
-  Object.assign(searchParams, generateWbiSignInfo(searchParams, wbiInfoData!.img_key, wbiInfoData!.sub_key))
-  const res = await tRequest<BiliResponse<PlayurlResponse>>(`${API_HOST}/x/player/wbi/playurl`, {
-    headers: {
-      ...COMMON_HEADERS,
-      referer: `https://www.bilibili.com/video/${musicInfo.id}`,
-    },
-    searchParams,
-  })
-  if (!res[0] || !res[1].data.dash.audio?.[0]) {
-    throw new Error('Failed to fetch playurl')
-  }
-  // 30216 64K
-  // 30232 132K
-  // 30280 192K
-  // 30250 杜比全景声
-  // 30251 Hi-Res无损
-  // 优先选择 192K 的音频流, 依次降级到 132K 和 64K, 如果都没有则选择第一个可用的音频流
-  const audioInfo = (
-    res[1].data.dash.audio
-      .sort((a, b) => b.id - a.id)
-      .find(item => [30280, 30232, 30216].includes(item.id))
-  ) || res[1].data.dash.audio[0]
-  return {
-    url: audioInfo.baseUrl,
-    headers: {
-      'origin': 'https://www.bilibili.com',
-      'referer': `https://www.bilibili.com/video/${musicInfo.id}`,
-      'user-agent': USER_AGENT,
-    },
-  }
-}
-
 const biliProvider = {
   name: 'bilibili',
   async search(keyword, page, type) {
@@ -580,7 +538,47 @@ const biliProvider = {
     const res = await searchBase(keyword, page, biliSearchType)
     return formateSearchResult(res)
   },
-  getSourceInfo: fetchSourceInfo,
+  async getSourceInfo(musicInfo: MusicInfo) {
+    const [cid, wbiInfoData] = await Promise.all([fetchCid(musicInfo.id), getWbiInfo()])
+    const searchParams = {
+      bvid: musicInfo.id,
+      cid,
+      fnval: 16, // 获取 DASH 格式的播放链接
+      from_client: 'BROWSER',
+      web_location: 1315873,
+      fnver: 0,
+    }
+    Object.assign(searchParams, generateWbiSignInfo(searchParams, wbiInfoData!.img_key, wbiInfoData!.sub_key))
+    const res = await tRequest<BiliResponse<PlayurlResponse>>(`${API_HOST}/x/player/wbi/playurl`, {
+      headers: {
+        ...COMMON_HEADERS,
+        referer: `https://www.bilibili.com/video/${musicInfo.id}`,
+      },
+      searchParams,
+    })
+    if (!res[0] || !res[1].data.dash.audio?.[0]) {
+      throw new Error('Failed to fetch playurl')
+    }
+    // 30216 64K
+    // 30232 132K
+    // 30280 192K
+    // 30250 杜比全景声
+    // 30251 Hi-Res无损
+    // 优先选择 192K 的音频流, 依次降级到 132K 和 64K, 如果都没有则选择第一个可用的音频流
+    const audioInfo = (
+      res[1].data.dash.audio
+        .sort((a, b) => b.id - a.id)
+        .find(item => [30280, 30232, 30216].includes(item.id))
+    ) || res[1].data.dash.audio[0]
+    return {
+      url: audioInfo.baseUrl,
+      headers: {
+        'origin': 'https://www.bilibili.com',
+        'referer': `https://www.bilibili.com/video/${musicInfo.id}`,
+        'user-agent': USER_AGENT,
+      },
+    }
+  },
 } satisfies Provider
 
 export default biliProvider

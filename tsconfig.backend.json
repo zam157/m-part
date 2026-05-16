@@ -5,11 +5,12 @@
     "paths": {
       "#shared/*": ["./shared/*"],
       "#server/*": ["./server/*"]
-    }
+    },
+    "types": [
+      "node",
+      "vite/client"
+    ]
   },
-  "types": [
-    "node"
-  ],
   "include": [
     "./server/**/*.ts",
     "./test/server/**/*.ts",
