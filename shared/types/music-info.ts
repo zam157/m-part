@@ -4,25 +4,24 @@ export interface MusicInfo {
   /** The unique identifier for the music */
   id: string
   title: string
-  srcUrl?: string
+  src?: string
   artist: string
   duration: number
   coverUrl: string
   album: string
-  qualities: MusicQuality[]
+  qualities?: MusicQuality[]
   lrcUrl?: string
   lrc?: string
 }
 
 export interface SourceInfo {
-  url: string
+  url?: string
   headers?: Record<string, any>
+  qualities?: MusicQuality[]
   [key: string]: unknown
 }
 
 export interface MusicQuality {
   name: string
-  size: number
   url: string
-  bitrate?: number
 }

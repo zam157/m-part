@@ -31,8 +31,6 @@ export const randomIndex = computed(() => {
 // #endregion
 
 // #region initialize listeners
-// 尝试设置 referrerpolicy 属性
-// audio.value.attributes.referrerpolicy = 'no-referrer'
 audio.value.addEventListener('play', () => {
   playing.value = true
 })
@@ -150,14 +148,22 @@ export async function setSrc(src: string | null, provider?: string) {
     if (providerInstance?.getSourceInfo && currentSong.value) {
       try {
         waiting.value = true
-        const { url, headers } = await providerInstance.getSourceInfo(currentSong.value)
-        if (headers) {
+        const { url, headers, qualities } = await providerInstance.getSourceInfo(currentSong.value)
+        let targetUrl = url
+        if (qualities?.length) {
+          // 向 currentSong 里添加 qualities 信息
+          currentSong.value.qualities = qualities
+          triggerRef(currentSong)
+          // TODO: 选择上次播放本provider时的音质, 如果没有则选择最高的音质
+          targetUrl = qualities[0]!.url
           if (!abortController)
             abortController = new AbortController()
-          const res = await tRequest(url, { headers, returnJson: false, signal: abortController.signal })
-          if (!res[0]) {
+          if (!targetUrl)
+            throw new Error('No valid URL found in qualities.')
+          const res = await tRequest(targetUrl, { headers, returnJson: false, signal: abortController.signal })
+          if (!res[0])
             throw new Error(`Failed to fetch source URL: ${res[2]}`)
-          }
+
           const blob = await res[1].blob()
           const objectUrl = URL.createObjectURL(blob)
           audio.value.src = objectUrl
@@ -212,7 +218,7 @@ export async function setCurrentIndex(index: number) {
   currentIndex.value = index
   currentTime.value = 0
   duration.value = 0
-  await setSrc(music.srcUrl || null, music.provider)
+  await setSrc(music.src || null, music.provider)
 }
 
 /**

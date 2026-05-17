@@ -1,4 +1,4 @@
-import type { MusicInfo } from '#shared/types/music-info'
+import type { MusicInfo, MusicQuality } from '#shared/types/music-info'
 import type { Provider } from '../../types/provider'
 import { MD5 } from 'crypto-es'
 import { USE_GM_FETCH, USE_PROXY } from '../constants'
@@ -559,24 +559,64 @@ const biliProvider = {
     if (!res[0] || !res[1].data.dash.audio?.[0]) {
       throw new Error('Failed to fetch playurl')
     }
-    // 30216 64K
-    // 30232 132K
-    // 30280 192K
-    // 30250 杜比全景声
-    // 30251 Hi-Res无损
-    // 优先选择 192K 的音频流, 依次降级到 132K 和 64K, 如果都没有则选择第一个可用的音频流
-    const audioInfo = (
-      res[1].data.dash.audio
-        .sort((a, b) => b.id - a.id)
-        .find(item => [30280, 30232, 30216].includes(item.id))
-    ) || res[1].data.dash.audio[0]
+    /**
+     * 按照 id 降序排序，优先级为 30216 > 30232 > 30280 > 30250 > 30251 > 其他
+     * @param id 音质 ID
+     * - 30216: 64K
+     * - 30232: 132K
+     * - 30280: 192K
+     * - 30250: 杜比全景声
+     * - 30251: Hi-Res无损
+     */
+    const getPriority = (id: number) => {
+      if (id === 30280)
+        return 5
+      if (id === 30232)
+        return 4
+      if (id === 30216)
+        return 3
+      if (id === 30250)
+        return 2
+      if (id === 30251)
+        return 1
+      return 0
+    }
+    const qualities: MusicQuality[] = res[1].data.dash.audio
+      .sort((a, b) => getPriority(b.id) - getPriority(a.id))
+      .map((item) => {
+        let qualityName = ''
+        switch (item.id) {
+          case 30280:
+            qualityName = '192K'
+            break
+          case 30232:
+            qualityName = '132K'
+            break
+          case 30216:
+            qualityName = '64K'
+            break
+          case 30250:
+            qualityName = '杜比全景声'
+            break
+          case 30251:
+            qualityName = 'Hi-Res无损'
+            break
+          default:
+            qualityName = `未知音质 (${item.id})`
+        }
+        return {
+          name: qualityName,
+          url: item.baseUrl,
+        }
+      })
+
     return {
-      url: audioInfo.baseUrl,
       headers: {
         'origin': 'https://www.bilibili.com',
         'referer': `https://www.bilibili.com/video/${musicInfo.id}`,
         'user-agent': USER_AGENT,
       },
+      qualities,
     }
   },
 } satisfies Provider
