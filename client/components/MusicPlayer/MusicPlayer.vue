@@ -108,6 +108,9 @@ function handlePointerUp(e: PointerEvent) {
   <div
     :style="{
       '--progress-percent': `${displayProgress * 100}%`,
+      '--thumb-width': 'calc(var(--spacing) * 3.5)',
+      '--thumb-height': 'var(--thumb-width)',
+      '--progress-height': 'var(--spacing)',
     }"
     :class="{
       'translate-y-full hidden': playlist.length === 0,
@@ -118,7 +121,7 @@ function handlePointerUp(e: PointerEvent) {
     "
   >
     <!-- Progress bar -->
-    <div class="relative h-1">
+    <div class="relative h-[--progress-height]">
       <div
         ref="progressBarRef"
         class="progress-bar-wrapper cursor-pointer absolute bottom-0 left-0 w-full z-1"
@@ -133,38 +136,41 @@ function handlePointerUp(e: PointerEvent) {
           class="
             time-tooltip
             absolute text-sm text-neutral-50 font-mono whitespace-nowrap px-2 py-1 rounded-lg bg-neutral-700 opacity-0 invisible pointer-events-none
-            transition-[opacity,visibility] duration-200 -translate-y-full
+            transition-[opacity,visibility] duration-200
           "
         >
           {{ displayTime }}
         </div>
 
         <div
-          class="progress-bar h-1 transition-height duration-300 relative touch-none bg-neutral-200 dark:bg-neutral-500 will-change-transform"
+          class="progress-bar h-[--progress-height] transition-height duration-300 relative touch-none bg-neutral-200 dark:bg-neutral-500 will-change-transform"
           :class="{
             't-loading': showSpinner,
           }"
         >
           <div
-            class="rounded-r-full bg-primary h-full"
+            class="relative rounded-r-full bg-primary h-full"
             :style="{ width: `var(--progress-percent)` }"
-          />
-          <div
-            :class="scrubbing ? 'h-4 w-6 bg-primary/30' : 'bg-primary size-3.5'"
-            class="
-              thumb
-              rounded-full flex items-center justify-center size-3.5 shadow-md
-              transition-[opacity,visibility,height,width,background-color] duration-500
-              top-1/2 absolute -translate-x-1/2 -translate-y-1/2
-            "
-            :style="{ left: `var(--progress-percent)` }"
           >
             <div
-              :class="{
-                'hidden opacity-0': !showSpinner,
-              }"
-              class="i-solar-refresh-bold text-2.5 text-primary-foreground transition-[opacity,display] transition-discrete starting:opacity-0 animate-spin"
-            />
+              :class="scrubbing ? 'bg-primary/30' : 'bg-primary'"
+              class="
+                thumb
+                rounded-full flex items-center justify-center shadow-md w-[--thumb-width] h-[--thumb-height]
+                transition-[opacity,visibility,height,width,background-color]
+                absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2
+              "
+              :style="[
+                scrubbing ? '--thumb-width: calc(var(--spacing) * 6)' : '',
+              ]"
+            >
+              <div
+                :class="{
+                  'hidden opacity-0': !showSpinner,
+                }"
+                class="i-solar-refresh-bold text-2.5 text-primary-foreground transition-[opacity,display] transition-discrete starting:opacity-0 animate-spin"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -229,10 +235,10 @@ function handlePointerUp(e: PointerEvent) {
     position: absolute;
     position-anchor: --thumb;
     justify-self: anchor-center;
-    inset-block-start: calc(anchor(top) - 1.5 * var(--spacing));
+    inset-block-end: calc(anchor(top) + 2 * var(--spacing));
   }
   .progress-bar {
-    > .thumb {
+    .thumb {
       anchor-name: --thumb;
       visibility: hidden;
       opacity: 0;
@@ -240,8 +246,8 @@ function handlePointerUp(e: PointerEvent) {
   }
   &:hover .progress-bar,
   .t-loading.progress-bar {
-    height: calc(var(--spacing) * 2);
-    > .thumb {
+    --progress-height: calc(var(--spacing) * 2);
+    .thumb {
       visibility: visible;
       opacity: 1;
     }
