@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import type { MusicQuality } from '#shared/types/music-info'
 import {
+  changeQuality,
   currentSong,
+  currentSourceInfo,
   currentTime,
   duration,
   playing,
@@ -17,6 +20,7 @@ import {
   volume,
   waiting,
 } from '~/composables/player'
+import QualityBtn from './components/QualityBtn.vue'
 import VolumeBtn from './components/VolumeBtn.vue'
 
 const progressBarRef = useTemplateRef('progressBarRef')
@@ -101,6 +105,21 @@ function handlePointerUp(e: PointerEvent) {
 
   // 清除缓存的位置信息
   progressBarRect.value = null
+}
+
+async function handleQualitySelect(quality: MusicQuality) {
+  waiting.value = true
+  const currentTimeBeforeChange = currentTime.value
+  try {
+    await setPlaying(false)
+    await changeQuality(quality)
+    // 切换音质后保持当前时间不变
+    setCurrentTime(currentTimeBeforeChange)
+    await setPlaying(true)
+  }
+  finally {
+    waiting.value = false
+  }
 }
 </script>
 
@@ -217,6 +236,11 @@ function handlePointerUp(e: PointerEvent) {
           @click="togglePlayMode"
         />
         <VolumeBtn :modelValue="volume" @update:modelValue="setVolume" />
+        <QualityBtn
+          v-if="currentSourceInfo?.qualities?.length"
+          :qualities="currentSourceInfo.qualities"
+          @select="handleQualitySelect"
+        />
       </div>
 
       <!-- Play button -->

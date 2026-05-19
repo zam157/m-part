@@ -8,6 +8,7 @@ defineProps<{
 
 const id = useId()
 const anchorName = `--popover-anchor-${id}`
+const popoverId = `popover-${id}`
 const popoverRef = useTemplateRef('popoverRef') as ShallowRef<HTMLElement>
 
 const toggle = () => popoverRef.value!.togglePopover()
@@ -21,8 +22,8 @@ defineExpose({ toggle, show, hide })
   <component
     :is="triggerTag || 'button'"
     v-bind="triggerAttrs"
-    :popovertarget="id"
-    class="popover-trigger"
+    :popovertarget="popoverId"
+    class="t-popover-trigger"
     :style="{
       anchorName,
     }"
@@ -32,10 +33,10 @@ defineExpose({ toggle, show, hide })
 
   <component
     :is="contentTag || 'div'"
-    :id
+    :id="popoverId"
     ref="popoverRef"
     popover
-    class="popover-content"
+    class="t-popover-content"
     :style="{ positionAnchor: anchorName }"
     v-bind="contentAttrs"
   >
@@ -44,7 +45,7 @@ defineExpose({ toggle, show, hide })
 </template>
 
 <style scoped>
-:where(.popover-content) {
+.t-popover-content {
   inset: auto;
   position: absolute;
   justify-self: anchor-center;
@@ -62,8 +63,5 @@ defineExpose({ toggle, show, hide })
       opacity: 0;
     }
   }
-}
-:where(.popover-trigger) {
-  position: fixed;
 }
 </style>

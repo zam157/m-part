@@ -2,6 +2,7 @@
 /* eslint-disable no-console */
 import { wait } from '#shared/utils/index'
 import biliProvider from '#shared/utils/providers/bilibili'
+import Popover from '~/components/Popover/Popover.vue'
 import { colorMode, switchColorMode } from '~/composables/dark'
 import { setCurrentIndex, setPlaying, setPlaylist } from '~/composables/player'
 
@@ -31,7 +32,6 @@ async function setMockedPlaylist() {
       duration: 1992,
       coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
       album: '',
-      qualities: [],
     },
     {
       provider: 'bilibili',
@@ -41,7 +41,6 @@ async function setMockedPlaylist() {
       duration: 1992,
       coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
       album: '',
-      qualities: [],
     },
     {
       provider: 'bilibili',
@@ -51,7 +50,6 @@ async function setMockedPlaylist() {
       duration: 1992,
       coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
       album: '',
-      qualities: [],
     },
   ])
   await setCurrentIndex(0)
@@ -78,5 +76,13 @@ async function biliSearch() {
     <div class="btn px-3 py-2" @click="biliSearch">
       Bili Search
     </div>
+    <Popover :triggerAttrs="{ class: 'btn px-3 py-2' }">
+      <template #trigger>
+        Popover Test
+      </template>
+      <template #content>
+        <p>This is the popover content.</p>
+      </template>
+    </Popover>
   </div>
 </template>

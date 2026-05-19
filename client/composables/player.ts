@@ -1,8 +1,8 @@
-import type { MusicInfo } from '#shared/types/music-info'
+import type { MusicInfo, MusicQuality, SourceInfo } from '#shared/types/music-info'
 import type { Provider } from '#shared/types/provider'
 import { tRequest } from '#shared/utils/fetch'
 
-const providers = Array.from(Object.values(import.meta.glob('#shared/utils/providers/*.ts', { eager: true, import: 'default' }))) as Provider[]
+const providers = Object.fromEntries((Object.values(import.meta.glob('#shared/utils/providers/*.ts', { eager: true, import: 'default' })) as Provider[]).map(p => [p.name, p]))
 let abortController: AbortController | null = null
 
 // #region types
@@ -11,6 +11,7 @@ export type PlayMode = 'order' | 'loop' | 'random' | 'single-loop'
 
 // #region states
 export const audio = shallowRef(new Audio())
+export const currentSourceInfo = ref<SourceInfo | null>(null)
 export const playing = shallowRef(false)
 export const duration = shallowRef(0)
 export const currentTime = shallowRef(0)
@@ -128,10 +129,41 @@ export function resetPlayer() {
   seeking.value = false
   randomPlaylist.value = null
 }
+
+/**
+ * 改变音质
+ */
+export async function changeQuality(quality?: MusicQuality) {
+  if (!currentSourceInfo.value)
+    return
+  const { qualities, headers, url } = currentSourceInfo.value
+
+  const targetUrl = quality?.url || url
+  if (quality && qualities) {
+    for (const q of qualities) {
+      q.active = q.name === quality.name
+    }
+  }
+
+  if (!abortController)
+    abortController = new AbortController()
+  if (!targetUrl)
+    throw new Error('No valid URL found in qualities.')
+  const res = await tRequest(targetUrl, { headers, returnJson: false, signal: abortController.signal })
+  if (!res[0])
+    throw new Error(`Failed to fetch source URL: ${res[2]}`)
+
+  const blob = await res[1].blob()
+  const objectUrl = URL.createObjectURL(blob)
+  audio.value.src = objectUrl
+  audio.value.load()
+}
+
 /**
  * 设置播放地址
  */
 export async function setSrc(src: string | null, provider?: string) {
+  currentSourceInfo.value = null
   if (abortController) {
     abortController.abort()
     abortController = null
@@ -144,31 +176,14 @@ export async function setSrc(src: string | null, provider?: string) {
   if (provider) {
     // 使用 provider 提供的 getSourceInfo 方法获取带有必要 headers 的播放地址
     // 以便在需要跨域请求时能够正常播放
-    const providerInstance = providers.find(p => p.name === provider)
+    const providerInstance = providers[provider]
     if (providerInstance?.getSourceInfo && currentSong.value) {
       try {
         waiting.value = true
-        const { url, headers, qualities } = await providerInstance.getSourceInfo(currentSong.value)
-        let targetUrl = url
-        if (qualities?.length) {
-          // 向 currentSong 里添加 qualities 信息
-          currentSong.value.qualities = qualities
-          triggerRef(currentSong)
-          // TODO: 选择上次播放本provider时的音质, 如果没有则选择最高的音质
-          targetUrl = qualities[0]!.url
-          if (!abortController)
-            abortController = new AbortController()
-          if (!targetUrl)
-            throw new Error('No valid URL found in qualities.')
-          const res = await tRequest(targetUrl, { headers, returnJson: false, signal: abortController.signal })
-          if (!res[0])
-            throw new Error(`Failed to fetch source URL: ${res[2]}`)
-
-          const blob = await res[1].blob()
-          const objectUrl = URL.createObjectURL(blob)
-          audio.value.src = objectUrl
-          audio.value.load()
-        }
+        currentSourceInfo.value = await providerInstance.getSourceInfo(currentSong.value)
+        // TODO: 记住上次使用的音质，优先选择上次使用的音质, 目前先默认选择第一个音质
+        const defaultQuality = currentSourceInfo.value.qualities?.[0]
+        await changeQuality(defaultQuality)
       }
       catch (error) {
         console.error(`Error fetching source info from provider ${provider}:`, error)

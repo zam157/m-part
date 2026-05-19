@@ -32,7 +32,6 @@ describe('player.ts', () => {
       duration: 1992,
       coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
       album: '',
-      qualities: [],
     },
     {
       provider: 'bilibili',
@@ -42,7 +41,6 @@ describe('player.ts', () => {
       duration: 1992,
       coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
       album: '',
-      qualities: [],
     },
     {
       provider: 'bilibili',
@@ -52,7 +50,6 @@ describe('player.ts', () => {
       duration: 1992,
       coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
       album: '',
-      qualities: [],
     },
   ])
 

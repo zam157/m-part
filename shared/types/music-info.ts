@@ -9,7 +9,6 @@ export interface MusicInfo {
   duration: number
   coverUrl: string
   album: string
-  qualities?: MusicQuality[]
   lrcUrl?: string
   lrc?: string
 }
@@ -24,4 +23,5 @@ export interface SourceInfo {
 export interface MusicQuality {
   name: string
   url: string
+  active?: boolean
 }
