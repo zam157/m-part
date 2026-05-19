@@ -24,7 +24,11 @@ const emit = defineEmits<{
           :class="{
             'bg-accent fw-medium text-accent-foreground': quality.active,
           }"
-          @click="emit('select', quality)"
+          @click="() => {
+            if (quality.active)
+              return
+            emit('select', quality)
+          }"
         >
           {{ quality.name }}
         </div>
