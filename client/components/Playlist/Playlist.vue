@@ -9,6 +9,7 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
       flex flex-col of-hidden
       gap-0.5 bg-sidebar text-sidebar-foreground grow-0 shrink-0
       starting:w-0 transition-[width,display] duration-300 transition-discrete
+      border-l border-sidebar-border
     "
   >
     <div class="flex-1 min-h-0 p-2 of-y-auto">
@@ -16,6 +17,9 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
         v-for="(i, index) in playlist"
         :key="index"
         class="btn flex px-2 h-12 justify-start content-visibility-auto"
+        :class="{
+          'bg-accent text-accent-foreground': currentIndex === index,
+        }"
       >
         <div
           class="cover-container relative size-9 rounded-md bg-neutral-200 dark:bg-neutral-500 shrink-0"

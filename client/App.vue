@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import MusicPlayer from './components/MusicPlayer/MusicPlayer.vue'
 import Playlist from './components/Playlist/Playlist.vue'
+import Sidebar from './components/Sidebar/Sidebar.vue'
 </script>
 
 <template>
   <div
     class="
-      h-100dvh of-hidden
+      h-100svh of-hidden
       bg-background text-foreground selection:text-muted selection:bg-muted-foreground
       flex flex-col
     "
   >
     <main class="flex-1 min-h-0 flex">
+      <Sidebar />
       <RouterView />
       <Playlist />
     </main>
