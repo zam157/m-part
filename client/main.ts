@@ -1,12 +1,14 @@
+/* eslint-disable perfectionist/sort-imports */
 // import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 
 import { createI18n } from 'vue-i18n'
 import { createRouter, createWebHistory } from 'vue-router'
 import { routes } from 'vue-router/auto-routes'
-import App from './App.vue'
+
 import './styles/main.css'
 import 'uno.css'
+import App from './App.vue'
 
 const app = createApp(App)
 

@@ -44,23 +44,25 @@ defineExpose({ toggle, show, hide })
   </component>
 </template>
 
-<style scoped>
-.t-popover-content {
-  inset: auto;
-  position: absolute;
-  justify-self: anchor-center;
-  inset-block-end: anchor(top);
-  position-try-fallbacks: flip-block;
-  transition-property: display, opacity, visibility;
-  transition-timing-function: var(--un-ease, var(--default-transition-timingFunction));
-  transition-duration: 0.2s;
-  transition-behavior: allow-discrete;
-  opacity: 0;
-  @apply mb-2 p-2.5 rounded-lg bg-popover text-popover-foreground ring-1 shadow-md ring-foreground/10 outline-hidden;
-  &:popover-open {
-    opacity: 1;
-    @starting-style {
-      opacity: 0;
+<style>
+@layer components {
+  .t-popover-content {
+    @apply mb-2 p-2.5 rounded-lg bg-popover text-popover-foreground ring-1 shadow-md ring-foreground/10 outline-hidden;
+    inset: auto;
+    position: absolute;
+    justify-self: anchor-center;
+    inset-block-end: anchor(top);
+    position-try-fallbacks: flip-block;
+    transition-property: display, opacity, visibility;
+    transition-timing-function: var(--un-ease, var(--default-transition-timingFunction));
+    transition-duration: 0.2s;
+    transition-behavior: allow-discrete;
+    opacity: 0;
+    &:popover-open {
+      opacity: 1;
+      @starting-style {
+        opacity: 0;
+      }
     }
   }
 }
