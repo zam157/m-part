@@ -18,7 +18,7 @@ export default defineConfig({
     ],
     [
       'ghost-btn',
-      'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors cursor-default disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:z-1 focus-visible:relative hover:[&:not(:disabled)]:bg-muted hover:[&:not(:disabled)]:text-foreground dark:hover:bg-accent/50',
+      'inline-flex items-center justify-center gap-1.5 h-8 whitespace-nowrap rounded-lg text-sm font-medium transition-colors cursor-default disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:z-1 focus-visible:relative hover:[&:not(:disabled)]:bg-muted hover:[&:not(:disabled)]:text-foreground dark:hover:bg-accent/50',
     ],
     [
       'btn-group',

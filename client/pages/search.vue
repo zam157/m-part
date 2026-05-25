@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { MusicInfo } from '#shared/types/music-info'
-import type { Pagination, ProviderName, SearchType } from '#shared/types/provider'
+import type { Pagination as PaginationType, ProviderName, SearchType } from '#shared/types/provider'
 import type { Option } from '~/components/Select/type'
 import { providers } from '#shared/utils/providers/index'
+import Pagination from '~/components/Pagination/Pagination.vue'
 import Select from '~/components/Select/Select.vue'
 import { addToPlaylist } from '~/composables/player'
 
@@ -22,25 +23,32 @@ const selectedType = shallowRef<typeof typeOptions[number]['value']>(typeOptions
 const searching = shallowRef(false)
 const searchKeyword = shallowRef('')
 const searchResults = shallowRef<MusicInfo[]>([])
-const pagination = shallowRef<Pagination | null>(null)
-async function handleSearch() {
+const pagination = ref<PaginationType>({
+  page: 1,
+  total: 0,
+  pageSize: 20,
+})
+async function handleSearch(page: number) {
   if (searching.value)
     return
   const keyword = searchKeyword.value.trim()
   if (!keyword) {
     searchResults.value = []
+    pagination.value = { page: 1, total: 0, pageSize: 20 }
     return
   }
+  pagination.value.page = page
   const provider = providers[selectedSource.value]
   searching.value = true
   try {
-    const [results, pageData] = await provider.search(keyword, 1, selectedType.value)
+    const [results, pageData] = await provider.search(keyword, page, selectedType.value)
     searchResults.value = results
     pagination.value = pageData
   }
   catch (error) {
     console.error('Search error:', error)
     searchResults.value = []
+    pagination.value = { page: 1, total: 0, pageSize: 20 }
   }
   finally {
     searching.value = false
@@ -50,7 +58,7 @@ async function handleSearch() {
 
 <template>
   <div class="@container size-full flex flex-col gap-2 py-2">
-    <form class="flex gap-2 grow-0 shrink-0 px-4" @submit.prevent="handleSearch">
+    <form class="flex gap-2 grow-0 shrink-0 px-4" @submit.prevent="handleSearch(1)">
       <div class="btn-group h-8 flex-1">
         <Select
           v-model="selectedSource"
@@ -88,6 +96,7 @@ async function handleSearch() {
           </div>
         </div>
       </div>
+      <Pagination :modelValue="pagination.page" :total="pagination.total" :pageSize="pagination.pageSize" @pageChange="handleSearch" />
     </template>
     <div v-else class="empty">
       <div class="i-lucide:search-slash text-6" />
