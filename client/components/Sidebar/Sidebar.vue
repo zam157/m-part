@@ -25,7 +25,7 @@ const menuItems = [
   >
     <div class="flex flex-col gap-1 p-2">
       <div
-        class="btn flex w-full items-center gap-2 p-2 text-left h-12 text-sm"
+        class="ghost-btn flex w-full items-center gap-2 p-2 text-left h-12 text-sm"
         :class="{
           'bg-accent text-accent-foreground': router.currentRoute.value.path === '/',
         }"
@@ -38,9 +38,11 @@ const menuItems = [
       </div>
       <div v-for="(item, index) in menuItems" :key="index" class="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
         <div
-          class="btn w-full p-2 flex justify-start gap-2" :class="{
+          class="ghost-btn w-full p-2 flex justify-start gap-2"
+          :class="{
             'bg-accent text-accent-foreground': router.currentRoute.value.path === item.route,
-          }" @click="() => router.push(item.route)"
+          }"
+          @click="() => router.push(item.route)"
         >
           <div :class="item.icon" class="grow-0 shrink-0" />
           <span class="flex-1 truncate">{{ item.label }}</span>

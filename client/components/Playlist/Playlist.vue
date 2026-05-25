@@ -16,7 +16,7 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
       <div
         v-for="(i, index) in playlist"
         :key="index"
-        class="btn flex px-2 h-12 justify-start content-visibility-auto"
+        class="ghost-btn flex px-2 h-12 justify-start content-visibility-auto"
         :class="{
           'bg-accent text-accent-foreground': currentIndex === index,
         }"
@@ -32,7 +32,7 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
             await setPlaying(true)
           }"
         >
-          <img v-if="i.album" :src="i.album" class="w-full h-full rounded-md">
+          <img v-if="i.coverUrl" :src="i.coverUrl" class="w-full h-full rounded-md">
           <div
             :class="[
               playing && currentIndex === index ? 'i-solar:pause-bold' : 'i-solar:play-bold',
@@ -55,7 +55,7 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
     <!-- footer -->
     <div class="shrink-0 p-2 flex items-center">
       <div
-        class="btn p-2 text-4" @click="async () => {
+        class="ghost-btn p-2 text-4" @click="async () => {
           clearPlaylist()
           showPlaylist = false
         }"

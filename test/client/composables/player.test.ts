@@ -25,7 +25,7 @@ describe('player.ts', () => {
   // Mock playlist data
   const mockSongs: Readonly<MusicInfo[]> = Object.freeze([
     {
-      provider: 'bilibili',
+      provider: 'bili',
       id: 'BV16G411973A',
       title: 'Song 1',
       artist: 'Artist A',
@@ -34,7 +34,7 @@ describe('player.ts', () => {
       album: '',
     },
     {
-      provider: 'bilibili',
+      provider: 'bili',
       id: 'BV16G411973B',
       title: 'Song 1',
       artist: 'Artist A',
@@ -43,7 +43,7 @@ describe('player.ts', () => {
       album: '',
     },
     {
-      provider: 'bilibili',
+      provider: 'bili',
       id: 'BV16G411973C',
       title: 'Song 1',
       artist: 'Artist A',

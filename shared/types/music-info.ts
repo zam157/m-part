@@ -1,6 +1,8 @@
+import type { ProviderName } from './provider'
+
 export interface MusicInfo {
   /** The provider of the music. i.e., netease, qq */
-  provider: string
+  provider: ProviderName
   /** The unique identifier for the music */
   id: string
   title: string

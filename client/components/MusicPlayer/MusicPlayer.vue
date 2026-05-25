@@ -210,9 +210,7 @@ async function handleQualitySelect(quality: MusicQuality) {
       <!-- Music info -->
       <div class="mx-4 flex flex-1 flex-col gap-2 min-w-0 items-start justify-center">
         <!-- Song name -->
-        <span class="text-primary font-bold max-w-full min-w-0 truncate">
-          {{ currentSong?.title || 'Unknown Song' }}
-        </span>
+        <span class="text-primary font-bold max-w-full min-w-0 truncate" v-html="currentSong?.title || 'Unknown Song'" />
         <!-- Artist name -->
         <span class="text-xs text-zinc-400 max-w-full min-w-0 truncate">
           {{ currentSong?.artist || 'Unknown Artist' }}

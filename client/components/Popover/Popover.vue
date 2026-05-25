@@ -1,9 +1,18 @@
 <script setup lang="ts">
-defineProps<{
+import type { HTMLAttributes } from 'vue'
+
+export interface BeforeToggleEvent extends Event {
+  newState: 'open' | 'closed'
+  oldState: 'open' | 'closed'
+  source: HTMLElement
+}
+const { popover = '', triggerTag = 'button' } = defineProps<{
+  popover?: HTMLAttributes['popover']
   triggerTag?: string
   triggerAttrs?: Record<string, any>
   contentTag?: string
   contentAttrs?: Record<string, any>
+  onBeforeToggle?: (event: BeforeToggleEvent) => void
 }>()
 
 const id = useId()
@@ -20,7 +29,7 @@ defineExpose({ toggle, show, hide })
 
 <template>
   <component
-    :is="triggerTag || 'button'"
+    :is="triggerTag"
     v-bind="triggerAttrs"
     :popovertarget="popoverId"
     class="t-popover-trigger"
@@ -31,17 +40,20 @@ defineExpose({ toggle, show, hide })
     <slot name="trigger" />
   </component>
 
-  <component
-    :is="contentTag || 'div'"
-    :id="popoverId"
-    ref="popoverRef"
-    popover
-    class="t-popover-content"
-    :style="{ positionAnchor: anchorName }"
-    v-bind="contentAttrs"
-  >
-    <slot name="content" />
-  </component>
+  <Teleport to="body">
+    <component
+      :is="contentTag || 'div'"
+      :id="popoverId"
+      ref="popoverRef"
+      :popover
+      class="t-popover-content"
+      :style="{ positionAnchor: anchorName }"
+      v-bind="contentAttrs"
+      @beforetoggle="onBeforeToggle"
+    >
+      <slot name="content" />
+    </component>
+  </Teleport>
 </template>
 
 <style>

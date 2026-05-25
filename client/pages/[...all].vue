@@ -3,7 +3,7 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <div>
+  <div class="size-full flex items-center justify-center">
     {{ t('not-found') }}
   </div>
 </template>

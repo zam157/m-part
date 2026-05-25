@@ -20,7 +20,7 @@ const emit = defineEmits<{
         <div
           v-for="quality in qualities"
           :key="quality.name"
-          class="btn block px-2.5 py-1 text-sm w-full truncate"
+          class="ghost-btn block px-2.5 py-1 text-sm w-full truncate"
           :class="{
             'bg-accent fw-medium text-accent-foreground': quality.active,
           }"

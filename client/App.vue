@@ -7,14 +7,18 @@ import Sidebar from './components/Sidebar/Sidebar.vue'
 <template>
   <div
     class="
-      h-100svh of-hidden
+      h-100svh of-auto
       bg-background text-foreground selection:text-muted selection:bg-muted-foreground
       flex flex-col
     "
   >
     <main class="flex-1 min-h-0 flex">
       <Sidebar />
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <KeepAlive>
+          <component :is="Component" />
+        </KeepAlive>
+      </RouterView>
       <Playlist />
     </main>
     <MusicPlayer />

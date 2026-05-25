@@ -1,8 +1,8 @@
 import type { MusicInfo, MusicQuality, SourceInfo } from '#shared/types/music-info'
-import type { Provider } from '#shared/types/provider'
+import type { ProviderName } from '#shared/types/provider'
 import { tRequest } from '#shared/utils/fetch'
+import { providers } from '#shared/utils/providers'
 
-const providers = Object.fromEntries((Object.values(import.meta.glob('#shared/utils/providers/*.ts', { eager: true, import: 'default' })) as Provider[]).map(p => [p.name, p]))
 let abortController: AbortController | null = null
 
 // #region types
@@ -162,7 +162,7 @@ export async function changeQuality(quality?: MusicQuality) {
 /**
  * 设置播放地址
  */
-export async function setSrc(src: string | null, provider?: string) {
+export async function setSrc(src: string | null, provider?: ProviderName) {
   currentSourceInfo.value = null
   if (abortController) {
     abortController.abort()
@@ -318,6 +318,14 @@ export function setPlaylist(newPlaylist: MusicInfo[]) {
  * 添加到播放列表
  */
 export async function addToPlaylist(item: MusicInfo) {
+  // 避免重复添加同一首歌
+  const existingIndex = playlist.value.findIndex(m => m.provider === item.provider && m.id === item.id)
+  if (existingIndex !== -1) {
+    await setCurrentIndex(existingIndex)
+    await setPlaying(true)
+    return
+  }
+
   playlist.value.push(item)
   triggerRef(playlist)
   if (playMode.value === 'random') {

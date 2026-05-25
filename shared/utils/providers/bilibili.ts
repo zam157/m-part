@@ -478,32 +478,27 @@ function parseDuration(durationStr: string): number {
  */
 function formateSearchResult(data: SearchTypeData): MusicInfo[] {
   return data.result.flatMap((item) => {
-    if (item.type === 'video') {
-      return {
-        provider: 'bilibili',
-        id: item.bvid,
-        title: item.title,
-        artist: item.author,
-        duration: parseDuration(item.duration),
-        coverUrl: item.pic,
-        album: item.typename,
-        qualities: [],
-      }
-    }
-    else if (item.type === 'bili_user') {
+    if (item.type === 'bili_user') {
       // 用户搜索结果：返回用户最近发布的视频
       return item.res.map(video => ({
-        provider: 'bilibili',
+        provider: 'bili',
         id: video.bvid,
         title: video.title,
         artist: item.uname,
         duration: parseDuration(video.duration),
         coverUrl: video.pic,
         album: item.uname,
-        qualities: [],
       }))
     }
-    return []
+    return {
+      provider: 'bili',
+      id: item.bvid,
+      title: item.title,
+      artist: item.author,
+      duration: parseDuration(item.duration),
+      coverUrl: item.pic,
+      album: item.typename,
+    }
   })
 }
 
@@ -522,7 +517,7 @@ async function fetchCid(bvid?: string, aid?: number) {
 }
 
 const biliProvider = {
-  name: 'bilibili',
+  name: 'bili',
   async search(keyword, page, type) {
     let biliSearchType: 'video' | 'bili_user'
     if (type === 'album' || type === 'music') {
@@ -536,7 +531,14 @@ const biliProvider = {
     }
 
     const res = await searchBase(keyword, page, biliSearchType)
-    return formateSearchResult(res)
+    return [
+      formateSearchResult(res),
+      {
+        page: res.page,
+        pageSize: res.pagesize,
+        total: res.numResults,
+      },
+    ]
   },
   async getSourceInfo(musicInfo: MusicInfo) {
     const [cid, wbiInfoData] = await Promise.all([fetchCid(musicInfo.id), getWbiInfo()])
