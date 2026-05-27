@@ -82,7 +82,7 @@ function nextPage() {
       @click="previousPage"
     >
       <div class="i-lucide:chevron-left text-4" />
-      <span>Previous</span>
+      <span>上一页</span>
     </li>
 
     <!-- Page Numbers -->
@@ -112,7 +112,7 @@ function nextPage() {
       class="ghost-btn gap-1.5 pl-2.5 pr-1.5 active:translate-y-px"
       @click="nextPage"
     >
-      <span>Next</span>
+      <span>下一页</span>
       <div class="i-lucide:chevron-right text-4" />
     </li>
   </ul>

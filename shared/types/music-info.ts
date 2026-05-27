@@ -15,6 +15,23 @@ export interface MusicInfo {
   lrc?: string
 }
 
+export interface ArtistInfo {
+  provider: ProviderName
+  id: string | number
+  name: string
+  coverUrl?: string
+  description?: string
+}
+
+export interface AlbumInfo {
+  provider: ProviderName
+  id: string
+  title: string
+  artist: string
+  coverUrl: string
+  releaseDate?: string
+}
+
 export interface SourceInfo {
   url?: string
   headers?: Record<string, any>

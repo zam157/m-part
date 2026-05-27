@@ -305,13 +305,15 @@ export function setVolume(vol: number) {
 /**
  * 覆盖播放列表
  */
-export function setPlaylist(newPlaylist: MusicInfo[]) {
+export async function setPlaylist(newPlaylist: MusicInfo[]) {
   resetPlayer()
   playlist.value = newPlaylist
   if (playMode.value === 'random') {
     generateRandomPlaylist()
     currentIndex.value = randomPlaylist.value?.[0] ?? null
   }
+  await setCurrentIndex(0)
+  await setPlaying(true)
 }
 
 /**

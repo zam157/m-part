@@ -45,6 +45,13 @@ declare module 'vue-router/auto-routes' {
       { all: ParamValue<false> },
       | never
     >,
+    '/artist-detail/[provider]/[id]': RouteRecordInfo<
+      '/artist-detail/[provider]/[id]',
+      '/artist-detail/:provider/:id',
+      { provider: ParamValue<true>, id: ParamValue<true> },
+      { provider: ParamValue<false>, id: ParamValue<false> },
+      | never
+    >,
     '/playground': RouteRecordInfo<
       '/playground',
       '/playground',
@@ -81,6 +88,12 @@ declare module 'vue-router/auto-routes' {
     'client/pages/[...all].vue': {
       routes:
         | '/[...all]'
+      views:
+        | never
+    }
+    'client/pages/artist-detail/[provider]/[id].vue': {
+      routes:
+        | '/artist-detail/[provider]/[id]'
       views:
         | never
     }

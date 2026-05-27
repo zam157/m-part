@@ -57,7 +57,7 @@ async function setMockedPlaylist() {
 }
 
 async function biliSearch() {
-  const results = await biliProvider.search('一条闲木鱼', 1, 'music')
+  const results = await biliProvider.search('一条闲木鱼', 1)
   console.log('Bili Search Results:', results)
   await wait(2357)
   const sourceInfo = await biliProvider.getSourceInfo?.(results[0][0]!)

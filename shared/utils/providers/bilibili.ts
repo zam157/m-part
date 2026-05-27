@@ -1,10 +1,12 @@
-import type { MusicInfo, MusicQuality } from '#shared/types/music-info'
+import type { ArtistInfo, MusicInfo, MusicQuality } from '#shared/types/music-info'
 import type { Provider } from '../../types/provider'
+import type { TRequestErrorTuple } from '../fetch'
 import { MD5 } from 'crypto-es'
 import { USE_GM_FETCH, USE_PROXY } from '../constants'
 import { tRequest } from '../fetch'
 
 // #region types
+export type BiliSearchType = 'video' | 'bili_user'
 export interface BiliResponse<T> {
   code: number
   message?: string
@@ -21,7 +23,25 @@ export interface WbiInfo {
   img_key: string
   sub_key: string
 }
-
+export interface UserDetailResponse {
+  face: string
+  name: string
+  mid: number
+  sign: string
+  [key: string]: unknown
+}
+export interface UserVideoResponse {
+  list: {
+    slist: unknown[]
+    tlist: unknown[]
+    vlist: VideoSearchItem[]
+  }
+  page: {
+    pn: number
+    ps: number
+    count: number
+  }
+}
 // #region Search result types
 /**
  * 视频搜索结果项
@@ -174,7 +194,7 @@ export type SearchItem = VideoSearchItem | BiliUserSearchItem
 /**
  * 搜索接口响应数据
  */
-export interface SearchTypeData {
+export interface SearchData<T extends SearchItem = SearchItem> {
   /** 搜索ID */
   seid: string
   /** 当前页码 */
@@ -217,7 +237,7 @@ export interface SearchTypeData {
   /** 副分页信息（仅直播间/主播搜索有效） */
   pageinfo?: Record<string, unknown>
   /** 搜索结果列表 */
-  result: SearchItem[]
+  result: T[]
   /** 显示列标记 */
   show_column: number
 }
@@ -423,20 +443,48 @@ const getBuvidInfo = createAsyncCache('buvid_info', async () => {
   throw new Error('Failed to fetch buvid info')
 })
 
-const getWbiInfo = createAsyncCache('wbi_info', () => getWbiKeys())
+const getWbiInfo = createAsyncCache('wbi_info', getWbiKeys)
 async function getCookie() {
   const buvidInfo = await getBuvidInfo()
 
   return `buvid3=${buvidInfo!.b_3};buvid4=${buvidInfo!.b_4};`
 }
 
-async function searchBase(keyword: string, page: number, type: 'video' | 'bili_user') {
-  const [cookie, wbiInfoData] = await Promise.all([getCookie(), getWbiInfo()])
-  const headers: Record<string, string> = {
+async function biliRequestHelper<T>(url: string, options: Parameters<typeof tRequest>[1]) {
+  const promises: [Promise<void>?, ReturnType<typeof getWbiInfo>?] = []
+  const headers = new Headers({
     ...COMMON_HEADERS,
+    ...options?.headers,
+  })
+  if (headers.get('cookie') == null) {
+    promises[0] = (async () => {
+      const cookie = await getCookie()
+      headers.set('cookie', cookie)
+    })()
+  }
+  if (url.includes('/wbi/'))
+    promises[1] = getWbiInfo()
+  const [, wbiInfoData] = await Promise.all(promises)
+  const searchParams = { ...options?.searchParams }
+  if (wbiInfoData)
+    Object.assign(searchParams, generateWbiSignInfo(searchParams, wbiInfoData.img_key, wbiInfoData.sub_key))
+  const res = await tRequest<BiliResponse<T>>(url, {
+    ...options,
+    headers,
+    searchParams,
+  })
+  if (res[0] && res[1].code < 0)
+    return [false, res[1].code, res[1].message] as TRequestErrorTuple
+
+  return res
+}
+
+function searchBase(keyword: string, page: number, type: 'video'): Promise<SearchData<VideoSearchItem>>
+function searchBase(keyword: string, page: number, type: 'bili_user'): Promise<SearchData<BiliUserSearchItem>>
+async function searchBase(keyword: string, page: number, type: BiliSearchType) {
+  const headers: Record<string, string> = {
     'accept': 'application/json, text/plain, */*',
     'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
-    cookie,
     'origin': 'https://search.bilibili.com',
     'referer': 'https://search.bilibili.com/',
   }
@@ -446,9 +494,8 @@ async function searchBase(keyword: string, page: number, type: 'video' | 'bili_u
     page_size: DEFAULT_PAGE_SIZE,
     keyword,
   }
-  Object.assign(searchParams, generateWbiSignInfo(searchParams, wbiInfoData!.img_key, wbiInfoData!.sub_key))
 
-  const res = await tRequest<BiliResponse<SearchTypeData>>(`${API_HOST}/x/web-interface/wbi/search/type`, {
+  const res = await biliRequestHelper<SearchData>(`${API_HOST}/x/web-interface/wbi/search/type`, {
     headers,
     searchParams,
   })
@@ -476,39 +523,41 @@ function parseDuration(durationStr: string): number {
  * 将搜索结果转换为 MusicInfo 数组
  * 支持视频搜索结果和用户搜索结果
  */
-function formateSearchResult(data: SearchTypeData): MusicInfo[] {
-  return data.result.flatMap((item) => {
-    if (item.type === 'bili_user') {
-      // 用户搜索结果：返回用户最近发布的视频
-      return item.res.map(video => ({
-        provider: 'bili',
-        id: video.bvid,
-        title: video.title,
-        artist: item.uname,
-        duration: parseDuration(video.duration),
-        coverUrl: video.pic,
-        album: item.uname,
-      }))
-    }
-    return {
+function formateSearchResult(data: VideoSearchItem[], type: 'video'): MusicInfo[]
+function formateSearchResult(data: BiliUserSearchItem[], type: 'bili_user'): ArtistInfo[]
+function formateSearchResult(data: SearchItem[], type: BiliSearchType) {
+  if (type === 'video') {
+    return (data as VideoSearchItem[]).map(i => ({
       provider: 'bili',
-      id: item.bvid,
-      title: item.title,
-      artist: item.author,
-      duration: parseDuration(item.duration),
-      coverUrl: item.pic,
-      album: item.typename,
-    }
-  })
+      id: i.bvid,
+      title: i.title,
+      artist: i.author,
+      duration: i.duration ? parseDuration(i.duration) : 0,
+      coverUrl: i.pic,
+      album: i.typename,
+    }) as MusicInfo)
+  }
+  if (type === 'bili_user') {
+    return (data as BiliUserSearchItem[]).map(i => ({
+      provider: 'bili',
+      id: i.mid.toString(),
+      name: i.uname,
+      coverUrl: i.upic,
+      description: i.usign,
+    }) as ArtistInfo)
+  }
+  return []
 }
 
 async function fetchCid(bvid?: string, aid?: number) {
   if (!bvid && !aid) {
     throw new Error('Either bvid or aid must be provided')
   }
-  const res = await tRequest<BiliResponse<VideoInfoResponse>>(`${API_HOST}/x/web-interface/view`, {
-    headers: COMMON_HEADERS,
+  const res = await biliRequestHelper<VideoInfoResponse>(`${API_HOST}/x/web-interface/view`, {
     searchParams: bvid ? { bvid } : { aid },
+    headers: {
+      cookie: '',
+    },
   })
   if (!res[0]) {
     throw new Error('Failed to fetch video info')
@@ -516,32 +565,73 @@ async function fetchCid(bvid?: string, aid?: number) {
   return res[1].data.cid
 }
 
+function fetchUserDetail(mid: string | number) {
+  return biliRequestHelper<UserDetailResponse>(`${API_HOST}/x/space/wbi/acc/info`, {
+    searchParams: {
+      mid,
+      token: '',
+      platform: 'web',
+      dm_img_list: '[]',
+      dm_img_str: 'V2ViR0wgMS4wIChPcGVuR0wgRVMgMi4wIENocm9taXVtKQ',
+      dm_cover_img_str: 'QU5HTEUgKEFNRCwgQU1EIFJhZGVvbiBSWCA1NjAwIFhUICgweDAwMDA3MzFGKSBEaXJlY3QzRDExIHZzXzVfMCBwc181XzAsIEQzRDExKUdvb2dsZSBJbmMuIChBTU',
+      dm_img_inter: '{"ds":[],"wh":[0,0,0],"of":[0,0,0]}',
+    },
+    headers: {
+      origin: 'https://space.bilibili.com',
+      referer: `https://space.bilibili.com/${mid}/upload/video`,
+      cookie: '',
+    },
+  })
+}
+
+function fetchUserVideos(mid: string | number, page: number) {
+  return biliRequestHelper<UserVideoResponse>(`${API_HOST}/x/space/wbi/arc/search`, {
+    searchParams: {
+      pn: page,
+      ps: DEFAULT_PAGE_SIZE,
+      order: 'pubdate',
+      mid,
+      order_avoided: 'true',
+      platform: 'web',
+      dm_img_list: '[]',
+      dm_img_str: 'V2ViR0wgMS4wIChPcGVuR0wgRVMgMi4wIENocm9taXVtKQ',
+      dm_cover_img_str: 'QU5HTEUgKEFNRCwgQU1EIFJhZGVvbiBSWCA1NjAwIFhUICgweDAwMDA3MzFGKSBEaXJlY3QzRDExIHZzXzVfMCBwc181XzAsIEQzRDExKUdvb2dsZSBJbmMuIChBTU',
+      dm_img_inter: '{"ds":[],"wh":[0,0,0],"of":[0,0,0]}',
+    },
+    headers: {
+      cookie: '',
+    },
+  })
+}
+
 const biliProvider = {
   name: 'bili',
-  async search(keyword, page, type) {
-    let biliSearchType: 'video' | 'bili_user'
-    if (type === 'album' || type === 'music') {
-      biliSearchType = 'video'
-    }
-    else if (type === 'artist') {
-      biliSearchType = 'bili_user'
-    }
-    else {
-      throw new Error('Unsupported search type')
-    }
-
-    const res = await searchBase(keyword, page, biliSearchType)
+  async search(keyword, page) {
+    const searchRes = await searchBase(keyword, page, 'video')
+    const formattedResult = formateSearchResult(searchRes.result, 'video')
     return [
-      formateSearchResult(res),
+      formattedResult,
       {
-        page: res.page,
-        pageSize: res.pagesize,
-        total: res.numResults,
+        page: searchRes.page,
+        pageSize: searchRes.pagesize,
+        total: searchRes.numResults,
+      },
+    ]
+  },
+  async searchArtist(keyword, page) {
+    const searchRes = await searchBase(keyword, page, 'bili_user')
+    const formattedResult = formateSearchResult(searchRes.result, 'bili_user')
+    return [
+      formattedResult,
+      {
+        page: searchRes.page,
+        pageSize: searchRes.pagesize,
+        total: searchRes.numResults,
       },
     ]
   },
   async getSourceInfo(musicInfo: MusicInfo) {
-    const [cid, wbiInfoData] = await Promise.all([fetchCid(musicInfo.id), getWbiInfo()])
+    const cid = await fetchCid(musicInfo.id)
     const searchParams = {
       bvid: musicInfo.id,
       cid,
@@ -550,10 +640,9 @@ const biliProvider = {
       web_location: 1315873,
       fnver: 0,
     }
-    Object.assign(searchParams, generateWbiSignInfo(searchParams, wbiInfoData!.img_key, wbiInfoData!.sub_key))
-    const res = await tRequest<BiliResponse<PlayurlResponse>>(`${API_HOST}/x/player/wbi/playurl`, {
+    const res = await biliRequestHelper<PlayurlResponse>(`${API_HOST}/x/player/wbi/playurl`, {
       headers: {
-        ...COMMON_HEADERS,
+        cookie: '',
         referer: `https://www.bilibili.com/video/${musicInfo.id}`,
       },
       searchParams,
@@ -620,6 +709,32 @@ const biliProvider = {
       },
       qualities,
     }
+  },
+  async getArtistInfo(id) {
+    const res = await fetchUserDetail(id)
+    if (!res[0])
+      throw new Error('Failed to fetch user detail')
+    const data = res[1].data
+    return {
+      provider: 'bili',
+      id: data.mid,
+      name: data.name,
+      coverUrl: data.face,
+      description: data.sign,
+    } as ArtistInfo
+  },
+  async getArtistWorks(id, page) {
+    const res = await fetchUserVideos(id, page)
+    if (!res[0])
+      throw new Error('Failed to fetch user videos')
+    return [
+      formateSearchResult(res[1].data.list.vlist, 'video'),
+      {
+        page: res[1].data.page.pn,
+        pageSize: res[1].data.page.ps,
+        total: res[1].data.page.count,
+      },
+    ]
   },
 } satisfies Provider
 
