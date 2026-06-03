@@ -12,8 +12,8 @@ catalogs:
   backend:
     nitro: latest
   build:
-    '@iconify-json/lucide': ^1.2.107
-    '@iconify-json/material-symbols': ^1.2.72
+    '@iconify-json/lucide': ^1.2.111
+    '@iconify-json/material-symbols': ^1.2.76
     '@iconify-json/solar': ^1.2.5
     '@intlify/unplugin-vue-i18n': ^11.2.3
     '@unocss/eslint-config': ^66.7.0
@@ -23,30 +23,30 @@ catalogs:
     unocss-preset-shadcn: ^1.0.1
     unplugin-auto-import: ^21.0.0
     unplugin-vue-components: ^32.1.0
-    vite: ^8.0.14
+    vite: ^8.0.16
     vite-plugin-pwa: ^1.3.0
   dev:
     '@antfu/eslint-config': ^9.0.0
     '@types/node': ^25.9.1
-    '@vitest/browser-playwright': ^4.1.7
+    '@vitest/browser-playwright': ^4.1.8
     '@vue/test-utils': ^2.4.10
-    eslint: ^10.4.0
+    eslint: ^10.4.1
     eslint-plugin-format: ^2.0.1
     jsdom: ^29.1.1
     nano-staged: ^1.0.2
     simple-git-hooks: ^2.13.1
     typescript: ^6.0.3
-    vitest: ^4.1.7
+    vitest: ^4.1.8
     vitest-browser-vue: 2.1.0
-    vue-tsc: ^3.3.1
+    vue-tsc: ^3.3.3
   frontend:
-    '@unhead/vue': ^3.1.0
+    '@unhead/vue': ^3.1.1
     '@vueuse/core': ^14.3.0
-    vue: 3.6.0-beta.12
+    vue: 3.6.0-beta.13
     vue-i18n: ^11.4.4
-    vue-router: ^5.0.7
+    vue-router: ^5.1.0
   shared:
     crypto-es: ^3.1.3
-    valibot: ^1.4.0
+    valibot: ^1.4.1
 configDependencies:
-  '@pnpm/pacquet': 0.2.7
+  '@pnpm/pacquet': 0.2.13
