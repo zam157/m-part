@@ -32,6 +32,21 @@ const typeOptions = [
 const selectedSource = shallowRef<typeof sourceOptions[number]['value']>(sourceOptions[0].value)
 const selectedType = shallowRef<typeof typeOptions[number]['value']>(typeOptions[0].value)
 
+// 根据当前 provider 的能力动态禁用不支持的类型
+const availableTypeOptions = computed<Option<SearchType>[]>(() => {
+  const provider = providers[selectedSource.value] as Provider
+  return typeOptions.map((opt) => {
+    let isDisabled = false
+    if (opt.value === 'music' && !provider.search)
+      isDisabled = true
+    else if (opt.value === 'album' && !provider.searchAlbum)
+      isDisabled = true
+    else if (opt.value === 'artist' && !provider.searchArtist)
+      isDisabled = true
+    return { ...opt, disabled: isDisabled }
+  })
+})
+
 const searchState = shallowReactive({
   searching: false,
   searchType: selectedType.value,
@@ -109,7 +124,7 @@ function handleArtistCardClick(artist: ArtistInfo) {
         <Select
           v-model="selectedType"
           placeholder="类型"
-          :options="typeOptions"
+          :options="availableTypeOptions"
           contentStyle="justify-self:auto;left:anchor(left);"
           triggerClass="w-16"
         />

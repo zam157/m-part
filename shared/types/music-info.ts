@@ -6,11 +6,12 @@ export interface MusicInfo {
   /** The unique identifier for the music */
   id: string
   title: string
+  description?: string
   src?: string
-  artist: string
+  artist?: string
   duration: number
   coverUrl: string
-  album: string
+  album?: string
   lrcUrl?: string
   lrc?: string
 }
@@ -29,7 +30,10 @@ export interface AlbumInfo {
   title: string
   artist: string
   coverUrl: string
+  totalTracks?: number
+  description?: string
   releaseDate?: string
+  extra?: Record<string, unknown>
 }
 
 export interface SourceInfo {

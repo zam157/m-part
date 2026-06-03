@@ -25,8 +25,8 @@ export interface Provider {
   getArtistInfo?: (id: string | number) => Promise<ArtistInfo>
   /** Retrieves the works of a given artist */
   getArtistWorks?: (id: string | number, page: number) => Promise<[MusicInfo[], Pagination]>
-  /** Retrieves the details of a given album */
-  getAlbumInfo?: (albumInfo: AlbumInfo) => Promise<AlbumInfo>
+  /** Retrieves the albums of a given artist */
+  getArtistAlbums?: (id: string | number, page: number) => Promise<[AlbumInfo[], Pagination]>
   /** Retrieves the works of a given album */
-  getAlbumWorks?: (albumInfo: AlbumInfo, page: number) => Promise<[MusicInfo[], Pagination]>
+  getAlbumWorks?: (id: string | number, page: number, extra: any) => Promise<[MusicInfo[], Pagination]>
 }

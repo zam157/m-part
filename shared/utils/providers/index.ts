@@ -1,6 +1,6 @@
 import type { Provider, ProviderName } from '#shared/types/provider'
 import BiliProvider from './bilibili'
 
-export const providers = {
+export const providers: Record<ProviderName, Provider> = {
   bili: BiliProvider,
-} as const satisfies Record<ProviderName, Provider>
+}

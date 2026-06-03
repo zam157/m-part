@@ -2,12 +2,12 @@
 interface Tab {
   value: T
   label: string
+  disabled?: boolean
 }
 
 interface Props {
   tabs: Tab[]
   modelValue?: T
-  disabled?: boolean
 }
 
 defineOptions({ inheritAttrs: false })
@@ -25,7 +25,8 @@ const activeTab = computed({
 provide('activeTab', activeTab)
 
 function handleTabClick(tabValue: T) {
-  if (!props.disabled) {
+  const tab = props.tabs.find(t => t.value === tabValue)
+  if (!tab!.disabled) {
     activeTab.value = tabValue
   }
 }
@@ -42,14 +43,14 @@ function handleTabClick(tabValue: T) {
       v-for="tab in tabs"
       :key="tab.value"
       :aria-selected="activeTab === tab.value"
-      :disabled="disabled"
+      :disabled="tab.disabled"
       role="tab"
       class="uno-layer-components:(px-1.5 py-0.5 text-sm font-medium transition-all rounded-md outline-none)"
       :class="[
         activeTab === tab.value
           ? 'uno-layer-components:(bg-background text-foreground shadow-sm)'
-          : 'uno-layer-components:(text-muted-foreground hover:text-foreground)',
-        disabled && 'uno-layer-components:(cursor-not-allowed opacity-50)',
+          : 'uno-layer-components:(text-muted-foreground)',
+        tab.disabled ? 'uno-layer-components:(cursor-not-allowed opacity-50)' : 'uno-layer-components:(hover:text-foreground)',
       ]"
       @click="handleTabClick(tab.value)"
     >

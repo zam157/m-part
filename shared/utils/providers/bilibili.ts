@@ -1,4 +1,4 @@
-import type { ArtistInfo, MusicInfo, MusicQuality } from '#shared/types/music-info'
+import type { AlbumInfo, ArtistInfo, MusicInfo, MusicQuality } from '#shared/types/music-info'
 import type { Provider } from '../../types/provider'
 import type { TRequestErrorTuple } from '../fetch'
 import { MD5 } from 'crypto-es'
@@ -42,7 +42,95 @@ export interface UserVideoResponse {
     count: number
   }
 }
-// #region Search result types
+
+interface ArchiveStatItem {
+  /** 播放数 */
+  view: number
+  /** VT数据 */
+  vt: number
+  /** 弹幕数 */
+  danmaku: number
+}
+
+interface ArchiveItem {
+  /** 稿件ID */
+  aid: number
+  /** B站视频ID */
+  bvid: string
+  /** 创建时间戳 */
+  ctime: number
+  /** 视频时长 */
+  duration: number
+  /** 是否启用VT */
+  enable_vt: boolean
+  /** 是否交互式视频 */
+  interactive_video: boolean
+  /** 封面图片链接 */
+  pic: string
+  /** 播放位置 */
+  playback_position: number
+  /** 发布时间戳 */
+  pubdate: number
+  /** 统计数据 */
+  stat: ArchiveStatItem
+  /** 状态 */
+  state: number
+  /** 视频标题 */
+  title: string
+  /** UGC付费 */
+  ugc_pay: number
+  /** VT显示 */
+  vt_display: string
+  /** 是否课程视频 */
+  is_lesson_video: number
+}
+
+interface AlbumMeta {
+  /** 分类 */
+  category: number
+  /** 合集封面 */
+  cover: string
+  /** 合集描述 */
+  description: string
+  /** UP主ID */
+  mid: number
+  /** 合集名称 */
+  name: string
+  /** 修改时间戳 */
+  ptime: number
+  /** 创建时间戳 */
+  ctime: number
+  /** 合集ID */
+  season_id: number
+  /** 系列ID */
+  series_id: number
+  /** 合集包含的视频总数 */
+  total: number
+  /** 合集标题 */
+  title: string
+}
+
+export interface BiliAlbumItem {
+  /** 视频列表 */
+  archives: ArchiveItem[]
+  /** 合集元数据 */
+  meta: AlbumMeta
+  /** 最近发布的视频ID列表 */
+  recent_aids: number[]
+}
+
+export interface UserAlbumResponse {
+  items_lists: {
+    page: {
+      page_num: number
+      page_size: number
+      total: number
+    }
+    seasons_list: BiliAlbumItem[]
+    series_list: BiliAlbumItem[]
+  }
+}
+
 /**
  * 视频搜索结果项
  */
@@ -257,13 +345,26 @@ export interface PlayurlResponse {
   }
   [key: string]: unknown
 }
-// #endregion
+interface AlbumExtra {
+  mid: number
+  cover?: string
+  artist?: string
+  title?: string
+}
 // #endregion
 
 // #region constants
 const API_HOST = USE_PROXY && !USE_GM_FETCH ? '/api/proxy/bili' : 'https://api.bilibili.com'
 const DEFAULT_PAGE_SIZE = 20
 export const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36'
+const COMMON_HEADERS = {
+  'user-agent': USER_AGENT,
+  'accept': '*/*',
+  'accept-encoding': 'gzip, deflate, br',
+  'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+  'origin': 'https://www.bilibili.com',
+  'referer': 'https://www.bilibili.com/',
+}
 // #endregion
 
 // #region wbi
@@ -389,14 +490,7 @@ async function getWbiKeys(SESSDATA = ''): Promise<WbiInfo> {
 }
 // #endregion
 
-const COMMON_HEADERS = {
-  'user-agent': USER_AGENT,
-  'accept': '*/*',
-  'accept-encoding': 'gzip, deflate, br',
-  'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
-  'origin': 'https://www.bilibili.com',
-  'referer': 'https://www.bilibili.com/',
-}
+// #region utils and helpers
 // 通用缓存工厂函数
 function createAsyncCache<T>(key: string, fetcher: () => Promise<T>) {
   let cache: T | undefined
@@ -479,31 +573,6 @@ async function biliRequestHelper<T>(url: string, options: Parameters<typeof tReq
   return res
 }
 
-function searchBase(keyword: string, page: number, type: 'video'): Promise<SearchData<VideoSearchItem>>
-function searchBase(keyword: string, page: number, type: 'bili_user'): Promise<SearchData<BiliUserSearchItem>>
-async function searchBase(keyword: string, page: number, type: BiliSearchType) {
-  const headers: Record<string, string> = {
-    'accept': 'application/json, text/plain, */*',
-    'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
-    'origin': 'https://search.bilibili.com',
-    'referer': 'https://search.bilibili.com/',
-  }
-  const searchParams = {
-    search_type: type,
-    page,
-    page_size: DEFAULT_PAGE_SIZE,
-    keyword,
-  }
-
-  const res = await biliRequestHelper<SearchData>(`${API_HOST}/x/web-interface/wbi/search/type`, {
-    headers,
-    searchParams,
-  })
-  if (!res[0])
-    throw new Error(`Search request failed: ${res[2]}`)
-  return res[1].data
-}
-
 /**
  * 解析时长字符串为秒数
  * 支持格式: "mm:ss" 或 "hh:mm:ss"
@@ -535,6 +604,7 @@ function formateSearchResult(data: SearchItem[], type: BiliSearchType) {
       duration: i.duration ? parseDuration(i.duration) : 0,
       coverUrl: i.pic,
       album: i.typename,
+      description: i.description,
     }) as MusicInfo)
   }
   if (type === 'bili_user') {
@@ -547,6 +617,61 @@ function formateSearchResult(data: SearchItem[], type: BiliSearchType) {
     }) as ArtistInfo)
   }
   return []
+}
+
+function formateArchives(type: 'seasons' | 'series', data: BiliAlbumItem[]): AlbumInfo[] {
+  return data.map((i) => {
+    const res: AlbumInfo = {
+      provider: 'bili',
+      id: '',
+      title: i.meta.name,
+      coverUrl: i.meta.cover,
+      description: i.meta.description,
+      totalTracks: i.meta.total,
+      artist: '',
+      extra: {
+        mid: i.meta.mid,
+        cover: i.meta.cover,
+        title: i.meta.name,
+        artist: '',
+      } satisfies AlbumExtra,
+    }
+    if (type === 'seasons') {
+      res.id = `season-${i.meta.season_id.toString()}`
+      res.releaseDate = new Date(i.meta.ptime * 1000).toISOString()
+    }
+    else if (type === 'series') {
+      res.id = `series-${i.meta.series_id.toString()}`
+      res.releaseDate = new Date(i.meta.ctime * 1000).toISOString()
+    }
+    return res
+  })
+}
+// #endregion
+
+function searchBase(keyword: string, page: number, type: 'video'): Promise<SearchData<VideoSearchItem>>
+function searchBase(keyword: string, page: number, type: 'bili_user'): Promise<SearchData<BiliUserSearchItem>>
+async function searchBase(keyword: string, page: number, type: BiliSearchType) {
+  const headers: Record<string, string> = {
+    'accept': 'application/json, text/plain, */*',
+    'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+    'origin': 'https://search.bilibili.com',
+    'referer': 'https://search.bilibili.com/',
+  }
+  const searchParams = {
+    search_type: type,
+    page,
+    page_size: DEFAULT_PAGE_SIZE,
+    keyword,
+  }
+
+  const res = await biliRequestHelper<SearchData>(`${API_HOST}/x/web-interface/wbi/search/type`, {
+    headers,
+    searchParams,
+  })
+  if (!res[0])
+    throw new Error(`Search request failed: ${res[2]}`)
+  return res[1].data
 }
 
 async function fetchCid(bvid?: string, aid?: number) {
@@ -602,6 +727,79 @@ function fetchUserVideos(mid: string | number, page: number) {
       cookie: '',
     },
   })
+}
+
+function fetchUserAlbums(mid: string | number, page: number) {
+  return biliRequestHelper<UserAlbumResponse>(`${API_HOST}/x/polymer/web-space/seasons_series_list`, {
+    searchParams: {
+      mid,
+      page_size: DEFAULT_PAGE_SIZE,
+      page_num: page,
+    },
+    headers: {
+      origin: 'https://space.bilibili.com',
+      referer: `https://space.bilibili.com/${mid}/lists`,
+      cookie: '',
+    },
+  })
+}
+
+function fetchSeasonsArchives(id: string | number, page: number, mid: number | string) {
+  return biliRequestHelper<{ archives: ArchiveItem[], meta: AlbumMeta, page: UserAlbumResponse['items_lists']['page'] }>(`${API_HOST}/x/polymer/web-space/seasons_archives_list`, {
+    searchParams: {
+      mid,
+      season_id: id,
+      sort_reverse: 'false',
+      page_size: DEFAULT_PAGE_SIZE,
+      page_num: page,
+    },
+    headers: {
+      origin: 'https://space.bilibili.com',
+      referer: 'https://space.bilibili.com/',
+      cookie: '',
+    },
+  })
+}
+
+async function fetchSeriesArchives(id: string | number, page: number, mid: number | string) {
+  const commonHeaders = {
+    origin: 'https://space.bilibili.com',
+    referer: 'https://space.bilibili.com/',
+    cookie: '',
+  }
+  // 系列 meta 信息和视频列表分别通过两个接口获取
+  const [seriesInfo, seriesArchives] = await Promise.all([
+    // https://api.bilibili.com/x/series/series?series_id=2735065&web_location=333.1387
+    biliRequestHelper<{ meta: AlbumMeta }>(`${API_HOST}/x/series/series`, {
+      searchParams: {
+        series_id: id,
+      },
+      headers: commonHeaders,
+    }),
+    // https://api.bilibili.com/x/series/archives?mid=316568752&current_mid=0&series_id=2735065&only_normal=true&sort=desc&ps=30&pn=1&web_location=333.1387
+    biliRequestHelper<{ archives: ArchiveItem[], page: UserAlbumResponse['items_lists']['page'] }>(`${API_HOST}/x/series/archives`, {
+      searchParams: {
+        mid,
+        current_mid: '0',
+        series_id: id,
+        only_normal: 'true',
+        sort: 'desc',
+        ps: DEFAULT_PAGE_SIZE,
+        pn: page,
+      },
+      headers: commonHeaders,
+    }),
+  ])
+  if (!seriesInfo[0])
+    throw new Error('Failed to fetch series info')
+  if (!seriesArchives[0])
+    throw new Error('Failed to fetch series archives')
+  const meta = seriesInfo[1].data.meta
+  return {
+    meta,
+    archives: seriesArchives[1].data.archives,
+    page: seriesArchives[1].data.page,
+  }
 }
 
 const biliProvider = {
@@ -733,6 +931,62 @@ const biliProvider = {
         page: res[1].data.page.pn,
         pageSize: res[1].data.page.ps,
         total: res[1].data.page.count,
+      },
+    ]
+  },
+  /**
+   * @returns AlbumInfo 数组，id 格式为 "season-{season_id}" 或 "series-{series_id}"
+   */
+  async getArtistAlbums(id, page) {
+    const res = await fetchUserAlbums(id, page)
+    if (!res[0])
+      throw new Error('Failed to fetch user albums')
+    const itemList = res[1].data.items_lists
+    const formattedAlbumsList: AlbumInfo[] = [
+      ...formateArchives('seasons', itemList.seasons_list),
+      ...formateArchives('series', itemList.series_list),
+    ]
+    return [
+      formattedAlbumsList,
+      {
+        page: itemList.page.page_num,
+        pageSize: itemList.page.page_size,
+        total: itemList.page.total,
+      },
+    ]
+  },
+  async getAlbumWorks(id, page, extra: AlbumExtra) {
+    const [type, realId] = id.toString().split('-') as [string, string]
+    let res
+    if (type === 'season') {
+      const seasonRes = await fetchSeasonsArchives(realId, page, extra.mid)
+      if (!seasonRes[0])
+        throw new Error('Failed to fetch seasons archives')
+      res = seasonRes[1].data
+    }
+    else if (type === 'series') {
+      const seriesRes = await fetchSeriesArchives(realId, page, extra.mid)
+      res = seriesRes
+    }
+    if (!res)
+      throw new Error('Failed to fetch album works')
+    return [
+      res.archives.map((i) => {
+        return {
+          provider: 'bili',
+          id: i.bvid,
+          title: i.title,
+          artist: extra.artist,
+          duration: i.duration,
+          coverUrl: i.pic,
+          album: extra.title,
+          description: '',
+        }
+      }),
+      {
+        page: res.page.page_num,
+        pageSize: res.page.page_size,
+        total: res.page.total,
       },
     ]
   },

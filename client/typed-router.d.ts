@@ -45,8 +45,15 @@ declare module 'vue-router/auto-routes' {
       { all: ParamValue<false> },
       | never
     >,
-    '/artist-detail/[provider]/[id]': RouteRecordInfo<
-      '/artist-detail/[provider]/[id]',
+    'AlbumDetailPage': RouteRecordInfo<
+      'AlbumDetailPage',
+      '/album-detail/:provider/:id',
+      { provider: ParamValue<true>, id: ParamValue<true> },
+      { provider: ParamValue<false>, id: ParamValue<false> },
+      | never
+    >,
+    'ArtistDetailPage': RouteRecordInfo<
+      'ArtistDetailPage',
       '/artist-detail/:provider/:id',
       { provider: ParamValue<true>, id: ParamValue<true> },
       { provider: ParamValue<false>, id: ParamValue<false> },
@@ -91,9 +98,15 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'client/pages/album-detail/[provider]/[id].vue': {
+      routes:
+        | 'AlbumDetailPage'
+      views:
+        | never
+    }
     'client/pages/artist-detail/[provider]/[id].vue': {
       routes:
-        | '/artist-detail/[provider]/[id]'
+        | 'ArtistDetailPage'
       views:
         | never
     }
