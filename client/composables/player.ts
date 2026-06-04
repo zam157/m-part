@@ -225,15 +225,10 @@ export async function setPlaying(isPlaying: boolean) {
  */
 export async function setCurrentIndex(index: number) {
   const music = playlist.value[index]
-  if (!music) {
-    const msg = `No song found at index ${index}.`
-    console.warn(msg)
-    return [false, msg] as const
-  }
   currentIndex.value = index
   currentTime.value = 0
   duration.value = 0
-  await setSrc(music.src || null, music.provider)
+  await setSrc(music?.src || null, music?.provider)
 }
 
 /**
@@ -313,7 +308,7 @@ export async function setPlaylist(newPlaylist: MusicInfo[]) {
     currentIndex.value = randomPlaylist.value?.[0] ?? null
   }
   await setCurrentIndex(0)
-  await setPlaying(true)
+  await setPlaying(newPlaylist.length > 0)
 }
 
 /**
