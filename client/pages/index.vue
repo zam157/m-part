@@ -5,7 +5,7 @@ defineOptions({
 </script>
 
 <template>
-  <div class="size-full flex items-center justify-center">
+  <div class="flex-1 min-w-0 flex items-center justify-center">
     index
   </div>
 </template>

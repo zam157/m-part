@@ -52,7 +52,7 @@ getAlbumWorks(1)
 </script>
 
 <template>
-  <div class="size-full flex flex-col gap-3 p-4">
+  <div class="flex-1 min-w-0 flex flex-col gap-3 p-4">
     <!-- Album Info -->
     <div class="grow-0 h-32 shrink-0 flex items-center gap-4">
       <img

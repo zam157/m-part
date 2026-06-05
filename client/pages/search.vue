@@ -111,7 +111,7 @@ function handleArtistCardClick(artist: ArtistInfo) {
 </script>
 
 <template>
-  <div class="@container size-full flex flex-col gap-2 py-2">
+  <div class="@container flex-1 min-w-0 flex flex-col gap-2 py-2">
     <form class="flex gap-2 grow-0 shrink-0 px-4" @submit.prevent="handleSearch(1, selectedType)">
       <div class="btn-group h-8 flex-1">
         <Select
