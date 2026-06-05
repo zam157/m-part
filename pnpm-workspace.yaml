@@ -3,6 +3,9 @@ allowBuilds:
   simple-git-hooks: true
 catalogMode: strict
 cleanupUnusedCatalogs: true
+minimumReleaseAgeExclude:
+  - vue
+  - '@vue/*'
 shellEmulator: true
 trustPolicy: no-downgrade
 trustPolicyExclude:
@@ -29,7 +32,7 @@ catalogs:
     '@antfu/eslint-config': ^9.0.0
     '@types/node': ^25.9.1
     '@vitest/browser-playwright': ^4.1.8
-    '@vue/test-utils': ^2.4.10
+    '@vue/test-utils': ^2.4.11
     eslint: ^10.4.1
     eslint-plugin-format: ^2.0.1
     jsdom: ^29.1.1
@@ -42,7 +45,7 @@ catalogs:
   frontend:
     '@unhead/vue': ^3.1.1
     '@vueuse/core': ^14.3.0
-    vue: 3.6.0-beta.13
+    vue: 3.6.0-beta.14
     vue-i18n: ^11.4.4
     vue-router: ^5.1.0
   shared:
