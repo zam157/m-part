@@ -42,7 +42,7 @@ import { clearPlaylist, currentIndex, playing, playlist, removeFromPlaylist, set
           />
         </div>
         <div class="flex-1 min-w-0 flex flex-col">
-          <span class="max-w-full truncate">{{ i.title }}</span>
+          <span class="max-w-full truncate" v-html="i.title" />
           <span class="text-xs text-muted-foreground truncate max-w-full truncate">{{ i.artist }}</span>
         </div>
         <div

@@ -20,12 +20,14 @@ import {
   volume,
   waiting,
 } from '~/composables/player'
+import Expended from './components/Expended.vue'
 import QualityBtn from './components/QualityBtn.vue'
 import VolumeBtn from './components/VolumeBtn.vue'
 
 const progressBarRef = useTemplateRef('progressBarRef')
 const tempProgress = ref<number | null>(null)
 const scrubbing = ref(false)
+const showExpended = ref(false)
 
 // 缓存进度条容器元素大小信息
 const progressBarRect = shallowRef<{ width: number, left: number } | null>(null)
@@ -198,13 +200,16 @@ async function handleQualitySelect(quality: MusicQuality) {
     <!-- Music player -->
     <div class="@container flex h-19">
       <!-- Music image -->
-      <div class="dark:bg-neutral-200 bg-neutral-500 h-full aspect-1">
+      <div class="cover-wrapper overflow-hidden relative dark:bg-neutral-200 bg-neutral-500 h-full aspect-1" @click="showExpended = !showExpended">
         <img
           v-if="currentSong?.coverUrl"
           :src="currentSong.coverUrl"
           referrerpolicy="no-referrer"
-          class="h-full w-full object-cover"
+          class="h-full w-full object-cover transition-filter"
         >
+        <div
+          class="i-lucide:chevrons-up absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-transparent text-10 transition-[color,transform] duration-200"
+        />
       </div>
 
       <!-- Music info -->
@@ -248,6 +253,7 @@ async function handleQualitySelect(quality: MusicQuality) {
         <div class="i-solar:skip-next-bold text-5 text-primary transition-color hover:text-primary/80" @click="prevNext(1)" />
       </div>
     </div>
+    <Expended v-model:show="showExpended" />
   </div>
 </template>
 
@@ -287,6 +293,16 @@ async function handleQualitySelect(quality: MusicQuality) {
     width: 100%;
     height: calc(4 * var(--spacing) + 100%);
     transform: translateY(-50%);
+  }
+}
+.cover-wrapper {
+  &:hover {
+    > img {
+      @apply filter-blur-xs;
+    }
+    > .i-lucide\:chevrons-up {
+      @apply text-black/70 z-2;
+    }
   }
 }
 </style>

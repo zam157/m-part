@@ -48,15 +48,15 @@ declare module 'vue-router/auto-routes' {
     'AlbumDetailPage': RouteRecordInfo<
       'AlbumDetailPage',
       '/album-detail/:provider/:id',
-      { provider: ParamValue<true>, id: ParamValue<true> },
-      { provider: ParamValue<false>, id: ParamValue<false> },
+      { id: ParamValue<true>, provider: ParamValue<true> },
+      { id: ParamValue<false>, provider: ParamValue<false> },
       | never
     >,
     'ArtistDetailPage': RouteRecordInfo<
       'ArtistDetailPage',
       '/artist-detail/:provider/:id',
-      { provider: ParamValue<true>, id: ParamValue<true> },
-      { provider: ParamValue<false>, id: ParamValue<false> },
+      { id: ParamValue<true>, provider: ParamValue<true> },
+      { id: ParamValue<false>, provider: ParamValue<false> },
       | never
     >,
     '/playground': RouteRecordInfo<

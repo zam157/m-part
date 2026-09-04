@@ -58,7 +58,7 @@ const renderContent = computed(() => {
         <div
           v-for="(option, index) in options"
           :key="index"
-          class="ghost-btn flex items-center pl-1.5 pr-8 py-1 text-sm w-full"
+          class="ghost-btn flex items-center pl-1.5 pr-8 py-1 text-3.5 w-full"
           :class="{
             'opacity-50 cursor-not-allowed': option.disabled,
           }"
