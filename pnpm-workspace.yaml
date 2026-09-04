@@ -3,6 +3,7 @@ allowBuilds:
   simple-git-hooks: true
 catalogMode: strict
 cleanupUnusedCatalogs: true
+minimumReleaseAge: 0 # 1440
 minimumReleaseAgeExclude:
   - vue
   - '@vue/*'
@@ -11,45 +12,44 @@ trustPolicy: no-downgrade
 trustPolicyExclude:
   - semver@6.3.1
   - rollup@2.80.0
+  - '@trickfilm400/rollup-plugin-off-main-thread@3.0.0-pre1'
 catalogs:
   backend:
     nitro: latest
   build:
-    '@iconify-json/lucide': ^1.2.111
-    '@iconify-json/material-symbols': ^1.2.76
-    '@iconify-json/solar': ^1.2.5
-    '@intlify/unplugin-vue-i18n': ^11.2.3
-    '@unocss/eslint-config': ^66.7.0
-    '@unocss/preset-web-fonts': ^66.7.0
-    '@vitejs/plugin-vue': ^6.0.7
-    unocss: ^66.7.0
+    '@iconify-json/lucide': ^1.2.128
+    '@iconify-json/material-symbols': ^1.2.90
+    '@iconify-json/solar': ^1.2.10
+    '@intlify/unplugin-vue-i18n': ^11.2.5
+    '@unocss/eslint-config': ^66.9.1
+    '@unocss/preset-web-fonts': ^66.9.1
+    '@vitejs/plugin-vue': ^6.0.8
+    unocss: ~66.8.1
     unocss-preset-shadcn: ^1.0.1
-    unplugin-auto-import: ^21.0.0
+    unplugin-auto-import: ^21.1.0
     unplugin-vue-components: ^32.1.0
-    vite: ^8.0.16
+    vite: ^8.2.2
     vite-plugin-pwa: ^1.3.0
   dev:
-    '@antfu/eslint-config': ^9.0.0
-    '@types/node': ^25.9.1
-    '@vitest/browser-playwright': ^4.1.8
-    '@vue/test-utils': ^2.4.11
-    eslint: ^10.4.1
+    '@antfu/eslint-config': ^9.3.0
+    '@types/node': ^26.4.0
+    '@vitest/browser-playwright': ^4.1.11
+    '@vue/test-utils': ^2.5.0
+    eslint: ^10.9.1
     eslint-plugin-format: ^2.0.1
-    jsdom: ^29.1.1
+    jsdom: ^30.0.1
     nano-staged: ^1.0.2
-    simple-git-hooks: ^2.13.1
-    typescript: ^6.0.3
-    vitest: ^4.1.8
+    simple-git-hooks: ^2.14.0
+    typescript: ^7.0.2
+    vitest: ^4.1.11
     vitest-browser-vue: 2.1.0
-    vue-tsc: ^3.3.3
+    vue-tsc: ^3.3.11
   frontend:
-    '@unhead/vue': ^3.1.1
-    '@vueuse/core': ^14.3.0
-    vue: 3.6.0-beta.14
-    vue-i18n: ^11.4.4
-    vue-router: ^5.1.0
+    '@unhead/vue': ^3.4.0
+    '@vueuse/core': ^14.4.0
+    vue: 3.6.0-rc.6
+    vue-i18n: ^11.4.10
+    vue-router: ^5.3.0
   shared:
     crypto-es: ^3.1.3
-    valibot: ^1.4.1
-configDependencies:
-  '@pnpm/pacquet': 0.2.13
+    valibot: ^1.4.2

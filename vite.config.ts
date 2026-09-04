@@ -16,8 +16,8 @@ import VueRouter from 'vue-router/vite'
 export default defineConfig({
   resolve: {
     alias: {
-      '~/': `${path.resolve(__dirname, 'client')}/`,
-      '#shared/': `${path.resolve(__dirname, 'shared')}/`,
+      '~/': `${path.resolve(import.meta.dirname, 'client')}/`,
+      '#shared/': `${path.resolve(import.meta.dirname, 'shared')}/`,
     },
   },
 
@@ -105,7 +105,7 @@ export default defineConfig({
       runtimeOnly: true,
       compositionOnly: true,
       fullInstall: true,
-      include: [path.resolve(__dirname, 'client/locales/**')],
+      include: [path.resolve(import.meta.dirname, 'client/locales/**')],
     }),
 
     nitro(),
@@ -139,4 +139,7 @@ export default defineConfig({
       },
     ],
   },
+  // experimental: {
+  //   bundledDev: true,
+  // },
 })

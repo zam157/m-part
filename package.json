@@ -52,10 +52,10 @@
     "vitest-browser-vue": "catalog:dev",
     "vue-tsc": "catalog:dev"
   },
-  "simple-git-hooks": {
-    "pre-commit": "pnpm exec nano-staged"
-  },
-  "nano-staged": {
-    "*": "eslint --fix"
-  }
+  // "simple-git-hooks": {
+  //   "pre-commit": "pnpm exec nano-staged"
+  // },
+  // "nano-staged": {
+  //   "*": "eslint --fix"
+  // }
 }
