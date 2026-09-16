@@ -4,15 +4,15 @@ import antfu from '@antfu/eslint-config'
 export default antfu(
   {
     markdown: false,
+    solid: true,
     unocss: true,
     formatters: true,
     pnpm: true,
-    // ignores: [
-    //   'pnpm-workspace.yaml',
-    // ],
+    ignores: [
+      // 由 filesystem-routing 生成
+      'client/file-routes.d.ts',
+    ],
     rules: {
-      'vue/attribute-hyphenation': ['warn', 'never'],
-      'vue/v-on-event-hyphenation': ['warn', 'never'],
       'unocss/order': 'off',
     },
   },

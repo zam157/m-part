@@ -10,52 +10,40 @@
     "test": "vitest",
     "test:frontend": "vitest client",
     "test:backend": "vitest server",
-    "typecheck": "vue-tsc --build --noEmit",
-    "typecheck:frontend": "vue-tsc --noEmit --project tsconfig.frontend.json",
-    "typecheck:backend": "vue-tsc --noEmit --project tsconfig.backend.json"
+    "typecheck": "tsc --build",
+    "typecheck:frontend": "tsc --noEmit --project tsconfig.frontend.json",
+    "typecheck:backend": "tsc --noEmit --project tsconfig.backend.json"
   },
   "dependencies": {
-    "@unhead/vue": "catalog:frontend",
-    "@vueuse/core": "catalog:frontend",
+    "@solidjs/router": "catalog:frontend",
+    "@solidjs/web": "catalog:frontend",
     "crypto-es": "catalog:shared",
     "nitro": "catalog:backend",
-    "valibot": "catalog:shared",
-    "vue": "catalog:frontend",
-    "vue-i18n": "catalog:frontend",
-    "vue-router": "catalog:frontend"
+    "solid-js": "catalog:frontend",
+    "valibot": "catalog:shared"
   },
   "devDependencies": {
     "@antfu/eslint-config": "catalog:dev",
     "@iconify-json/lucide": "catalog:build",
     "@iconify-json/material-symbols": "catalog:build",
     "@iconify-json/solar": "catalog:build",
-    "@intlify/unplugin-vue-i18n": "catalog:build",
+    "@solidjs/vite-plugin": "catalog:build",
     "@types/node": "catalog:dev",
     "@unocss/eslint-config": "catalog:build",
     "@unocss/preset-web-fonts": "catalog:build",
-    "@vitejs/plugin-vue": "catalog:build",
     "@vitest/browser-playwright": "catalog:dev",
-    "@vue/test-utils": "catalog:dev",
     "eslint": "catalog:dev",
     "eslint-plugin-format": "catalog:dev",
+    "eslint-plugin-solid": "catalog:dev",
+    "filesystem-routing": "catalog:build",
     "jsdom": "catalog:dev",
     "nano-staged": "catalog:dev",
     "simple-git-hooks": "catalog:dev",
     "typescript": "catalog:dev",
     "unocss": "catalog:build",
     "unocss-preset-shadcn": "catalog:build",
-    "unplugin-auto-import": "catalog:build",
-    "unplugin-vue-components": "catalog:build",
     "vite": "catalog:build",
     "vite-plugin-pwa": "catalog:build",
-    "vitest": "catalog:dev",
-    "vitest-browser-vue": "catalog:dev",
-    "vue-tsc": "catalog:dev"
-  },
-  // "simple-git-hooks": {
-  //   "pre-commit": "pnpm exec nano-staged"
-  // },
-  // "nano-staged": {
-  //   "*": "eslint --fix"
-  // }
+    "vitest": "catalog:dev"
+  }
 }

@@ -1,17 +1,12 @@
 /// <reference types="vitest/config" />
 import path from 'node:path'
-import VueI18n from '@intlify/unplugin-vue-i18n/vite'
-import { unheadVueComposablesImports } from '@unhead/vue'
-import Vue from '@vitejs/plugin-vue'
+import solid from '@solidjs/vite-plugin'
 // import { playwright } from '@vitest/browser-playwright'
+import { fileRoutes } from 'filesystem-routing/vite'
 import { nitro } from 'nitro/vite'
 import Unocss from 'unocss/vite'
-import AutoImport from 'unplugin-auto-import/vite'
-// import Components from 'unplugin-vue-components/vite'
 import { defineConfig } from 'vite'
 // import { VitePWA } from 'vite-plugin-pwa'
-import { VueRouterAutoImports } from 'vue-router/unplugin'
-import VueRouter from 'vue-router/vite'
 
 export default defineConfig({
   resolve: {
@@ -26,46 +21,20 @@ export default defineConfig({
   },
 
   plugins: [
-    VueRouter({
-      routesFolder: 'client/pages',
-      extensions: ['.vue', '.md'],
-      dts: 'client/typed-router.d.ts',
+    solid({
+      extensions: ['.jsx', '.tsx'],
+      // Solid 编译器默认会省略「唯一属性」的引号（`class="empty"` → `class=empty`），
+      // 编译产物里该 token 就没法被 UnoCSS 提取，单 token 的 class 会静默丢样式。
+      solid: { omitQuotes: false },
     }),
 
-    Vue({
-      include: [/\.vue$/, /\.md$/],
+    // https://github.com/solidjs/filesystem-routing
+    // 扫描 client/pages 生成 virtual:file-routes 路由清单
+    fileRoutes({
+      dir: 'client/pages',
+      extensions: ['ts', 'tsx'],
+      types: 'client/file-routes.d.ts',
     }),
-
-    // https://github.com/antfu/unplugin-auto-import
-    AutoImport({
-      include: [/\.[jt]sx?$/, /\.vue$/, /\.vue\?vue/, /\.md$/],
-      imports: [
-        'vue',
-        'vue-i18n',
-        '@vueuse/core',
-        unheadVueComposablesImports,
-        VueRouterAutoImports,
-        {
-          // add any other imports you were relying on
-          'vue-router/auto': ['useLink'],
-        },
-      ],
-      dts: 'client/auto-imports.d.ts',
-      dirs: [
-        // 'client/composables',
-        // 'client/stores',
-      ],
-      vueTemplate: true,
-    }),
-
-    // https://github.com/antfu/unplugin-vue-components
-    // Components({
-    //   // allow auto load markdown components under `./client/components/`
-    //   extensions: ['vue', 'md'],
-    //   // allow auto import and register components used in markdown
-    //   include: [/\.vue$/, /\.vue\?vue/, /\.md$/],
-    //   dts: 'client/components.d.ts',
-    // }),
 
     // https://github.com/antfu/unocss
     // see uno.config.ts for config
@@ -99,14 +68,6 @@ export default defineConfig({
     //     ],
     //   },
     // }),
-
-    // https://github.com/intlify/bundle-tools/tree/main/packages/unplugin-vue-i18n
-    VueI18n({
-      runtimeOnly: true,
-      compositionOnly: true,
-      fullInstall: true,
-      include: [path.resolve(import.meta.dirname, 'client/locales/**')],
-    }),
 
     nitro(),
   ],

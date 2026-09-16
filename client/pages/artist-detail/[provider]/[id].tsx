@@ -1,0 +1,257 @@
+import type { AlbumInfo, ArtistInfo, MusicInfo } from '#shared/types/music-info'
+import type { Pagination as PaginationType, ProviderName } from '#shared/types/provider'
+import { providers } from '#shared/utils/providers/index'
+import { useNavigate, useParams } from '@solidjs/router'
+import { createSignal, For, Match, Show, Switch } from 'solid-js'
+import Pagination from '~/components/Pagination/Pagination'
+import TabContent from '~/components/Tabs/TabContent'
+import Tabs from '~/components/Tabs/Tabs'
+import { setPlaylist } from '~/composables/player'
+
+type TabValue = 'music' | 'albums'
+
+export default function ArtistDetailPage() {
+  const navigate = useNavigate()
+  const params = useParams<{ provider: string, id: string }>()
+
+  const provider = params.provider as ProviderName
+  const artistId = params.id
+  const providerInstance = providers[provider]
+
+  const [infoLoading, setInfoLoading] = createSignal(true)
+  const [artistInfo, setArtistInfo] = createSignal<ArtistInfo | null>(null)
+
+  const [worksLoading, setWorksLoading] = createSignal(true)
+  const [works, setWorks] = createSignal<MusicInfo[]>([])
+  const [worksPagination, setWorksPagination] = createSignal<PaginationType>({
+    page: 1,
+    total: 0,
+    pageSize: 20,
+  })
+
+  const [albumsLoading, setAlbumsLoading] = createSignal(false)
+  const [albums, setAlbums] = createSignal<AlbumInfo[]>([])
+  const [albumsPagination, setAlbumsPagination] = createSignal<PaginationType>({
+    page: 1,
+    total: 0,
+    pageSize: 20,
+  })
+
+  const [activeTab, setActiveTab] = createSignal<TabValue>('music')
+
+  const tabs = ([
+    { value: 'music', label: '单曲' },
+    { value: 'albums', label: '专辑' },
+  ] satisfies { value: TabValue, label: string }[])
+    .map((tab) => {
+      if (tab.value === 'albums' && !providerInstance.getArtistAlbums) {
+        return { ...tab, disabled: true }
+      }
+      if (tab.value === 'music' && !providerInstance.getArtistWorks) {
+        return { ...tab, disabled: true }
+      }
+      return tab
+    })
+
+  async function getArtistInfo() {
+    if (!providerInstance.getArtistInfo)
+      return null
+    setArtistInfo(await providerInstance.getArtistInfo(artistId))
+    setInfoLoading(false)
+  }
+
+  async function getArtistWorks(page: number) {
+    if (!providerInstance.getArtistWorks)
+      return null
+    const [items, pageData] = await providerInstance.getArtistWorks(artistId, page)
+    setWorks(items)
+    setWorksPagination(pageData)
+    setWorksLoading(false)
+  }
+
+  async function getArtistAlbums(page: number) {
+    if (!providerInstance.getArtistAlbums)
+      return null
+    setAlbumsLoading(true)
+    const [items, pageData] = await providerInstance.getArtistAlbums(artistId, page)
+    setAlbums(items)
+    setAlbumsPagination(pageData)
+    setAlbumsLoading(false)
+  }
+
+  function handleTabChange(value: TabValue) {
+    setActiveTab(value)
+    if (value === 'music' && worksLoading()) {
+      getArtistWorks(1)
+    }
+    else if (value === 'albums' && !albums().length) {
+      getArtistAlbums(1)
+    }
+  }
+
+  function handleAlbumClick(album: AlbumInfo) {
+    let targetUrl = `/album-detail/${provider}/${album.id}`
+    if (album.extra) {
+      const query = new URLSearchParams({
+        ...album.extra,
+        artist: artistInfo()?.name || '',
+      } as Record<string, string>).toString()
+      targetUrl += `?${query}`
+    }
+    navigate(targetUrl)
+  }
+
+  getArtistInfo()
+  getArtistWorks(1)
+
+  return (
+    <div class="flex-1 min-w-0 flex flex-col gap-3 p-4">
+      <div class="grow-0 h-32 shrink-0 flex items-center gap-4">
+        <Show
+          when={!infoLoading()}
+          fallback={<div class="skeleton h-full aspect-square object-cover rounded" />}
+        >
+          <img
+            src={artistInfo()?.coverUrl}
+            referrerpolicy="no-referrer"
+            alt="Artist Avatar"
+            class="h-full aspect-square object-cover rounded-lg"
+          />
+        </Show>
+        <div class="flex flex-col gap-1">
+          <div class={`text-xl font-bold ${infoLoading() ? 'skeleton w-16 h-[1em]' : ''}`.trim()}>
+            {artistInfo()?.name}
+          </div>
+          <div class={`text-sm text-muted-foreground ${infoLoading() ? 'skeleton w-24 h-[1em]' : ''}`.trim()}>
+            {artistInfo()?.description}
+          </div>
+          <div class={activeTab() === 'music' ? 'visible' : 'invisible'}>
+            <Show when={!worksLoading()} fallback={<div class="skeleton w-24 h-8 mt-2" />}>
+              <button
+                class="btn px-3 py-1 mt-2 w-24"
+                onClick={() => setPlaylist(works())}
+              >
+                {!worksLoading() ? '播放全部' : ' '}
+              </button>
+            </Show>
+          </div>
+        </div>
+      </div>
+
+      <Tabs class="grow-0" tabs={tabs} modelValue={activeTab()} onModelValueChange={handleTabChange}>
+        <TabContent value="music" class="flex-1 min-h-0 overflow-auto flex flex-col gap-1 pb-2">
+          <Switch
+            fallback={(
+              <div class="empty">
+                <span class="i-solar:music-notes-bold text-4xl text-foreground/20 mb-2" />
+                <span class="text-foreground/30">暂无单曲</span>
+              </div>
+            )}
+          >
+            <Match when={worksLoading()}>
+              <For each={[1, 2, 3, 4, 5, 6]}>
+                {i => (
+                  <div class="flex items-center gap-2 p-1.5 h-12">
+                    <div class="skeleton h-10 aspect-square object-cover rounded-lg shrink-0" />
+                    <div class="flex flex-col flex-1 min-w-0 gap-2">
+                      <div class="text-sm font-medium truncate skeleton h-[1em] w-[6em]" />
+                      <div class="text-xs text-muted-foreground truncate skeleton h-[1em] w-[12em]" />
+                    </div>
+                  </div>
+                )}
+              </For>
+            </Match>
+
+            <Match when={works().length}>
+              <For each={works()}>
+                {work => (
+                  <div class="ghost-btn flex items-center gap-2 p-1.5 h-12">
+                    <img
+                      src={work.coverUrl}
+                      referrerpolicy="no-referrer"
+                      alt="Work Cover"
+                      class="h-10 aspect-square object-cover rounded-lg shrink-0"
+                    />
+                    <div class="flex flex-col flex-1 min-w-0">
+                      <div class="text-sm font-medium w-full truncate min-h-1em">
+                        {work.title}
+                      </div>
+                      <div class="text-xs text-muted-foreground w-full truncate min-h-1em">
+                        {work.description}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </For>
+              <Pagination
+                modelValue={worksPagination().page}
+                total={worksPagination().total}
+                pageSize={worksPagination().pageSize}
+                onPageChange={getArtistWorks}
+              />
+            </Match>
+          </Switch>
+        </TabContent>
+
+        <Show when={providerInstance.getArtistAlbums}>
+          <TabContent value="albums" class="flex-1 min-h-0 overflow-auto flex flex-col gap-1 pb-2">
+            <Switch
+              fallback={(
+                <div class="empty">
+                  <span class="i-solar:music-notes-bold text-4xl text-foreground/20 mb-2" />
+                  <span class="text-foreground/30">暂无专辑</span>
+                </div>
+              )}
+            >
+              <Match when={albumsLoading()}>
+                <For each={[1, 2, 3, 4]}>
+                  {i => (
+                    <div class="flex items-center gap-2 p-1.5 h-12">
+                      <div class="skeleton h-10 aspect-square rounded-lg shrink-0" />
+                      <div class="flex flex-col flex-1 min-w-0 gap-2">
+                        <div class="skeleton h-[1em] w-[6em]" />
+                        <div class="skeleton h-[1em] w-[12em]" />
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </Match>
+
+              <Match when={albums().length}>
+                <For each={albums()}>
+                  {album => (
+                    <div
+                      class="ghost-btn flex items-center gap-2 p-1.5 h-12"
+                      onClick={() => handleAlbumClick(album)}
+                    >
+                      <img
+                        src={album.coverUrl}
+                        referrerpolicy="no-referrer"
+                        alt="Album Cover"
+                        class="h-10 aspect-square object-cover rounded-lg shrink-0"
+                      />
+                      <div class="flex flex-col gap-0.5 flex-1 min-w-0">
+                        <div class="text-sm font-medium w-full truncate min-h-1em">
+                          {album.title}
+                        </div>
+                        <div class="text-xs text-muted-foreground w-full truncate min-h-1em">
+                          {album.description}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </For>
+                <Pagination
+                  modelValue={albumsPagination().page}
+                  total={albumsPagination().total}
+                  pageSize={albumsPagination().pageSize}
+                  onPageChange={getArtistAlbums}
+                />
+              </Match>
+            </Switch>
+          </TabContent>
+        </Show>
+      </Tabs>
+    </div>
+  )
+}

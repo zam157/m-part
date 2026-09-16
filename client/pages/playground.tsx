@@ -1,23 +1,18 @@
-<script setup lang="ts">
 /* eslint-disable no-console */
 import { wait } from '#shared/utils/index'
 import biliProvider from '#shared/utils/providers/bilibili'
-import Popover from '~/components/Popover/Popover.vue'
+import Popover from '~/components/Popover/Popover'
 import { colorMode, switchColorMode } from '~/composables/dark'
 import { setCurrentIndex, setPlaying, setPlaylist } from '~/composables/player'
 
-defineOptions({
-  name: 'Playground',
-})
-
 function toggleDark() {
-  if (colorMode.value === 'light') {
+  if (colorMode() === 'light') {
     switchColorMode('dark')
   }
-  else if (colorMode.value === 'dark') {
+  else if (colorMode() === 'dark') {
     switchColorMode('system')
   }
-  else if (colorMode.value === 'system') {
+  else if (colorMode() === 'system') {
     switchColorMode('light')
   }
 }
@@ -63,26 +58,26 @@ async function biliSearch() {
   const sourceInfo = await biliProvider.getSourceInfo?.(results[0][0]!)
   console.log('Source Info:', sourceInfo)
 }
-</script>
 
-<template>
-  <div class="flex-1 min-w-0">
-    <div class="ghost-btn px-3 py-2" @click="toggleDark">
-      colorMode: {{ colorMode }}
+export default function Playground() {
+  return (
+    <div class="flex-1 min-w-0">
+      <div class="ghost-btn px-3 py-2" onClick={toggleDark}>
+        colorMode:
+        {' '}
+        {colorMode()}
+      </div>
+      <div class="ghost-btn px-3 py-2" onClick={setMockedPlaylist}>
+        Set Mocked Playlist
+      </div>
+      <div class="ghost-btn px-3 py-2" onClick={biliSearch}>
+        Bili Search
+      </div>
+      <Popover
+        triggerAttrs={{ class: 'ghost-btn px-3 py-2' }}
+        trigger="Popover Test"
+        content={<p>This is the popover content.</p>}
+      />
     </div>
-    <div class="ghost-btn px-3 py-2" @click="setMockedPlaylist">
-      Set Mocked Playlist
-    </div>
-    <div class="ghost-btn px-3 py-2" @click="biliSearch">
-      Bili Search
-    </div>
-    <Popover :triggerAttrs="{ class: 'ghost-btn px-3 py-2' }">
-      <template #trigger>
-        Popover Test
-      </template>
-      <template #content>
-        <p>This is the popover content.</p>
-      </template>
-    </Popover>
-  </div>
-</template>
+  )
+}
