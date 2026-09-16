@@ -1,36 +1,13 @@
 import type { JSX } from '@solidjs/web'
 import { Dynamic, Portal } from '@solidjs/web'
 import { createUniqueId } from 'solid-js'
+import { splitBoundAttrs } from './attrs'
 import './popover.css'
 
 export interface PopoverApi {
   toggle: () => void
   show: () => void
   hide: () => void
-}
-
-/**
- * 合并 class / style 两个「可叠加」属性，其余属性原样透传。
- * Solid 不会像 Vue 那样自动合并 class，所以需要显式处理。
- */
-function splitBoundAttrs(attrs: Record<string, any> | undefined, defaults: Record<string, any>) {
-  const { class: className, style, ...rest } = attrs ?? {}
-  const merged: Record<string, any> = { ...rest, ...defaults }
-  if ('class' in defaults) {
-    merged.class = `${defaults.class} ${className ?? ''}`.trim()
-  }
-  else if (className !== undefined) {
-    merged.class = className
-  }
-  if ('style' in defaults) {
-    merged.style = typeof style === 'string'
-      ? `${defaults.style as string}${style}`
-      : { ...(defaults.style as object), ...(style ?? {}) }
-  }
-  else if (style !== undefined) {
-    merged.style = style
-  }
-  return merged
 }
 
 export interface PopoverProps {
@@ -54,9 +31,11 @@ export interface PopoverProps {
 }
 
 export default function Popover(props: PopoverProps) {
-  const id = createUniqueId()
-  const anchorName = `--popover-anchor-${id}`
-  const popoverId = `popover-${id}`
+  // 只需一个唯一标识（`cl-0`、`cl-1`…）：
+  // - 它本身作为弹出容器的 id，供触发器的 `popovertarget` 引用；
+  // - 锚点名（<dashed-ident>）由它派生，供 `anchor-name` / `position-anchor` 使用。
+  const popoverId = createUniqueId()
+  const anchorName = `--${popoverId}`
 
   let popoverRef: HTMLElement | undefined
 
