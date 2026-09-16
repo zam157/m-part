@@ -6,7 +6,7 @@ export interface SelectProps<T> {
   disabled?: boolean
   placeholder?: string
   options: readonly Option<T>[]
-  /** 追加到弹出容器的行内样式（字符串形式，便于与内置 anchor 样式拼接） */
+  /** 追加到弹出容器的行内样式（与内置样式无关，直接透传） */
   contentStyle?: string
   /** 追加到触发器的工具类 */
   triggerClass?: string

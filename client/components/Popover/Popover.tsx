@@ -1,7 +1,6 @@
 import type { JSX } from '@solidjs/web'
 import { Dynamic, Portal } from '@solidjs/web'
 import { createUniqueId } from 'solid-js'
-import { splitBoundAttrs } from './attrs'
 import './popover.css'
 
 export interface PopoverApi {
@@ -11,15 +10,15 @@ export interface PopoverApi {
 }
 
 export interface PopoverProps {
-  /** popover 属性，默认 `auto`（等价于 Vue 版的 `popover=""`） */
+  /** popover 属性，默认 `auto` */
   popover?: 'auto' | 'hint' | 'manual'
   /** 触发器标签名，默认 `button` */
   triggerTag?: string
-  /** 触发器上的附加属性（class / style 会与内置样式合并） */
+  /** 触发器的附加属性，原样透传 */
   triggerAttrs?: Record<string, any>
   /** 内容容器标签名，默认 `div` */
   contentTag?: string
-  /** 内容容器上的附加属性（class / style 会与内置样式合并） */
+  /** 弹出容器的附加属性，原样透传（`class` 会与内置类名拼接） */
   contentAttrs?: Record<string, any>
   onBeforeToggle?: (event: ToggleEvent) => void
   /** 触发器内容 */
@@ -30,43 +29,46 @@ export interface PopoverProps {
   ref?: (api: PopoverApi) => void
 }
 
+/**
+ * 基于原生 Popover API 的浮层。
+ *
+ * 定位全部交给 CSS（见 `popover.css`）：`popovertarget` + `id` 已经把触发器和浮层
+ * 关联成「隐式锚点」，浮层上的 `position-anchor: auto` 指的就是它。所以这里不需要
+ * 动态的 `anchor-name` / `position-anchor` 行内样式，只需要一个唯一 id。
+ */
 export default function Popover(props: PopoverProps) {
-  // 只需一个唯一标识（`cl-0`、`cl-1`…）：
-  // - 它本身作为弹出容器的 id，供触发器的 `popovertarget` 引用；
-  // - 锚点名（<dashed-ident>）由它派生，供 `anchor-name` / `position-anchor` 使用。
   const popoverId = createUniqueId()
-  const anchorName = `--${popoverId}`
-
   let popoverRef: HTMLElement | undefined
+  let triggerRef: HTMLElement | undefined
 
   props.ref?.({
-    toggle: () => popoverRef?.togglePopover(),
-    show: () => popoverRef?.showPopover(),
+    // 命令式打开不经过触发器的激活流程，显式给出 source 才能保留隐式锚点
+    toggle: () => popoverRef?.togglePopover({ source: triggerRef }),
+    show: () => popoverRef?.showPopover({ source: triggerRef }),
     hide: () => popoverRef?.hidePopover(),
-  })
-
-  const triggerProps = () => splitBoundAttrs(props.triggerAttrs, {
-    popovertarget: popoverId,
-    class: 't-popover-trigger',
-    style: `anchor-name:${anchorName};`,
-  })
-
-  const contentProps = () => splitBoundAttrs(props.contentAttrs, {
-    id: popoverId,
-    popover: props.popover ?? 'auto',
-    class: 't-popover-content',
-    style: `position-anchor:${anchorName};`,
-    onBeforeToggle: props.onBeforeToggle,
   })
 
   return (
     <>
-      <Dynamic component={props.triggerTag ?? 'button'} {...(triggerProps() as any)}>
+      <Dynamic
+        component={props.triggerTag ?? 'button'}
+        {...(props.triggerAttrs ?? {})}
+        ref={triggerRef}
+        popovertarget={popoverId}
+      >
         {props.trigger}
       </Dynamic>
 
       <Portal>
-        <Dynamic component={props.contentTag ?? 'div'} ref={popoverRef} {...(contentProps() as any)}>
+        <Dynamic
+          component={props.contentTag ?? 'div'}
+          {...(props.contentAttrs ?? {})}
+          id={popoverId}
+          popover={props.popover ?? 'auto'}
+          ref={popoverRef}
+          class={`t-popover-content ${props.contentAttrs?.class ?? ''}`.trim()}
+          onBeforeToggle={props.onBeforeToggle}
+        >
           {props.content}
         </Dynamic>
       </Portal>
