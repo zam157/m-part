@@ -9,9 +9,12 @@
     justify-self: anchor-center;
     inset-block-end: anchor(top);
     position-try-fallbacks: flip-block;
-    transition-property: display, opacity, visibility;
+    transition-property: display, opacity, overlay;
     transition-timing-function: var(--un-ease, var(--default-transition-timingFunction));
     transition-duration: 0.2s;
+    /* display / overlay 都是离散属性：allow-discrete 让它们在过渡结束后才提交，
+       这样关闭时元素能留在 top layer 里把淡出动画播完（否则会被下层内容盖住，
+       看起来像瞬间消失）。 */
     transition-behavior: allow-discrete;
     opacity: 0;
     &:popover-open {
