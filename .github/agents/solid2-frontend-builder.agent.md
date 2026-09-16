@@ -26,7 +26,7 @@ tools: [execute, read, edit, search, 'io.github.chromedevtools/chrome-devtools-m
 - 列表一律用 `<For>`（带 index 访问器）/ `<Index>` / `<Repeat>`，**不要用 `.map()`**
 - 条件渲染用 `<Show>`、`<Switch>/<Match>`；三元表达式只用于属性等简单场景
 - 事件用 `onClick` / `onInput`（小驼峰），不是 Vue 的 `@click`
-- 副作用用 `createEffect(..., { defer: true })`，依赖不直观时用 `on(() => deps, ...)` 显式声明
+- 副作用用 Solid 2 的双函数形式 `createEffect(compute, effect)`：在 `compute` 里读信号即建立依赖，`effect` 收到新值并执行副作用；一次性 DOM 收尾用 `onSettled`。Solid 2 **没有** Solid 1 的 `on()` 辅助函数
 - 清理逻辑写在 `onCleanup` 中（定时器、事件监听、AbortController、ResizeObserver）
 - 派生值优先用 `createMemo`；不要把可推导的值再存成信号
 
@@ -38,7 +38,7 @@ tools: [execute, read, edit, search, 'io.github.chromedevtools/chrome-devtools-m
 - `classList` 已从 Solid 2 的 JSX 类型中移除：条件类名用模板字符串拼接 `class={`a ${cond ? 'b' : ''}`}`
 - `aria-*` 等属性只接受字符串字面量：写 `aria-selected={cond ? 'true' : 'false'}`
 - 属性名保持 **连字符**（`data-testid`、`aria-label`、`fill-rule`），仅事件与 JS 侧使用小驼峰
-- 开发环境出现 `ASYNC_OUTSIDE_LOADING_BOUNDARY` 之类提示属路由代码分割导致的诊断信息，修复方式是用 `<Loading fallback={...}>` 包住**数据相关的那一段**（不要把整个布局 shell 包进去）
+- 路由分块会产生 `ASYNC_OUTSIDE_LOADING_BOUNDARY` 诊断（`render()` 在初始挂载期间强制检查 Loading 边界）：`client/App.tsx` 已用 `<Loading fallback={<PageLoading />}>` 只包住内容区，外壳保持可见。新增的异步读取请落在该边界内；不要把整个布局 shell 或 `<Router>` 包进边界
 
 ## 状态共享（本项目的 keep-alive 替代方案）
 

@@ -73,7 +73,8 @@ pnpm typecheck:backend   # 仅后端类型检查
 
 - **信号写入是“暂存”的**：调用 `setX(1)` 后，在同一个同步块内读取 `x()` 仍是旧值，需要 `flush()` 或等待微任务才提交。**不要写入后立即回读同一个信号**，把新值作为参数显式传递
 - 因此在 Vitest 中断言信号前需要 `import { flush } from 'solid-js'` 并调用 `flush()`
-- 路由默认开启代码分割，路由组件是异步的，开发环境可能出现 `ASYNC_OUTSIDE_LOADING_BOUNDARY` 诊断提示；如需消除，用 `<Loading fallback={...}>` 只包住数据相关的区域
+- 路由默认开启代码分割，路由组件是 `lazy()` 异步组件。`render()` 在初始挂载期间会强制检查 Loading 边界，异步读取若逃到根节点就会提示 `ASYNC_OUTSIDE_LOADING_BOUNDARY`，并把整棵根节点的挂载推迟到异步就绪
+- 内容区已在 `client/App.tsx` 用 `<Loading fallback={<PageLoading />}>` 包住：外壳（侧边栏/播放列表/播放器）保持可见，只有内容区在等待期间显示 loading。**不要把外壳或整个 `<Router>` 包进边界**（会整屏闪回 fallback），新增的异步读取应落在内容区边界内
 
 ### 样式
 
