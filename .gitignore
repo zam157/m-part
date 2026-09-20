@@ -10,3 +10,4 @@ tsc-output
 *.log
 cypress/downloads
 public/assets/fonts
+.zcodeignore
