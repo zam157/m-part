@@ -2,7 +2,9 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ESNext"],
-    "types": ["node"]
+    "types": ["node"],
+    // Vite 的原生配置加载器（未来的默认行为）要求配置里显式写出 .ts 扩展名
+    "allowImportingTsExtensions": true
   },
   "include": [
     "./*.ts",

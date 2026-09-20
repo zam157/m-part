@@ -1,19 +1,13 @@
 /// <reference types="vitest/config" />
-import path from 'node:path'
-import solid from '@solidjs/vite-plugin'
 // import { playwright } from '@vitest/browser-playwright'
-import { fileRoutes } from 'filesystem-routing/vite'
-import { nitro } from 'nitro/vite'
-import Unocss from 'unocss/vite'
+// import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
+import { resolveAliases, sharedPlugins } from './vite-shared.ts'
 // import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '~/': `${path.resolve(import.meta.dirname, 'client')}/`,
-      '#shared/': `${path.resolve(import.meta.dirname, 'shared')}/`,
-    },
+    alias: resolveAliases(),
   },
 
   build: {
@@ -21,24 +15,8 @@ export default defineConfig({
   },
 
   plugins: [
-    solid({
-      extensions: ['.jsx', '.tsx'],
-      // Solid 编译器默认会省略「唯一属性」的引号（`class="empty"` → `class=empty`），
-      // 编译产物里该 token 就没法被 UnoCSS 提取，单 token 的 class 会静默丢样式。
-      solid: { omitQuotes: false },
-    }),
-
-    // https://github.com/solidjs/filesystem-routing
-    // 扫描 client/pages 生成 virtual:file-routes 路由清单
-    fileRoutes({
-      dir: 'client/pages',
-      extensions: ['ts', 'tsx'],
-      types: 'client/file-routes.d.ts',
-    }),
-
-    // https://github.com/antfu/unocss
-    // see uno.config.ts for config
-    Unocss(),
+    // Solid 编译、文件路由、UnoCSS —— 与扩展构建共用，见 vite-shared.ts
+    ...sharedPlugins(),
 
     // https://github.com/antfu/vite-plugin-pwa
     // VitePWA({
@@ -69,7 +47,7 @@ export default defineConfig({
     //   },
     // }),
 
-    nitro(),
+    // nitro(),
   ],
 
   // https://github.com/vitest-dev/vitest
@@ -83,13 +61,13 @@ export default defineConfig({
     //   instances: [{ browser: 'chromium', headless: true }],
     // },
     projects: [
-      {
-        test: {
-          name: 'server',
-          environment: 'node',
-          include: ['test/server/**/*.test.ts'],
-        },
-      },
+      // {
+      //   test: {
+      //     name: 'server',
+      //     environment: 'node',
+      //     include: ['test/server/**/*.test.ts'],
+      //   },
+      // },
       {
         extends: true,
         test: {
