@@ -30,9 +30,19 @@ export default defineConfig({
     // 没有 popup，点击图标交给 background 里的 action.onClicked 处理
     action: { default_title: 'm-part' },
     permissions: ['declarativeNetRequestWithHostAccess'],
+    // 音频 CDN 必须逐一列全：playurl 会返回 bilivideo.com（upos 镜像）或
+    // mcdn.bilivideo.cn 之类的地址。**漏掉域名不会报权限错误**，而是该请求
+    // 不再豁免 CORS，表现为浏览器报
+    // "The value of the 'Access-Control-Allow-Origin' header ... must not be the
+    //  wildcard '*' when the request's credentials mode is 'include'"，
+    // 很容易误判成 CDN 不支持跨域。新增 CDN 域名时两处都要改（这里是权限，
+    // public/rules/bilibili.json 里是注入 referer 的规则）。
+    // 已知还有 Akamai 镜像（*.akamaized.net，主要给海外用户），暂不申请这么宽的
+    // 权限；等日志里真出现该域名的 CORS 报错再按需加
     host_permissions: [
       'https://api.bilibili.com/*',
       'https://*.bilivideo.com/*',
+      'https://*.bilivideo.cn/*',
       'https://*.hdslb.com/*',
     ],
     declarative_net_request: {

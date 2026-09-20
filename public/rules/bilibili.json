@@ -69,7 +69,7 @@
       ]
     },
     "condition": {
-      "urlFilter": "||bilivideo.com/",
+      "requestDomains": ["bilivideo.com", "bilivideo.cn"],
       "resourceTypes": ["xmlhttprequest", "media"]
     }
   }
