@@ -50,7 +50,7 @@ export default defineConfig({
     ],
     [
       'card',
-      'flex flex-col gap-4 overflow-hidden rounded-xl bg-card py-4 text-sm text-card-foreground ring-1 ring-foreground/10 w-full max-w-sm',
+      'flex flex-col gap-4 overflow-hidden rounded-xl bg-card py-4 text-sm text-card-foreground ring-1 ring-foreground/10 w-full',
     ],
     [
       'empty',
