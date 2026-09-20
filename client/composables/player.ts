@@ -168,12 +168,13 @@ export function resetPlayer() {
 }
 
 /**
- * 改变音质
+ * 拉取并加载指定音质的音频。
+ *
+ * `sourceInfo` 由调用方显式传入：Solid 2 的 signal 写入要到下一次 flush 才提交，
+ * 刚写完 `setCurrentSourceInfo` 就读取会拿到旧值（null），那样这里会直接提前返回，
+ * 表现为「点了歌、接口也正常返回，但没有声音」。UI 侧的入口见 `changeQuality`。
  */
-export async function changeQuality(quality?: MusicQuality) {
-  const sourceInfo = currentSourceInfo()
-  if (!sourceInfo)
-    return
+async function loadQuality(sourceInfo: SourceInfo, quality?: MusicQuality) {
   const { qualities, headers, url } = sourceInfo
 
   const targetUrl = quality?.url || url
@@ -197,6 +198,19 @@ export async function changeQuality(quality?: MusicQuality) {
   const objectUrl = URL.createObjectURL(blob)
   audio.src = objectUrl
   audio.load()
+}
+
+/**
+ * 改变音质（UI 入口）。
+ *
+ * 这里读 `currentSourceInfo()` 是安全的：调用方在事件回调里调用，
+ * 此前 `setCurrentSourceInfo` 的写入早已提交。
+ */
+export async function changeQuality(quality?: MusicQuality) {
+  const sourceInfo = currentSourceInfo()
+  if (!sourceInfo)
+    return
+  await loadQuality(sourceInfo, quality)
 }
 
 /**
@@ -228,7 +242,8 @@ async function playSource(music: MusicInfo | undefined, src: string | null, prov
         setCurrentSourceInfo(sourceInfo)
         // TODO: 记住上次使用的音质，优先选择上次使用的音质, 目前先默认选择第一个音质
         const defaultQuality = sourceInfo.qualities?.[0]
-        await changeQuality(defaultQuality)
+        // 显式传 sourceInfo，不在这里读 signal（写入尚未提交，读到的还是 null）
+        await loadQuality(sourceInfo, defaultQuality)
       }
       catch (error) {
         console.error(`Error fetching source info from provider ${provider}:`, error)
