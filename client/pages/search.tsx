@@ -3,7 +3,7 @@ import { useNavigate } from '@solidjs/router'
 import { For, Match, Show, Switch } from 'solid-js'
 import Pagination from '~/components/Pagination/Pagination'
 import Select from '~/components/Select/Select'
-import { addToPlaylist } from '~/composables/player'
+import { addToPlayQueue } from '~/composables/player'
 import {
   albumResults,
   artistResults,
@@ -90,7 +90,7 @@ export default function SearchPage() {
                 {result => (
                   <div
                     class="card gap-2 p-2 cursor-default hover:bg-muted transition-colors"
-                    onClick={() => addToPlaylist(result)}
+                    onClick={() => addToPlayQueue(result)}
                   >
                     <div class="flex flex-col gap-2 h-full">
                       <img src={result.coverUrl} alt="cover" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />

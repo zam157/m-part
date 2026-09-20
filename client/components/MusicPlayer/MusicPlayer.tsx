@@ -7,17 +7,17 @@ import {
   currentTime,
   duration,
   playing,
-  playlist,
+  playQueue,
   playMode,
   prevNext,
   progress,
   seeking,
   setCurrentTime,
   setPlaying,
-  setShowPlaylist,
+  setShowPlayQueue,
   setVolume,
   setWaiting,
-  showPlaylist,
+  showPlayQueue,
   togglePlayMode,
   volume,
   waiting,
@@ -144,7 +144,7 @@ export default function MusicPlayer() {
       class={`
         grow-0 shrink-0 flex flex-col select-none relative
         transition-[transform,display] transition-discrete starting:translate-y-full
-        ${playlist().length === 0 ? 'translate-y-full hidden' : ''}
+        ${playQueue().length === 0 ? 'translate-y-full hidden' : ''}
       `}
     >
       {/* Progress bar */}
@@ -235,7 +235,7 @@ export default function MusicPlayer() {
         <div class="px-2 flex gap-4 items-center justify-center">
           <div
             class="i-solar-playlist-bold text-5 text-primary transition-color hover:text-primary/80"
-            onClick={() => setShowPlaylist(!showPlaylist())}
+            onClick={() => setShowPlayQueue(!showPlayQueue())}
           />
           <div
             class={`${playModeIcon()} text-5 text-primary transition-color hover:text-primary/80`}

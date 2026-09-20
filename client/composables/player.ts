@@ -21,10 +21,10 @@ const [volume, setVolumeState] = createSignal(1)
 const [seeking, setSeekingState] = createSignal(false)
 const [waiting, setWaiting] = createSignal(false)
 const [currentIndex, setCurrentIndexState] = createSignal<number | null>(null)
-const [showPlaylist, setShowPlaylist] = createSignal(false)
+const [showPlayQueue, setShowPlayQueue] = createSignal(false)
 const [playMode, setPlayModeState] = createSignal<PlayMode>('order')
-const [playlist, setPlaylistState] = createSignal<MusicInfo[]>([])
-const [randomPlaylist, setRandomPlaylistState] = createSignal<number[] | null>(null)
+const [playQueue, setPlayQueueState] = createSignal<MusicInfo[]>([])
+const [randomPlayQueue, setRandomPlayQueueState] = createSignal<number[] | null>(null)
 const [currentSourceInfo, setCurrentSourceInfo] = createSignal<SourceInfo | null>(null)
 
 export {
@@ -32,14 +32,14 @@ export {
   currentSourceInfo,
   currentTime,
   duration,
-  playlist,
+  playQueue,
   playing,
   playMode,
-  randomPlaylist,
+  randomPlayQueue,
   seeking,
-  setShowPlaylist,
+  setShowPlayQueue,
   setWaiting,
-  showPlaylist,
+  showPlayQueue,
   volume,
   waiting,
 }
@@ -61,14 +61,14 @@ const { currentSong, progress, randomIndex } = createRoot(() => {
     const index = currentIndex()
     if (index === null)
       return null
-    return playlist()[index]
+    return playQueue()[index]
   })
 
   /** 当前歌曲在随机播放列表中的位置 */
   const randomIndex = createMemo(() => {
     const index = currentIndex()
-    const random = randomPlaylist()
-    if (index === null || !random?.length || !playlist().length || playMode() !== 'random')
+    const random = randomPlayQueue()
+    if (index === null || !random?.length || !playQueue().length || playMode() !== 'random')
       return null
     return random.findIndex(i => i === index)
   })
@@ -123,7 +123,7 @@ audio.addEventListener('ended', () => {
   }
   if (playMode() === 'order') {
     // 顺序播放：如果是最后一首，停止播放
-    if (currentIndex() === playlist().length - 1) {
+    if (currentIndex() === playQueue().length - 1) {
       setPlaying(false)
       prevNext(1, false)
       return
@@ -164,7 +164,7 @@ export function resetPlayer() {
   setPlayingState(false)
   setWaiting(false)
   setSeekingState(false)
-  setRandomPlaylistState(null)
+  setRandomPlayQueueState(null)
 }
 
 /**
@@ -275,7 +275,7 @@ export async function setPlaying(isPlaying: boolean) {
 /**
  * 切换到指定歌曲。
  *
- * `music` 由调用方显式传入（而不是内部读取 `playlist()`），这样在同一个同步块里
+ * `music` 由调用方显式传入（而不是内部读取 `playQueue()`），这样在同一个同步块里
  * 刚写入过播放列表的调用方也能正确取到歌曲 —— Solid 2 的 signal 写入要到下一次
  * flush 才提交，写入后立刻读取会拿到旧列表。
  */
@@ -290,7 +290,7 @@ async function startPlaying(music: MusicInfo | undefined, index: number) {
  * 设置当前播放的歌曲
  */
 export async function setCurrentIndex(index: number) {
-  await startPlaying(playlist()[index], index)
+  await startPlaying(playQueue()[index], index)
 }
 
 /**
@@ -299,7 +299,7 @@ export async function setCurrentIndex(index: number) {
  * @param autoPlay 是否自动播放下一首，默认为 true
  */
 export async function prevNext(type: 0 | 1, autoPlay = true) {
-  const list = playlist()
+  const list = playQueue()
   if (!list.length)
     return
 
@@ -334,7 +334,7 @@ export async function prevNext(type: 0 | 1, autoPlay = true) {
   }
   // random
   else if (mode === 'random') {
-    const random = randomPlaylist()
+    const random = randomPlayQueue()
     const position = randomIndex()
     if (position === null || !random) {
       await setPlaying(false)
@@ -367,24 +367,24 @@ export function setVolume(vol: number) {
 /**
  * 覆盖播放列表
  */
-export async function setPlaylist(newPlaylist: MusicInfo[]) {
+export async function setPlayQueue(newPlayQueue: MusicInfo[]) {
   resetPlayer()
-  setPlaylistState(newPlaylist)
+  setPlayQueueState(newPlayQueue)
   if (playMode() === 'random') {
-    const random = createRandomOrder(newPlaylist.length)
-    setRandomPlaylistState(random)
+    const random = createRandomOrder(newPlayQueue.length)
+    setRandomPlayQueueState(random)
     setCurrentIndexState(random?.[0] ?? null)
   }
-  await startPlaying(newPlaylist[0], 0)
-  await setPlaying(newPlaylist.length > 0)
+  await startPlaying(newPlayQueue[0], 0)
+  await setPlaying(newPlayQueue.length > 0)
 }
 
 /**
  * 添加到播放列表
  */
-export async function addToPlaylist(item: MusicInfo) {
+export async function addToPlayQueue(item: MusicInfo) {
   // 避免重复添加同一首歌
-  const list = playlist()
+  const list = playQueue()
   const existingIndex = list.findIndex(m => m.provider === item.provider && m.id === item.id)
   if (existingIndex !== -1) {
     await setCurrentIndex(existingIndex)
@@ -392,12 +392,12 @@ export async function addToPlaylist(item: MusicInfo) {
     return
   }
 
-  setPlaylistState([...list, item])
+  setPlayQueueState([...list, item])
   if (playMode() === 'random') {
-    const random = randomPlaylist() ?? []
+    const random = randomPlayQueue() ?? []
     // 随机插入新歌曲在随机列表中的位置
     const insertPos = Math.floor(Math.random() * (random.length + 1))
-    setRandomPlaylistState([
+    setRandomPlayQueueState([
       ...random.slice(0, insertPos),
       list.length,
       ...random.slice(insertPos),
@@ -410,14 +410,14 @@ export async function addToPlaylist(item: MusicInfo) {
 /**
  * 从播放列表中移除
  */
-export async function removeFromPlaylist(index: number) {
-  const list = playlist().filter((_, i) => i !== index)
-  setPlaylistState(list)
-  const random = randomPlaylist()
+export async function removeFromPlayQueue(index: number) {
+  const list = playQueue().filter((_, i) => i !== index)
+  setPlayQueueState(list)
+  const random = randomPlayQueue()
   if (playMode() === 'random' && random) {
     // 与原先的 splice(findIndex(...), 1) 保持一致（含找不到时的 -1 行为）
     const position = random.findIndex(i => i === index)
-    setRandomPlaylistState(
+    setRandomPlayQueueState(
       random
         .filter((_, i) => i !== position)
         // 调整随机列表中大于被删除索引的值
@@ -428,7 +428,7 @@ export async function removeFromPlaylist(index: number) {
   const current = currentIndex()
 
   if (list.length === 0 || current === null) {
-    setShowPlaylist(false)
+    setShowPlayQueue(false)
     resetPlayer()
     return
   }
@@ -446,10 +446,10 @@ export async function removeFromPlaylist(index: number) {
 export function setPlayMode(mode: PlayMode) {
   setPlayModeState(mode)
   if (mode === 'random') {
-    setRandomPlaylistState(createRandomOrder(playlist().length))
+    setRandomPlayQueueState(createRandomOrder(playQueue().length))
   }
   else {
-    setRandomPlaylistState(null)
+    setRandomPlayQueueState(null)
   }
 }
 
@@ -476,7 +476,7 @@ export function togglePlayMode() {
 /**
  * 清空播放列表
  */
-export function clearPlaylist() {
-  setPlaylist([])
+export function clearPlayQueue() {
+  setPlayQueue([])
 }
 // #endregion

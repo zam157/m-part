@@ -6,7 +6,7 @@ import { createSignal, For, Match, Show, Switch } from 'solid-js'
 import Pagination from '~/components/Pagination/Pagination'
 import TabContent from '~/components/Tabs/TabContent'
 import Tabs from '~/components/Tabs/Tabs'
-import { setPlaylist } from '~/composables/player'
+import { setPlayQueue } from '~/composables/player'
 
 type TabValue = 'music' | 'albums'
 
@@ -129,7 +129,7 @@ export default function ArtistDetailPage() {
             <Show when={!worksLoading()} fallback={<div class="skeleton w-24 h-8 mt-2" />}>
               <button
                 class="btn px-3 py-1 mt-2 w-24"
-                onClick={() => setPlaylist(works())}
+                onClick={() => setPlayQueue(works())}
               >
                 {!worksLoading() ? '播放全部' : ' '}
               </button>

@@ -1,17 +1,17 @@
 import { For, Show } from 'solid-js'
 import {
-  clearPlaylist,
+  clearPlayQueue,
   currentIndex,
   playing,
-  playlist,
-  removeFromPlaylist,
+  playQueue,
+  removeFromPlayQueue,
   setCurrentIndex,
   setPlaying,
-  setShowPlaylist,
-  showPlaylist,
+  setShowPlayQueue,
+  showPlayQueue,
 } from '~/composables/player'
 
-export default function Playlist() {
+export default function PlayQueue() {
   async function handleItemClick(index: number) {
     if (currentIndex() === index) {
       await setPlaying(!playing())
@@ -22,8 +22,8 @@ export default function Playlist() {
   }
 
   function handleClear() {
-    clearPlaylist()
-    setShowPlaylist(false)
+    clearPlayQueue()
+    setShowPlayQueue(false)
   }
 
   return (
@@ -33,11 +33,11 @@ export default function Playlist() {
         gap-0.5 bg-sidebar text-sidebar-foreground grow-0 shrink-0
         starting:w-0 transition-[width,display] duration-300 transition-discrete
         border-l border-sidebar-border
-        ${showPlaylist() ? 'w-80' : 'w-0 hidden'}
+        ${showPlayQueue() ? 'w-80' : 'w-0 hidden'}
       `}
     >
       <div class="flex-1 min-h-0 p-2 of-y-auto">
-        <For each={playlist()}>
+        <For each={playQueue()}>
           {(song, index) => (
             <div
               class={`ghost-btn flex px-2 h-12 justify-start content-visibility-auto ${currentIndex() === index() ? 'bg-accent text-accent-foreground' : ''}`.trim()}
@@ -63,7 +63,7 @@ export default function Playlist() {
                 class="i-solar:close-circle-bold text-3.5 hover:text-destructive transition-color grow-0 shrink-0"
                 onClick={(event) => {
                   event.stopPropagation()
-                  removeFromPlaylist(index())
+                  removeFromPlayQueue(index())
                 }}
               />
             </div>

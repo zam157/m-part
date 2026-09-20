@@ -13,7 +13,11 @@ export interface Provider {
   name: ProviderName
   /** Retrieves the source information for a given music item */
   getSourceInfo?: (musicInfo: MusicInfo) => Promise<SourceInfo>
-  /** Retrieves the playlist for a given music item */
+  /**
+   * 获取歌单（用户收藏的歌曲集合）。
+   *
+   * 注意：与“播放列表 / 播放队列”（`client/composables/player.ts` 的 `playQueue`）无关。
+   */
   getPlaylist?: () => Promise<[MusicInfo[], Pagination]>
   /** Searches for music items based on keyword */
   search?: (keyword: string, page: number) => Promise<[MusicInfo[], Pagination]>

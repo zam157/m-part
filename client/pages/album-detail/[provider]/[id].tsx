@@ -4,7 +4,7 @@ import { providers } from '#shared/utils/providers/index'
 import { useParams, useSearchParams } from '@solidjs/router'
 import { createSignal, For, Match, Show, Switch } from 'solid-js'
 import Pagination from '~/components/Pagination/Pagination'
-import { addToPlaylist, setPlaylist } from '~/composables/player'
+import { addToPlayQueue, setPlayQueue } from '~/composables/player'
 
 /** useSearchParams 的值可能是数组，这里统一取单值 */
 function queryValue(value: string | string[] | undefined): string | undefined {
@@ -42,7 +42,7 @@ export default function AlbumDetailPage() {
   }
 
   function handlePlay(music: MusicInfo) {
-    addToPlaylist(music)
+    addToPlayQueue(music)
   }
 
   getAlbumWorks(1)
@@ -74,7 +74,7 @@ export default function AlbumDetailPage() {
           >
             <button
               class="btn px-3 py-1 mt-2 w-24"
-              onClick={() => setPlaylist(works())}
+              onClick={() => setPlayQueue(works())}
             >
               播放全部
             </button>

@@ -1,7 +1,7 @@
 import type { JSX } from '@solidjs/web'
 import { Loading } from 'solid-js'
 import MusicPlayer from './components/MusicPlayer/MusicPlayer'
-import Playlist from './components/Playlist/Playlist'
+import PlayQueue from './components/PlayQueue/PlayQueue'
 import Sidebar from './components/Sidebar/Sidebar'
 
 export interface AppProps {
@@ -42,7 +42,7 @@ export default function App(props: AppProps) {
       <main class="flex-1 min-h-0 flex">
         <Sidebar />
         <Loading fallback={<PageLoading />}>{props.children}</Loading>
-        <Playlist />
+        <PlayQueue />
       </main>
       <MusicPlayer />
     </div>

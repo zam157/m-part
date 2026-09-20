@@ -3,7 +3,7 @@ import { wait } from '#shared/utils/index'
 import biliProvider from '#shared/utils/providers/bilibili'
 import Popover from '~/components/Popover/Popover'
 import { colorMode, switchColorMode } from '~/composables/dark'
-import { setCurrentIndex, setPlaying, setPlaylist } from '~/composables/player'
+import { setCurrentIndex, setPlaying, setPlayQueue } from '~/composables/player'
 
 function toggleDark() {
   if (colorMode() === 'light') {
@@ -17,8 +17,8 @@ function toggleDark() {
   }
 }
 
-async function setMockedPlaylist() {
-  setPlaylist([
+async function setMockedPlayQueue() {
+  setPlayQueue([
     {
       provider: 'bili',
       id: 'BV1kPQjBLE1q',
@@ -67,8 +67,8 @@ export default function Playground() {
         {' '}
         {colorMode()}
       </div>
-      <div class="ghost-btn px-3 py-2" onClick={setMockedPlaylist}>
-        Set Mocked Playlist
+      <div class="ghost-btn px-3 py-2" onClick={setMockedPlayQueue}>
+        Set Mocked Play Queue
       </div>
       <div class="ghost-btn px-3 py-2" onClick={biliSearch}>
         Bili Search
