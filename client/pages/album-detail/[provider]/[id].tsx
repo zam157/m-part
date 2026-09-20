@@ -3,7 +3,7 @@ import type { Pagination as PaginationType, ProviderName } from '#shared/types/p
 import { errorMessage } from '#shared/utils'
 import { providers } from '#shared/utils/providers/index'
 import { useParams, useSearchParams } from '@solidjs/router'
-import { createSignal, For, Match, Show, Switch } from 'solid-js'
+import { createSignal, For, Match, Show, Switch, untrack } from 'solid-js'
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
 import Pagination from '~/components/Pagination/Pagination'
 import { addToPlayQueue, setPlayQueue } from '~/composables/player'
@@ -13,12 +13,46 @@ function queryValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value
 }
 
+interface AlbumDetailViewProps {
+  provider: ProviderName
+  id: string
+}
+
+/**
+ * 路由参数在渲染期直接读会触发 STRICT_READ_UNTRACKED（那是个不会更新的快照）：
+ * 交给 `keyed` 的 `<Show>` 在追踪作用域里读，它把原始值传给子节点，
+ * 参数一变整块重建，详情数据随之重新拉取。
+ */
 export default function AlbumDetailPage() {
   const params = useParams<{ provider: string, id: string }>()
-  const [searchParams] = useSearchParams()
 
-  const provider = params.provider as ProviderName
-  const albumId = params.id
+  const routeParams = () => (params.provider && params.id
+    ? { provider: params.provider as ProviderName, id: params.id }
+    : null)
+
+  return (
+    <Show when={routeParams()} keyed>
+      {route => <AlbumDetailView provider={route.provider} id={route.id} />}
+    </Show>
+  )
+}
+
+function AlbumDetailView(props: AlbumDetailViewProps) {
+  // 查询串来自 router.location（响应式 store）：`useSearchParams()` 在组件体里调用会读它，
+  // 取出属性值也一样 —— store 的属性读取不落在追踪作用域就会触发 STRICT_READ_UNTRACKED。
+  //
+  // 这里整块放进 untrack：详情数据只在挂载时拉一次（loadAlbumWorks 在首个 await 之前就会
+  // 用到 mid），参数一变 keyed 的 Show 会重建整块，快照自然跟着刷新。
+  const [searchParams] = untrack(() => useSearchParams())
+  const query = untrack(() => ({
+    mid: queryValue(searchParams.mid),
+    cover: queryValue(searchParams.cover),
+    title: queryValue(searchParams.title),
+    artist: queryValue(searchParams.artist),
+  }))
+
+  const provider = props.provider
+  const albumId = props.id
   const providerInstance = providers[provider]
   const canLoadWorks = Boolean(providerInstance.getAlbumWorks)
 
@@ -39,7 +73,7 @@ export default function AlbumDetailPage() {
     if (!providerInstance.getAlbumWorks)
       return
     try {
-      const [items, pageData] = await providerInstance.getAlbumWorks(albumId, page, searchParams)
+      const [items, pageData] = await providerInstance.getAlbumWorks(albumId, page, query)
       setWorks(items)
       setPagination(pageData)
       setLoadError(null)
@@ -63,9 +97,9 @@ export default function AlbumDetailPage() {
     <div class="flex-1 min-w-0 flex flex-col gap-3 p-4">
       {/* Album Info */}
       <div class="grow-0 h-32 shrink-0 flex items-center gap-4">
-        <Show when={queryValue(searchParams.cover)}>
+        <Show when={query.cover}>
           <img
-            src={queryValue(searchParams.cover)}
+            src={query.cover}
             referrerpolicy="no-referrer"
             alt="Album Cover"
             class="h-full aspect-square object-cover rounded-lg"
@@ -73,10 +107,10 @@ export default function AlbumDetailPage() {
         </Show>
         <div class="flex flex-col gap-1">
           <div class="text-xl font-bold">
-            {queryValue(searchParams.title) || '未知专辑'}
+            {query.title || '未知专辑'}
           </div>
           <div class="text-sm text-muted-foreground">
-            {queryValue(searchParams.artist) || '未知艺术家'}
+            {query.artist || '未知艺术家'}
           </div>
           <Show when={!loading() && works().length} fallback={
             <Show when={loading()}>

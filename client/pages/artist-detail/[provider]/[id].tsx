@@ -13,12 +13,37 @@ import { setPlayQueue } from '~/composables/player'
 
 type TabValue = 'music' | 'albums'
 
+interface ArtistDetailViewProps {
+  provider: ProviderName
+  id: string
+}
+
+/**
+ * 路由参数是响应式的，在渲染期直接读 `params.provider` / `params.id` 会触发
+ * STRICT_READ_UNTRACKED：那样拿到的是挂载时的快照，参数变了页面也不会跟着变。
+ *
+ * 改成交给 `keyed` 的 `<Show>`：它在追踪作用域里读参数，并把**原始值**（不是
+ * accessor）传给子节点，参数一变就重建整块（等价于重新挂载），详情数据随之重新拉取。
+ */
 export default function ArtistDetailPage() {
-  const navigate = useNavigate()
   const params = useParams<{ provider: string, id: string }>()
 
-  const provider = params.provider as ProviderName
-  const artistId = params.id
+  const routeParams = () => (params.provider && params.id
+    ? { provider: params.provider as ProviderName, id: params.id }
+    : null)
+
+  return (
+    <Show when={routeParams()} keyed>
+      {route => <ArtistDetailView provider={route.provider} id={route.id} />}
+    </Show>
+  )
+}
+
+function ArtistDetailView(props: ArtistDetailViewProps) {
+  const navigate = useNavigate()
+
+  const provider = props.provider
+  const artistId = props.id
   const providerInstance = providers[provider]
 
   const [infoLoading, setInfoLoading] = createSignal(Boolean(providerInstance.getArtistInfo))
