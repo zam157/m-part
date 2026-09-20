@@ -83,17 +83,17 @@ export default function AlbumDetailPage() {
       </div>
 
       {/* Track List */}
-      <div class="flex-1 min-h-0 overflow-auto flex flex-col gap-1 pb-2">
+      <div class="flex-1 min-h-0 overflow-auto grid gap-x-2 gap-y-1 responsive-cols grid-auto-rows-max content-start pb-2">
         <Switch
           fallback={(
-            <div class="empty">
+            <div class="empty col-span-full">
               <span class="i-solar:music-notes-bold text-4xl text-foreground/20 mb-2" />
               <span class="text-foreground/30">暂无曲目</span>
             </div>
           )}
         >
           <Match when={!canLoadWorks}>
-            <div class="empty">
+            <div class="empty col-span-full">
               <span class="i-solar:danger-circle-bold text-4xl text-foreground/20 mb-2" />
               <span class="text-foreground/30">当前音源不支持专辑</span>
             </div>
@@ -138,6 +138,7 @@ export default function AlbumDetailPage() {
               )}
             </For>
             <Pagination
+              class="col-span-full"
               modelValue={pagination().page}
               total={pagination().total}
               pageSize={pagination().pageSize}

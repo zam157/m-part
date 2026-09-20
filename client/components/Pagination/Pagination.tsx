@@ -7,6 +7,8 @@ export interface PaginationProps {
   /** 当前页（受控，等价于原来的 v-model） */
   modelValue: number
   onPageChange?: (page: number) => void
+  /** 追加到根节点的类名（例如放在网格容器里时用 col-span-full 撑满整行） */
+  class?: string
 }
 
 export default function Pagination(props: PaginationProps) {
@@ -82,7 +84,7 @@ export default function Pagination(props: PaginationProps) {
   }
 
   return (
-    <ul class="flex items-center justify-center gap-1">
+    <ul class={`flex items-center justify-center gap-1 ${props.class ?? ''}`.trim()}>
       {/* Previous Button */}
       <li
         class="ghost-btn gap-1.5 pr-2.5 pl-1.5 active:translate-y-px"

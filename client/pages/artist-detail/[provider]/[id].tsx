@@ -139,10 +139,10 @@ export default function ArtistDetailPage() {
       </div>
 
       <Tabs class="grow-0" tabs={tabs} modelValue={activeTab()} onModelValueChange={handleTabChange}>
-        <TabContent value="music" class="flex-1 min-h-0 overflow-auto flex flex-col gap-1 pb-2">
+        <TabContent value="music" class="flex-1 min-h-0 overflow-auto grid gap-x-2 gap-y-1 responsive-cols grid-auto-rows-max content-start pb-2">
           <Switch
             fallback={(
-              <div class="empty">
+              <div class="empty col-span-full">
                 <span class="i-solar:music-notes-bold text-4xl text-foreground/20 mb-2" />
                 <span class="text-foreground/30">暂无单曲</span>
               </div>
@@ -184,6 +184,7 @@ export default function ArtistDetailPage() {
                 )}
               </For>
               <Pagination
+                class="col-span-full"
                 modelValue={worksPagination().page}
                 total={worksPagination().total}
                 pageSize={worksPagination().pageSize}
@@ -194,10 +195,10 @@ export default function ArtistDetailPage() {
         </TabContent>
 
         <Show when={providerInstance.getArtistAlbums}>
-          <TabContent value="albums" class="flex-1 min-h-0 overflow-auto flex flex-col gap-1 pb-2">
+          <TabContent value="albums" class="flex-1 min-h-0 overflow-auto grid gap-x-2 gap-y-1 responsive-cols grid-auto-rows-max content-start pb-2">
             <Switch
               fallback={(
-                <div class="empty">
+                <div class="empty col-span-full">
                   <span class="i-solar:music-notes-bold text-4xl text-foreground/20 mb-2" />
                   <span class="text-foreground/30">暂无专辑</span>
                 </div>
@@ -242,6 +243,7 @@ export default function ArtistDetailPage() {
                   )}
                 </For>
                 <Pagination
+                  class="col-span-full"
                   modelValue={albumsPagination().page}
                   total={albumsPagination().total}
                   pageSize={albumsPagination().pageSize}

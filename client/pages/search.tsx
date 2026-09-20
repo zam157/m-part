@@ -83,14 +83,8 @@ export default function SearchPage() {
           </div>
         )}
       >
-        {/* 列数由 minmax 的下限（最小卡宽）反推，而这个下限本身跟着视口走：
-            clamp(300px, 15vw, 360px) = 最小卡宽 300px / 随视口增长 / 上限 360px。
-            这样窄屏不会挤出过小的卡片，宽屏是"卡片变大"而不是"列数一直加"
-            （写死固定列数时，2560 宽会排到 11 列 ~200px 的小卡片）。
-            参考值（可用宽 ≈ 视口宽 - 216 侧边栏 - 32 padding）：
-            1366 → 3 列 ~362px、1920 → 5 列 ~322px、2560 → 6 列 ~372px、3440 → 8 列 ~385px。
-            想整体放大/缩小卡片，改这三个数即可 */}
-        <div class="min-h-0 flex-1 overflow-auto grid gap-4 grid-cols-[repeat(auto-fill,minmax(clamp(300px,15vw,360px),1fr))] grid-auto-rows-max px-4 pb-4 pt-2">
+        {/* 列宽与列数见 uno.config.ts 的 responsive-cols */}
+        <div class="min-h-0 flex-1 overflow-auto grid gap-4 responsive-cols grid-auto-rows-max px-4 pb-4 pt-2">
           <Switch>
             <Match when={searchType() === 'music'}>
               <For each={musicResults()}>

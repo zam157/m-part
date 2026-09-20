@@ -52,6 +52,15 @@ export default defineConfig({
       'card',
       'flex flex-col gap-4 overflow-hidden rounded-xl bg-card py-4 text-sm text-card-foreground ring-1 ring-foreground/10 w-full',
     ],
+    /**
+     * 自适应列数：列宽的下限跟着视口走，避免「宽屏时列数一直加、单元格越排越小」。
+     *   clamp(300px, 15vw, 360px) = 最小宽 / 随视口增长 / 上限
+     * 可用宽 ≈ 视口宽 - 216（Sidebar 的 w-54）- 32（px-4）时的实测列数：
+     * 1366 → 3 列 ~362px、1920 → 5 列 ~322px、2560 → 6 列 ~372px、3440 → 8 列。
+     * 用 auto-fill 而非 auto-fit：结果很少时不要塌陷空轨道、把单元格拉满整行。
+     * 想整体放大/缩小，改这三个数即可。
+     */
+    ['responsive-cols', 'grid-cols-[repeat(auto-fill,minmax(clamp(300px,15vw,360px),1fr))]'],
     [
       'empty',
       'flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border-dashed p-6 text-center text-balance',
