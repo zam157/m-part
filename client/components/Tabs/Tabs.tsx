@@ -1,4 +1,5 @@
 import type { JSX } from '@solidjs/web'
+import { clsx } from 'cn/lite'
 import { For } from 'solid-js'
 import { TabsContext } from './tabs-context'
 
@@ -30,7 +31,7 @@ export default function Tabs<T extends string>(props: TabsProps<T>) {
   }
 
   function tabClass(tab: Tab<T>) {
-    return [
+    return clsx(
       'uno-layer-components:(px-1.5 py-0.5 text-sm font-medium transition-all rounded-md outline-none)',
       activeTab() === tab.value
         ? 'uno-layer-components:(bg-background text-foreground shadow-sm)'
@@ -38,13 +39,13 @@ export default function Tabs<T extends string>(props: TabsProps<T>) {
       tab.disabled
         ? 'uno-layer-components:(cursor-not-allowed opacity-50)'
         : 'uno-layer-components:(hover:text-foreground)',
-    ].join(' ')
+    )
   }
 
   return (
     <TabsContext value={{ activeTab, setActiveTab }}>
       <div
-        class={`uno-layer-components:(flex gap-1 rounded-lg bg-muted p-[3px] w-fit) ${props.class ?? ''}`.trim()}
+        class={clsx('uno-layer-components:(flex gap-1 rounded-lg bg-muted p-[3px] w-fit)', props.class)}
         role="tablist"
       >
         <For each={props.tabs}>

@@ -3,6 +3,7 @@ import type { Pagination as PaginationType, ProviderName } from '#shared/types/p
 import { errorMessage } from '#shared/utils'
 import { providers } from '#shared/utils/providers/index'
 import { useNavigate, useParams } from '@solidjs/router'
+import { clsx } from 'cn/lite'
 import { createSignal, For, Match, Show, Switch } from 'solid-js'
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
 import Pagination from '~/components/Pagination/Pagination'
@@ -170,10 +171,10 @@ export default function ArtistDetailPage() {
             />
           </Show>
           <div class="flex flex-col gap-1">
-            <div class={`text-xl font-bold ${infoLoading() ? 'skeleton w-16 h-[1em]' : ''}`.trim()}>
+            <div class={clsx('text-xl font-bold', infoLoading() && 'skeleton w-16 h-[1em]')}>
               {artistInfo()?.name}
             </div>
-            <div class={`text-sm text-muted-foreground ${infoLoading() ? 'skeleton w-24 h-[1em]' : ''}`.trim()}>
+            <div class={clsx('text-sm text-muted-foreground', infoLoading() && 'skeleton w-24 h-[1em]')}>
               {artistInfo()?.description}
             </div>
             <div class={activeTab() === 'music' ? 'visible' : 'invisible'}>

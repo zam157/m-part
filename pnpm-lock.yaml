@@ -188,6 +188,9 @@ catalogs:
     '@solidjs/web':
       specifier: 2.0.0-rc.8
       version: 2.0.0-rc.8
+    cn:
+      specifier: ^0.3.0
+      version: 0.3.0
     solid-js:
       specifier: 2.0.0-rc.8
       version: 2.0.0-rc.8
@@ -209,6 +212,9 @@ importers:
       '@solidjs/web':
         specifier: catalog:frontend
         version: 2.0.0-rc.8(solid-js@2.0.0-rc.8)
+      cn:
+        specifier: catalog:frontend
+        version: 0.3.0
       crypto-es:
         specifier: catalog:shared
         version: 3.1.3
@@ -2704,6 +2710,11 @@ packages:
   cliui@8.0.1:
     resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
     engines: {node: '>=12'}
+
+  cn@0.3.0:
+    resolution: {integrity: sha512-qRoU0ARrZD3Bbj1wKFftEKxPjSnzTEdFkf22NVhW+zU9D/wajhoP+qUZ5DChhhSOBCH1onV12hrmGqfu1+5Z2Q==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -7680,6 +7691,8 @@ snapshots:
       string-width: 4.2.3
       strip-ansi: 6.0.1
       wrap-ansi: 7.0.0
+
+  cn@0.3.0: {}
 
   color-convert@2.0.1:
     dependencies:

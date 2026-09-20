@@ -1,3 +1,4 @@
+import { clsx } from 'cn/lite'
 import { Show } from 'solid-js'
 
 export interface ErrorMessageProps {
@@ -18,7 +19,7 @@ export interface ErrorMessageProps {
  */
 export default function ErrorMessage(props: ErrorMessageProps) {
   return (
-    <div class={`empty ${props.class ?? ''}`.trim()}>
+    <div class={clsx('empty', props.class)}>
       <span class="i-solar:danger-circle-bold text-4xl text-foreground/20" />
       <div class="flex flex-col gap-1">
         <span class="text-sm font-medium text-foreground/60">

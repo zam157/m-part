@@ -1,4 +1,5 @@
 import type { MusicQuality } from '#shared/types/music-info'
+import { clsx } from 'cn/lite'
 import { For } from 'solid-js'
 import Popover from '~/components/Popover/Popover'
 
@@ -17,7 +18,10 @@ export default function QualityBtn(props: QualityBtnProps) {
           <For each={props.qualities}>
             {quality => (
               <div
-                class={`ghost-btn flex px-2.5 py-1 text-3.5 w-full truncate ${quality.active ? 'bg-accent fw-medium text-accent-foreground' : ''}`.trim()}
+                class={clsx(
+                  'ghost-btn flex px-2.5 py-1 text-3.5 w-full truncate',
+                  quality.active && 'bg-accent fw-medium text-accent-foreground',
+                )}
                 onClick={() => {
                   if (quality.active)
                     return

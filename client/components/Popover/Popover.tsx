@@ -1,5 +1,6 @@
 import type { JSX } from '@solidjs/web'
 import { Dynamic, Portal } from '@solidjs/web'
+import { clsx } from 'cn/lite'
 import { createUniqueId } from 'solid-js'
 import './popover.css'
 
@@ -66,7 +67,7 @@ export default function Popover(props: PopoverProps) {
           id={popoverId}
           popover={props.popover ?? 'auto'}
           ref={popoverRef}
-          class={`t-popover-content ${props.contentAttrs?.class ?? ''}`.trim()}
+          class={clsx('t-popover-content', props.contentAttrs?.class)}
           onBeforeToggle={props.onBeforeToggle}
         >
           {props.content}

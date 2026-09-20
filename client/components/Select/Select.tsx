@@ -1,4 +1,5 @@
 import type { Option } from './type'
+import { clsx } from 'cn/lite'
 import { createMemo, createSignal, For, Show } from 'solid-js'
 import Popover, { type PopoverApi } from '../Popover/Popover'
 
@@ -60,7 +61,10 @@ export default function Select<T>(props: SelectProps<T>) {
             <For each={props.options}>
               {option => (
                 <div
-                  class={`ghost-btn flex items-center pl-1.5 pr-8 py-1 text-3.5 w-full ${option.disabled ? 'opacity-50 cursor-not-allowed' : ''}`.trim()}
+                  class={clsx(
+                    'ghost-btn flex items-center pl-1.5 pr-8 py-1 text-3.5 w-full',
+                    option.disabled && 'opacity-50 cursor-not-allowed',
+                  )}
                   onClick={() => select(option)}
                 >
                   <span class="w-full truncate">{option.label}</span>

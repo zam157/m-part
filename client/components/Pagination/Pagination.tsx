@@ -1,3 +1,4 @@
+import { clsx } from 'cn/lite'
 import { createMemo, For, Show } from 'solid-js'
 
 export interface PaginationProps {
@@ -100,7 +101,7 @@ export default function Pagination(props: PaginationProps) {
             return (
               <button
                 type="button"
-                class={`w-8 h-8 p-0 flex items-center justify-center ${pageClass(page) ?? ''}`.trim()}
+                class={clsx('w-8 h-8 p-0 flex items-center justify-center', pageClass(page))}
                 onClick={() => {
                   if (typeof page === 'number')
                     goToPage(page)

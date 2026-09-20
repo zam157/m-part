@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from '@solidjs/router'
+import { clsx } from 'cn/lite'
 import { For } from 'solid-js'
 
 const menuItems = [
@@ -34,7 +35,7 @@ export default function Sidebar() {
     >
       <div class="flex flex-col gap-1 p-2">
         <div
-          class={`ghost-btn flex w-full items-center gap-2 p-2 text-left h-12 text-sm ${itemClass('/')}`.trim()}
+          class={clsx('ghost-btn flex w-full items-center gap-2 p-2 text-left h-12 text-sm', itemClass('/'))}
           onClick={() => navigate('/')}
         >
           <div class="i-solar:music-library-2-bold flex aspect-square text-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground" />
@@ -46,10 +47,10 @@ export default function Sidebar() {
           {item => (
             <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
               <div
-                class={`ghost-btn w-full p-2 flex justify-start gap-2 ${itemClass(item.route)}`.trim()}
+                class={clsx('ghost-btn w-full p-2 flex justify-start gap-2', itemClass(item.route))}
                 onClick={() => navigate(item.route)}
               >
-                <div class={`grow-0 shrink-0 ${item.icon}`} />
+                <div class={clsx('grow-0 shrink-0', item.icon)} />
                 <span class="flex-1 truncate">{item.label}</span>
               </div>
             </div>

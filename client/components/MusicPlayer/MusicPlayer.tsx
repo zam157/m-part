@@ -1,4 +1,5 @@
 import type { MusicQuality } from '#shared/types/music-info'
+import { clsx } from 'cn/lite'
 import { Show, createMemo, createSignal } from 'solid-js'
 import {
   changeQuality,
@@ -139,11 +140,11 @@ export default function MusicPlayer() {
         '--thumb-height': 'var(--thumb-width)',
         '--progress-height': 'var(--spacing)',
       }}
-      class={`
-        grow-0 shrink-0 flex flex-col select-none relative
-        transition-[transform,display] transition-discrete starting:translate-y-full
-        ${playQueue().length === 0 ? 'translate-y-full hidden' : ''}
-      `}
+      class={clsx(
+        'grow-0 shrink-0 flex flex-col select-none relative',
+        'transition-[transform,display] transition-discrete starting:translate-y-full',
+        playQueue().length === 0 && 'translate-y-full hidden',
+      )}
     >
       {/* Progress bar */}
       <div class="relative h-[--progress-height]">
@@ -169,30 +170,31 @@ export default function MusicPlayer() {
           </Show>
 
           <div
-            class={`
-              progress-bar h-[--progress-height] transition-height duration-300 relative touch-none bg-neutral-200 dark:bg-neutral-500 will-change-transform
-              ${showSpinner() ? 't-loading' : ''}
-            `}
+            class={clsx(
+              'progress-bar h-[--progress-height] transition-height duration-300 relative touch-none',
+              'bg-neutral-200 dark:bg-neutral-500 will-change-transform',
+              showSpinner() && 't-loading',
+            )}
           >
             <div
               class="relative rounded-r-full bg-primary h-full"
               style={{ width: 'var(--progress-percent)' }}
             >
               <div
-                class={`
-                  thumb
-                  rounded-full flex items-center justify-center shadow-md w-[--thumb-width] h-[--thumb-height]
-                  transition-[opacity,visibility,height,width,background-color]
-                  absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2
-                  ${scrubbing() ? 'bg-primary/30' : 'bg-primary'}
-                `}
+                class={clsx(
+                  'thumb rounded-full flex items-center justify-center shadow-md w-[--thumb-width] h-[--thumb-height]',
+                  'transition-[opacity,visibility,height,width,background-color]',
+                  'absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2',
+                  scrubbing() ? 'bg-primary/30' : 'bg-primary',
+                )}
                 style={scrubbing() ? { '--thumb-width': 'calc(var(--spacing) * 6)' } : undefined}
               >
                 <div
-                  class={`
-                    i-solar-refresh-bold text-2.5 text-primary-foreground transition-[opacity,display] transition-discrete starting:opacity-0 animate-spin
-                    ${showSpinner() ? '' : 'hidden opacity-0'}
-                  `}
+                  class={clsx(
+                    'i-solar-refresh-bold text-2.5 text-primary-foreground',
+                    'transition-[opacity,display] transition-discrete starting:opacity-0 animate-spin',
+                    !showSpinner() && 'hidden opacity-0',
+                  )}
                 />
               </div>
             </div>
@@ -236,7 +238,7 @@ export default function MusicPlayer() {
             onClick={() => setShowPlayQueue(!showPlayQueue())}
           />
           <div
-            class={`${playModeIcon()} text-5 text-primary transition-color hover:text-primary/80`}
+            class={clsx(playModeIcon(), 'text-5 text-primary transition-color hover:text-primary/80')}
             onClick={togglePlayMode}
           />
           <VolumeBtn value={volume()} onValueChange={setVolume} />
@@ -252,7 +254,10 @@ export default function MusicPlayer() {
         <div class="btn-wrapper ml-2 mr-2 flex gap-2 items-center @lg:mr-6 @md:mr-4 @lg:gap-4 @md:gap-3">
           <div class="i-solar:skip-previous-bold text-5 text-primary transition-color hover:text-primary/80" onClick={() => prevNext(0)} />
           <div
-            class={`text-9 text-primary transition-[transform,color] hover:scale-110 hover:text-primary/80 ${playing() ? 'i-solar:pause-circle-bold' : 'i-solar:play-circle-bold'}`}
+            class={clsx(
+              'text-9 text-primary transition-[transform,color] hover:scale-110 hover:text-primary/80',
+              playing() ? 'i-solar:pause-circle-bold' : 'i-solar:play-circle-bold',
+            )}
             onClick={() => setPlaying(!playing())}
           />
           <div class="i-solar:skip-next-bold text-5 text-primary transition-color hover:text-primary/80" onClick={() => prevNext(1)} />
