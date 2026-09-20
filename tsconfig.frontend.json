@@ -15,7 +15,8 @@
     "types": [
       "node",
       "vite/client",
-      "vite-plugin-pwa/client"
+      "vite-plugin-pwa/client",
+      "chrome"
     ]
   },
   "include": [
@@ -23,6 +24,7 @@
     "./test/client/**/*.tsx",
     "./client/**/*.ts",
     "./client/**/*.tsx",
-    "./shared/**/*.ts"
+    "./shared/**/*.ts",
+    "./entrypoints/**/*.ts"
   ]
 }

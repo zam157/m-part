@@ -1,9 +1,12 @@
 {
   "type": "module",
   "private": true,
+  "version": "0.1.0",
   "scripts": {
     "build": "vite build",
+    "build:ext": "wxt build",
     "dev": "vite --port 3333",
+    "dev:ext": "wxt",
     "lint": "eslint .",
     "preview": "vite preview",
     "preview-https": "serve dist",
@@ -28,6 +31,7 @@
     "@iconify-json/material-symbols": "catalog:build",
     "@iconify-json/solar": "catalog:build",
     "@solidjs/vite-plugin": "catalog:build",
+    "@types/chrome": "catalog:dev",
     "@types/node": "catalog:dev",
     "@unocss/eslint-config": "catalog:build",
     "@unocss/preset-web-fonts": "catalog:build",
@@ -44,6 +48,7 @@
     "unocss-preset-shadcn": "catalog:build",
     "vite": "catalog:build",
     "vite-plugin-pwa": "catalog:build",
-    "vitest": "catalog:dev"
+    "vitest": "catalog:dev",
+    "wxt": "catalog:build"
   }
 }

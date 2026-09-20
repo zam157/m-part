@@ -11,3 +11,6 @@ tsc-output
 cypress/downloads
 public/assets/fonts
 .zcodeignore
+# WXT
+.output
+.wxt
