@@ -1,6 +1,7 @@
 import type { ArtistInfo } from '#shared/types/music-info'
 import { useNavigate } from '@solidjs/router'
 import { For, Match, Show, Switch } from 'solid-js'
+import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
 import Pagination from '~/components/Pagination/Pagination'
 import Select from '~/components/Select/Select'
 import { addToPlayQueue } from '~/composables/player'
@@ -15,6 +16,7 @@ import {
   pagination,
   searching,
   searchType,
+  searchError,
   selectedSource,
   selectedType,
   setKeyword,
@@ -76,11 +78,21 @@ export default function SearchPage() {
       <Show
         when={currentResults().length}
         fallback={(
-          <div class="empty">
-            <div class="i-lucide:search-slash text-6" />
-            <span class="text-sm/relaxed font-medium">没有找到相关内容</span>
-            <span class="text-xs text-muted-foreground">试试换个关键词？</span>
-          </div>
+          <Show
+            when={searchError()}
+            fallback={(
+              <div class="empty">
+                <div class="i-lucide:search-slash text-6" />
+                <span class="text-sm/relaxed font-medium">没有找到相关内容</span>
+                <span class="text-xs text-muted-foreground">试试换个关键词？</span>
+              </div>
+            )}
+          >
+            <ErrorMessage
+              message={searchError() ?? ''}
+              onRetry={() => handleSearch(pagination().page, searchType())}
+            />
+          </Show>
         )}
       >
         {/* 列宽与列数见 uno.config.ts 的 responsive-cols */}

@@ -1,8 +1,10 @@
 import type { AlbumInfo, ArtistInfo, MusicInfo } from '#shared/types/music-info'
 import type { Pagination as PaginationType, ProviderName } from '#shared/types/provider'
+import { errorMessage } from '#shared/utils'
 import { providers } from '#shared/utils/providers/index'
 import { useNavigate, useParams } from '@solidjs/router'
 import { createSignal, For, Match, Show, Switch } from 'solid-js'
+import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
 import Pagination from '~/components/Pagination/Pagination'
 import TabContent from '~/components/Tabs/TabContent'
 import Tabs from '~/components/Tabs/Tabs'
@@ -18,10 +20,12 @@ export default function ArtistDetailPage() {
   const artistId = params.id
   const providerInstance = providers[provider]
 
-  const [infoLoading, setInfoLoading] = createSignal(true)
+  const [infoLoading, setInfoLoading] = createSignal(Boolean(providerInstance.getArtistInfo))
+  const [infoError, setInfoError] = createSignal<string | null>(null)
   const [artistInfo, setArtistInfo] = createSignal<ArtistInfo | null>(null)
 
-  const [worksLoading, setWorksLoading] = createSignal(true)
+  const [worksLoading, setWorksLoading] = createSignal(Boolean(providerInstance.getArtistWorks))
+  const [worksError, setWorksError] = createSignal<string | null>(null)
   const [works, setWorks] = createSignal<MusicInfo[]>([])
   const [worksPagination, setWorksPagination] = createSignal<PaginationType>({
     page: 1,
@@ -30,6 +34,7 @@ export default function ArtistDetailPage() {
   })
 
   const [albumsLoading, setAlbumsLoading] = createSignal(false)
+  const [albumsError, setAlbumsError] = createSignal<string | null>(null)
   const [albums, setAlbums] = createSignal<AlbumInfo[]>([])
   const [albumsPagination, setAlbumsPagination] = createSignal<PaginationType>({
     page: 1,
@@ -53,35 +58,71 @@ export default function ArtistDetailPage() {
       return tab
     })
 
+  // 三条数据各自的失败原因：出错时既要结束 loading，也要把原因留在页面上，
+  // 否则请求挂掉和「确实没有数据」在界面上长得一模一样（还会永久停在骨架上）
+  //
+  // ⚠️ `getArtistInfo` / `getArtistWorks` 是在渲染期直接调用的，而 Solid 2 禁止在
+  // owned scope（组件/计算体）内写信号（REACTIVE_WRITE_IN_OWNED_SCOPE，直接抛错）。
+  // 所以这里的每个 set 都必须等一次 await 之后才执行；loading 的初值也改由
+  // provider 能力推导，免得要在渲染期补写。
   async function getArtistInfo() {
     if (!providerInstance.getArtistInfo)
-      return null
-    setArtistInfo(await providerInstance.getArtistInfo(artistId))
-    setInfoLoading(false)
+      return
+    try {
+      setArtistInfo(await providerInstance.getArtistInfo(artistId))
+      setInfoError(null)
+    }
+    catch (error) {
+      console.error('Failed to load artist info:', error)
+      setInfoError(errorMessage(error))
+    }
+    finally {
+      setInfoLoading(false)
+    }
   }
 
   async function getArtistWorks(page: number) {
     if (!providerInstance.getArtistWorks)
-      return null
-    const [items, pageData] = await providerInstance.getArtistWorks(artistId, page)
-    setWorks(items)
-    setWorksPagination(pageData)
-    setWorksLoading(false)
+      return
+    try {
+      const [items, pageData] = await providerInstance.getArtistWorks(artistId, page)
+      setWorks(items)
+      setWorksPagination(pageData)
+      setWorksError(null)
+    }
+    catch (error) {
+      console.error('Failed to load artist works:', error)
+      setWorksError(errorMessage(error))
+    }
+    finally {
+      setWorksLoading(false)
+    }
   }
 
+  // 只在事件里调用，不经过渲染期，但同样把 set 放在 await 之后以保持一致
   async function getArtistAlbums(page: number) {
     if (!providerInstance.getArtistAlbums)
-      return null
+      return
     setAlbumsLoading(true)
-    const [items, pageData] = await providerInstance.getArtistAlbums(artistId, page)
-    setAlbums(items)
-    setAlbumsPagination(pageData)
-    setAlbumsLoading(false)
+    try {
+      const [items, pageData] = await providerInstance.getArtistAlbums(artistId, page)
+      setAlbums(items)
+      setAlbumsPagination(pageData)
+      setAlbumsError(null)
+    }
+    catch (error) {
+      console.error('Failed to load artist albums:', error)
+      setAlbumsError(errorMessage(error))
+    }
+    finally {
+      setAlbumsLoading(false)
+    }
   }
 
   function handleTabChange(value: TabValue) {
     setActiveTab(value)
-    if (value === 'music' && worksLoading()) {
+    // 上一轮失败的 tab，切回来时自动重试，不用先点「重试」
+    if (value === 'music' && (worksLoading() || worksError())) {
       getArtistWorks(1)
     }
     else if (value === 'albums' && !albums().length) {
@@ -108,46 +149,67 @@ export default function ArtistDetailPage() {
     <div class="flex-1 min-w-0 flex flex-col gap-3 p-4">
       <div class="grow-0 h-32 shrink-0 flex items-center gap-4">
         <Show
-          when={!infoLoading()}
-          fallback={<div class="skeleton h-full aspect-square object-cover rounded" />}
+          when={!infoError()}
+          fallback={(
+            <ErrorMessage
+              class="h-full"
+              message={infoError() ?? ''}
+              onRetry={getArtistInfo}
+            />
+          )}
         >
-          <img
-            src={artistInfo()?.coverUrl}
-            referrerpolicy="no-referrer"
-            alt="Artist Avatar"
-            class="h-full aspect-square object-cover rounded-lg"
-          />
+          <Show
+            when={!infoLoading()}
+            fallback={<div class="skeleton h-full aspect-square object-cover rounded" />}
+          >
+            <img
+              src={artistInfo()?.coverUrl}
+              referrerpolicy="no-referrer"
+              alt="Artist Avatar"
+              class="h-full aspect-square object-cover rounded-lg"
+            />
+          </Show>
+          <div class="flex flex-col gap-1">
+            <div class={`text-xl font-bold ${infoLoading() ? 'skeleton w-16 h-[1em]' : ''}`.trim()}>
+              {artistInfo()?.name}
+            </div>
+            <div class={`text-sm text-muted-foreground ${infoLoading() ? 'skeleton w-24 h-[1em]' : ''}`.trim()}>
+              {artistInfo()?.description}
+            </div>
+            <div class={activeTab() === 'music' ? 'visible' : 'invisible'}>
+              <Show when={worksLoading()}>
+                <div class="skeleton w-24 h-8 mt-2" />
+              </Show>
+              <Show when={!worksLoading() && works().length}>
+                <button
+                  class="btn px-3 py-1 mt-2 w-24"
+                  onClick={() => setPlayQueue(works())}
+                >
+                  播放全部
+                </button>
+              </Show>
+            </div>
+          </div>
         </Show>
-        <div class="flex flex-col gap-1">
-          <div class={`text-xl font-bold ${infoLoading() ? 'skeleton w-16 h-[1em]' : ''}`.trim()}>
-            {artistInfo()?.name}
-          </div>
-          <div class={`text-sm text-muted-foreground ${infoLoading() ? 'skeleton w-24 h-[1em]' : ''}`.trim()}>
-            {artistInfo()?.description}
-          </div>
-          <div class={activeTab() === 'music' ? 'visible' : 'invisible'}>
-            <Show when={!worksLoading()} fallback={<div class="skeleton w-24 h-8 mt-2" />}>
-              <button
-                class="btn px-3 py-1 mt-2 w-24"
-                onClick={() => setPlayQueue(works())}
-              >
-                {!worksLoading() ? '播放全部' : ' '}
-              </button>
-            </Show>
-          </div>
-        </div>
       </div>
 
       <Tabs class="grow-0" tabs={tabs} modelValue={activeTab()} onModelValueChange={handleTabChange}>
-        <TabContent value="music" class="flex-1 min-h-0 overflow-auto grid gap-x-2 gap-y-1 responsive-cols grid-auto-rows-max content-start pb-2">
+        <TabContent value="music" class="flex-1 min-h-0 overflow-auto flex flex-col gap-1 pb-2">
           <Switch
             fallback={(
-              <div class="empty col-span-full">
+              <div class="empty">
                 <span class="i-solar:music-notes-bold text-4xl text-foreground/20 mb-2" />
                 <span class="text-foreground/30">暂无单曲</span>
               </div>
             )}
           >
+            <Match when={worksError()}>
+              <ErrorMessage
+                message={worksError() ?? ''}
+                onRetry={() => getArtistWorks(worksPagination().page)}
+              />
+            </Match>
+
             <Match when={worksLoading()}>
               <For each={[1, 2, 3, 4, 5, 6]}>
                 {i => (
@@ -184,7 +246,6 @@ export default function ArtistDetailPage() {
                 )}
               </For>
               <Pagination
-                class="col-span-full"
                 modelValue={worksPagination().page}
                 total={worksPagination().total}
                 pageSize={worksPagination().pageSize}
@@ -195,15 +256,22 @@ export default function ArtistDetailPage() {
         </TabContent>
 
         <Show when={providerInstance.getArtistAlbums}>
-          <TabContent value="albums" class="flex-1 min-h-0 overflow-auto grid gap-x-2 gap-y-1 responsive-cols grid-auto-rows-max content-start pb-2">
+          <TabContent value="albums" class="flex-1 min-h-0 overflow-auto flex flex-col gap-1 pb-2">
             <Switch
               fallback={(
-                <div class="empty col-span-full">
+                <div class="empty">
                   <span class="i-solar:music-notes-bold text-4xl text-foreground/20 mb-2" />
                   <span class="text-foreground/30">暂无专辑</span>
                 </div>
               )}
             >
+              <Match when={albumsError()}>
+                <ErrorMessage
+                  message={albumsError() ?? ''}
+                  onRetry={() => getArtistAlbums(albumsPagination().page)}
+                />
+              </Match>
+
               <Match when={albumsLoading()}>
                 <For each={[1, 2, 3, 4]}>
                   {i => (
@@ -243,7 +311,6 @@ export default function ArtistDetailPage() {
                   )}
                 </For>
                 <Pagination
-                  class="col-span-full"
                   modelValue={albumsPagination().page}
                   total={albumsPagination().total}
                   pageSize={albumsPagination().pageSize}

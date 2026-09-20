@@ -1,5 +1,6 @@
 import type { AlbumInfo, ArtistInfo, MusicInfo } from '#shared/types/music-info'
 import type { Pagination, Provider, ProviderName, SearchType } from '#shared/types/provider'
+import { errorMessage } from '#shared/utils'
 import type { Option } from '~/components/Select/type'
 import { providers } from '#shared/utils/providers/index'
 import { createMemo, createSignal } from 'solid-js'
@@ -35,6 +36,8 @@ const [selectedSource, setSelectedSource] = createSignal<SourceValue>(sourceOpti
 const [selectedType, setSelectedType] = createSignal<TypeValue>(typeOptions[0].value)
 const [keyword, setKeyword] = createSignal('')
 const [searching, setSearching] = createSignal(false)
+/** 上一次搜索的失败原因；为空表示没失败过（或已被下一次搜索清掉） */
+const [searchError, setSearchError] = createSignal<string | null>(null)
 /** 当前结果所属的搜索类型（可能与所选类型不同，取决于最后一次成功的搜索） */
 const [searchType, setSearchType] = createSignal<SearchType>(typeOptions[0].value)
 const [pagination, setPagination] = createSignal<Pagination>(emptyPagination())
@@ -49,6 +52,7 @@ export {
   musicResults,
   pagination,
   searching,
+  searchError,
   searchType,
   selectedSource,
   selectedType,
@@ -87,6 +91,7 @@ export const availableTypeOptions = createMemo<Option<SearchType>[]>(() => {
 export async function handleSearch(page: number, type: SearchType) {
   if (searching())
     return
+  setSearchError(null)
   const kw = keyword().trim()
   if (!kw) {
     clearResults()
@@ -124,7 +129,9 @@ export async function handleSearch(page: number, type: SearchType) {
   }
   catch (error) {
     console.error('Search error:', error)
+    // 失败了就不是「没搜到」，把原因留在页面上而不是冒充空结果
     clearResults()
+    setSearchError(errorMessage(error))
   }
   finally {
     setSearching(false)

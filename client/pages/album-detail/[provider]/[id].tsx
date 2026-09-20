@@ -1,8 +1,10 @@
 import type { MusicInfo } from '#shared/types/music-info'
 import type { Pagination as PaginationType, ProviderName } from '#shared/types/provider'
+import { errorMessage } from '#shared/utils'
 import { providers } from '#shared/utils/providers/index'
 import { useParams, useSearchParams } from '@solidjs/router'
 import { createSignal, For, Match, Show, Switch } from 'solid-js'
+import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
 import Pagination from '~/components/Pagination/Pagination'
 import { addToPlayQueue, setPlayQueue } from '~/composables/player'
 
@@ -21,6 +23,7 @@ export default function AlbumDetailPage() {
   const canLoadWorks = Boolean(providerInstance.getAlbumWorks)
 
   const [loading, setLoading] = createSignal(true)
+  const [loadError, setLoadError] = createSignal<string | null>(null)
   const [works, setWorks] = createSignal<MusicInfo[]>([])
   const [pagination, setPagination] = createSignal<PaginationType>({
     page: 1,
@@ -28,6 +31,10 @@ export default function AlbumDetailPage() {
     pageSize: 20,
   })
 
+  // 失败时也要结束 loading 并留下原因：否则请求挂掉和「确实没有曲目」在界面上一样
+  //
+  // ⚠️ 本函数在渲染期就被调用，而 Solid 2 禁止在 owned scope 内写信号
+  // （REACTIVE_WRITE_IN_OWNED_SCOPE，直接抛错），所以每个 set 都在 await 之后。
   async function getAlbumWorks(page: number) {
     if (!providerInstance.getAlbumWorks)
       return
@@ -35,6 +42,11 @@ export default function AlbumDetailPage() {
       const [items, pageData] = await providerInstance.getAlbumWorks(albumId, page, searchParams)
       setWorks(items)
       setPagination(pageData)
+      setLoadError(null)
+    }
+    catch (error) {
+      console.error('Failed to load album works:', error)
+      setLoadError(errorMessage(error))
     }
     finally {
       setLoading(false)
@@ -83,20 +95,27 @@ export default function AlbumDetailPage() {
       </div>
 
       {/* Track List */}
-      <div class="flex-1 min-h-0 overflow-auto grid gap-x-2 gap-y-1 responsive-cols grid-auto-rows-max content-start pb-2">
+      <div class="flex-1 min-h-0 overflow-auto flex flex-col gap-1 pb-2">
         <Switch
           fallback={(
-            <div class="empty col-span-full">
+            <div class="empty">
               <span class="i-solar:music-notes-bold text-4xl text-foreground/20 mb-2" />
               <span class="text-foreground/30">暂无曲目</span>
             </div>
           )}
         >
           <Match when={!canLoadWorks}>
-            <div class="empty col-span-full">
+            <div class="empty">
               <span class="i-solar:danger-circle-bold text-4xl text-foreground/20 mb-2" />
               <span class="text-foreground/30">当前音源不支持专辑</span>
             </div>
+          </Match>
+
+          <Match when={loadError()}>
+            <ErrorMessage
+              message={loadError() ?? ''}
+              onRetry={() => getAlbumWorks(pagination().page)}
+            />
           </Match>
 
           <Match when={loading()}>
@@ -138,7 +157,6 @@ export default function AlbumDetailPage() {
               )}
             </For>
             <Pagination
-              class="col-span-full"
               modelValue={pagination().page}
               total={pagination().total}
               pageSize={pagination().pageSize}

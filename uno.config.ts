@@ -53,7 +53,8 @@ export default defineConfig({
       'flex flex-col gap-4 overflow-hidden rounded-xl bg-card py-4 text-sm text-card-foreground ring-1 ring-foreground/10 w-full',
     ],
     /**
-     * 自适应列数：列宽的下限跟着视口走，避免「宽屏时列数一直加、单元格越排越小」。
+     * 搜索页结果网格的自适应列数：列宽的下限跟着视口走，
+     * 避免「宽屏时列数一直加、单元格越排越小」。
      *   clamp(300px, 15vw, 360px) = 最小宽 / 随视口增长 / 上限
      * 可用宽 ≈ 视口宽 - 216（Sidebar 的 w-54）- 32（px-4）时的实测列数：
      * 1366 → 3 列 ~362px、1920 → 5 列 ~322px、2560 → 6 列 ~372px、3440 → 8 列。
