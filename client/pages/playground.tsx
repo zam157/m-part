@@ -25,7 +25,7 @@ async function setMockedPlayQueue() {
       title: 'Song 1',
       artist: 'Artist A',
       duration: 1992,
-      coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
+      coverUrl: 'https://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
       album: '',
     },
     {
@@ -34,7 +34,7 @@ async function setMockedPlayQueue() {
       title: 'Song 2',
       artist: 'Artist B',
       duration: 1992,
-      coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
+      coverUrl: 'https://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
       album: '',
     },
     {
@@ -43,7 +43,7 @@ async function setMockedPlayQueue() {
       title: 'Song 3',
       artist: 'Artist C',
       duration: 1992,
-      coverUrl: 'http://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
+      coverUrl: 'https://i2.hdslb.com/bfs/archive/e4b39b75b141e15ec5eb197b92b8e3f9e768a609.jpg',
       album: '',
     },
   ])

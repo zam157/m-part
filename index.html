@@ -4,16 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <meta name="msapplication-TileColor" content="#00aba9" />
-    <script>
-      ;(function () {
-        if (!window.matchMedia) return
-        const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-        const prefersDark = darkModeMediaQuery ? darkModeMediaQuery.matches : false
-        const setting = localStorage.getItem('mpart-color-mode') || 'system'
-        if (setting === 'dark' || (prefersDark && setting !== 'light'))
-          document.documentElement.classList.toggle('dark', true)
-      })()
-    </script>
+    <title>m-part</title>
+    <!-- 首屏绘制前同步设置主题，避免闪烁。放在 public/ 下外链引用：
+         MV3 扩展页面的 CSP 是 `script-src 'self'`，内联脚本会被直接拒绝 -->
+    <script src="/scripts/color-mode-bootstrap.js"></script>
   </head>
   <body class="font-sans">
     <div id="app"></div>

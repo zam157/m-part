@@ -1,4 +1,5 @@
-import { createRouter } from '@solidjs/router'
+import { TARGET_EXTENSION } from '#shared/utils/constants'
+import { createRouter, hashHistory } from '@solidjs/router'
 import { fileRoutes } from '@solidjs/router/fs'
 import { pageRoutes } from 'virtual:file-routes'
 
@@ -12,4 +13,10 @@ import { pageRoutes } from 'virtual:file-routes'
  * - `album-detail/[provider]/[id].tsx` → `/album-detail/:provider/:id`
  * - `[...all].tsx` → `/*all`
  */
-export const Router = createRouter({ routes: fileRoutes(pageRoutes) })
+export const Router = createRouter({
+  routes: fileRoutes(pageRoutes),
+  // 扩展页面运行在 chrome-extension://<id>/index.html：history 模式会把路径推到
+  // 扩展源上（如 /search），刷新时浏览器找不到对应静态文件会 404；hash 模式把
+  // 路径放在 fragment 里，刷新始终落回 index.html。
+  ...(TARGET_EXTENSION ? { history: hashHistory() } : {}),
+})

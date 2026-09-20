@@ -2,8 +2,9 @@ import type { AlbumInfo, ArtistInfo, MusicInfo, MusicQuality } from '#shared/typ
 import type { Provider } from '../../types/provider'
 import type { TRequestErrorTuple } from '../fetch'
 import { MD5 } from 'crypto-es'
-import { USE_GM_FETCH, USE_PROXY } from '../constants'
+import { TARGET_EXTENSION, USE_GM_FETCH, USE_PROXY } from '../constants'
 import { tRequest } from '../fetch'
+import { toHttpsUrl } from '../url'
 
 // #region types
 export type BiliSearchType = 'video' | 'bili_user'
@@ -354,7 +355,8 @@ interface AlbumExtra {
 // #endregion
 
 // #region constants
-const API_HOST = USE_PROXY && !USE_GM_FETCH ? '/api/proxy/bili' : 'https://api.bilibili.com'
+// 扩展形态下请求由扩展页面直接发出（manifest 的 host_permissions 已覆盖），无需代理
+const API_HOST = USE_PROXY && !USE_GM_FETCH && !TARGET_EXTENSION ? '/api/proxy/bili' : 'https://api.bilibili.com'
 const DEFAULT_PAGE_SIZE = 20
 export const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36'
 const COMMON_HEADERS = {
@@ -465,6 +467,8 @@ function generateWbiSignInfo(params: { [key: string]: string | number | object |
 async function getWbiKeys(SESSDATA = ''): Promise<WbiInfo> {
   const res = await tRequest<WbiResponse>(`${API_HOST}/x/web-interface/nav`, {
     headers: {
+      // 扩展形态下这个 cookie 头会被传输层剥掉，改由 credentials: 'include'
+      // 自动携带浏览器里的真实 SESSDATA（见 shared/utils/fetch.ts）
       'cookie': `SESSDATA=${SESSDATA};`,
       'user-agent': USER_AGENT,
       'referer': 'https://www.bilibili.com/',
@@ -550,7 +554,9 @@ async function biliRequestHelper<T>(url: string, options: Parameters<typeof tReq
     ...COMMON_HEADERS,
     ...options?.headers,
   })
-  if (headers.get('cookie') == null) {
+  // 扩展形态下 cookie 由 credentials: 'include' 自动携带，手动注入也会被传输层剥掉，
+  // 徒增一次 buvid 请求，因此跳过
+  if (!TARGET_EXTENSION && headers.get('cookie') == null) {
     promises[0] = (async () => {
       const cookie = await getCookie()
       headers.set('cookie', cookie)
@@ -602,7 +608,7 @@ function formateSearchResult(data: SearchItem[], type: BiliSearchType) {
       title: i.title,
       artist: i.author,
       duration: i.duration ? parseDuration(i.duration) : 0,
-      coverUrl: i.pic,
+      coverUrl: toHttpsUrl(i.pic),
       album: i.typename,
       description: i.description,
     }) as MusicInfo)
@@ -612,7 +618,7 @@ function formateSearchResult(data: SearchItem[], type: BiliSearchType) {
       provider: 'bili',
       id: i.mid.toString(),
       name: i.uname,
-      coverUrl: i.upic,
+      coverUrl: toHttpsUrl(i.upic),
       description: i.usign,
     }) as ArtistInfo)
   }
@@ -625,13 +631,13 @@ function formateArchives(type: 'seasons' | 'series', data: BiliAlbumItem[]): Alb
       provider: 'bili',
       id: '',
       title: i.meta.name,
-      coverUrl: i.meta.cover,
+      coverUrl: toHttpsUrl(i.meta.cover),
       description: i.meta.description,
       totalTracks: i.meta.total,
       artist: '',
       extra: {
         mid: i.meta.mid,
-        cover: i.meta.cover,
+        cover: toHttpsUrl(i.meta.cover),
         title: i.meta.name,
         artist: '',
       } satisfies AlbumExtra,
@@ -917,7 +923,7 @@ const biliProvider = {
       provider: 'bili',
       id: data.mid,
       name: data.name,
-      coverUrl: data.face,
+      coverUrl: toHttpsUrl(data.face),
       description: data.sign,
     } as ArtistInfo
   },
@@ -978,7 +984,7 @@ const biliProvider = {
           title: i.title,
           artist: extra.artist,
           duration: i.duration,
-          coverUrl: i.pic,
+          coverUrl: toHttpsUrl(i.pic),
           album: extra.title,
           description: '',
         }
