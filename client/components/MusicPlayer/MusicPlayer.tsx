@@ -44,8 +44,10 @@ export default function MusicPlayer() {
   const [scrubbing, setScrubbing] = createSignal(false)
   const [showExpended, setShowExpended] = createSignal(false)
 
-  // 缓存进度条容器元素大小信息
-  const [progressBarRect, setProgressBarRect] = createSignal<{ width: number, left: number } | null>(null)
+  // 本次手势中进度条的位置缓存。刻意用普通变量而不是 signal：它是同一次手势内的中间量，
+  // pointerdown 里写入后需要在同一个同步块里读，而 Solid 2 的 signal 写入要到下一次
+  // flush 才提交（写完立刻读拿到 null），那样没经过 pointermove 的纯点击就算不出位置。
+  let progressBarRect: { width: number, left: number } | null = null
 
   const showSpinner = createMemo(() => waiting() || seeking())
 
@@ -68,11 +70,10 @@ export default function MusicPlayer() {
   }[playMode()]))
 
   function updateTempProgress(clientX: number) {
-    const rect = progressBarRect()
-    if (!rect)
+    if (!progressBarRect)
       return
 
-    const { width, left } = rect
+    const { width, left } = progressBarRect
     setTempProgress(Math.max(0, Math.min(1, (clientX - left) / width)))
   }
 
@@ -84,10 +85,7 @@ export default function MusicPlayer() {
     setScrubbing(true)
     // 在 pointerdown 时缓存进度条位置，避免频繁的 getBoundingClientRect 调用
     const rect = progressBarRef!.getBoundingClientRect()
-    setProgressBarRect({
-      width: rect.width,
-      left: rect.left,
-    })
+    progressBarRect = { width: rect.width, left: rect.left }
     updateTempProgress(event.clientX)
     ;(event.target as HTMLElement).setPointerCapture(event.pointerId)
   }
@@ -115,7 +113,7 @@ export default function MusicPlayer() {
     }
 
     // 清除缓存的位置信息
-    setProgressBarRect(null)
+    progressBarRect = null
   }
 
   async function handleQualitySelect(quality: MusicQuality) {
