@@ -39,7 +39,7 @@ export default function Select<T>(props: SelectProps<T>) {
       triggerAttrs={{
         disabled: props.disabled,
         type: 'button',
-        class: `border-btn justify-between h-full pl-2 pr-1 py-1 text-xs ${props.triggerClass ?? ''}`.trim(),
+        class: `border-btn justify-between h-full pl-2.5 pr-1 py-1 text-sm ${props.triggerClass ?? ''}`.trim(),
       }}
       contentAttrs={{
         class: 'w-24 max-h-80 overflow-y-auto p-1 mt-1',

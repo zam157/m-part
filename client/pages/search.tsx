@@ -35,21 +35,25 @@ export default function SearchPage() {
 
   return (
     <div class="flex-1 min-w-0 flex flex-col gap-2 py-2">
+      {/*
+        搜索栏：宽度收在 max-w-2xl（原来是 flex-1，1700px 窗口下输入框拉到 1275px），
+        左缘与下方结果网格对齐；高度用 h-10，btn-group 内部各段都是 h-full，一改整条跟着长高。
+      */}
       <form
-        class="flex gap-2 grow-0 shrink-0 px-4"
+        class="w-full max-w-2xl grow-0 shrink-0 flex gap-2 px-4"
         onSubmit={(event) => {
           event.preventDefault()
           handleSearch(1, selectedType())
         }}
       >
-        <div class="btn-group h-8 flex-1">
+        <div class="btn-group h-10 flex-1">
           <Select
             value={selectedSource()}
             onValueChange={setSelectedSource}
             placeholder="音源"
             options={sourceOptions}
             contentStyle="justify-self:auto;right:anchor(right);left:auto;"
-            triggerClass="w-16"
+            triggerClass="w-20"
           />
           <Select
             value={selectedType()}
@@ -57,17 +61,17 @@ export default function SearchPage() {
             placeholder="类型"
             options={availableTypeOptions()}
             contentStyle="justify-self:auto;left:anchor(left);"
-            triggerClass="w-16"
+            triggerClass="w-20"
           />
           <input
             name="search"
             placeholder="Search..."
-            class="h-8 input"
+            class="h-full input"
             value={keyword()}
             onInput={event => setKeyword(event.currentTarget.value)}
           />
         </div>
-        <button class="btn h-8 px-3" type="submit">
+        <button class="btn h-10 px-4" type="submit">
           <Show when={searching()}>
             <div class="i-lucide:loader-circle text-4 animate-spin" />
           </Show>
