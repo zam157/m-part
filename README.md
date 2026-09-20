@@ -47,3 +47,5 @@ pnpm test        # vitest：test/client（jsdom）+ test/server（node）
 - `pnpm lint` 不可用：仓库使用 TypeScript 7.x，而 `typescript-eslint` 尚未支持
 - 扩展图标尚未提供（manifest 未声明 `icons`，浏览器用占位图标）
 - 播放器跑在扩展页面里，关闭页面即停止播放（未使用 offscreen 后台播放）
+- `pnpm dev`（web 调试形态）**在开发模式下拿不到数据**：`/api/proxy/*` 请求会被 Vite 的
+  HTML fallback 接走（返回 200 + `text/html` 而非 JSON）。要看有数据的界面请用 `pnpm dev:ext`
