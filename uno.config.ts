@@ -73,7 +73,10 @@ export default defineConfig({
   ],
   presets: [
     presetWind4({
-      reset: true,
+      preflights: {
+        reset: true,
+        theme: true,
+      },
     }),
     presetShadcn({
       color: 'neutral',
