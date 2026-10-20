@@ -18,7 +18,7 @@ export default function IndexPage() {
   }
   return (
     <div class="home-page page-scroll">
-      <header class="page-topbar"><span class="text-sm text-muted-foreground">你的音乐空间</span><span class="source-badge">Bilibili 音源</span></header>
+      <header class="page-topbar"><span class="text-sm text-muted-foreground">你的音乐空间</span></header>
       <div class="home-content">
         <div class="section-heading"><div><h1>开始聆听</h1><p>熟悉的旋律，或是下一次偶然发现。</p></div><span class="text-xs text-muted-foreground">MUSIC PARTY / 01</span></div>
         <section class="listening-hero border border-border rounded-xl">

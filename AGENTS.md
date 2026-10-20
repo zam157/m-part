@@ -32,7 +32,21 @@
 - 列表用 `<For>` / `<Index>`，条件用 `<Show>` / `<Switch>` / `<Match>`，不要 `.map()`
 - 事件名小驼峰（`onClick` / `onInput`）；HTML / SVG 属性保持连字符（`data-*` / `aria-*`）
 - 空元素必须自闭合；`aria-*` 只接受 `'true' | 'false'` 字面量
-- 副作用与清理用 `createEffect` + `onCleanup`
+- 副作用用 `createEffect(compute, effect)`；effect 执行回调里的清理通过 **`return () => ...`** 注册，不要在那里调用 `onCleanup`（见下方踩坑记录）
+
+## Solid 2 控制流与清理踩坑（勿回退）
+
+- **`STRICT_READ_UNTRACKED`：`<Show>` 的 children 回调不是追踪作用域。** 非 keyed 的回调参数是 accessor，直接写 `{value => value()(...)}` 会触发警告，读取也不会持续更新。像 Popover 这样需要取出渲染函数并调用时，用 `<Show when={props.renderTrigger} keyed>{renderTrigger => renderTrigger(...)}</Show>`：keyed 回调接收原始值，`when` 的值变化时重建子树。需要保留非 keyed 行为时，把 accessor 的读取放进 JSX 绑定等追踪作用域，不要用 `untrack` 掩盖需要更新的读取。参考 `client/components/Popover/Popover.tsx`。
+- **`NO_OWNER_CLEANUP`：`createEffect` 的第二个回调是执行副作用的阶段，没有可供 `onCleanup` 注册的 owner。** 事件监听等资源应在这个回调里创建，并返回清理函数；重新执行或组件销毁时会清理。不要回退到 `createEffect(source, value => { ...; onCleanup(...) })`。参考 `client/components/Sidebar/Sidebar.tsx` 与 `client/components/Tooltip/Tooltip.tsx`：
+
+  ```ts
+  createEffect(() => target, (element) => {
+    element.addEventListener('change', handleChange)
+    return () => element.removeEventListener('change', handleChange)
+  })
+  ```
+
+- 验证时除了类型检查和客户端测试，还要刷新扩展页面，实际触发侧栏收放、跨断点缩放及 Tooltip 显隐，再检查控制台；Tooltip 的清理警告可能只在打开提示后出现。
 
 ## 命名约定（2026-09 改名后）
 
@@ -50,10 +64,8 @@
 ## 完成前自检
 
 ```bash
-pnpm typecheck:frontend   # 完整检查用 pnpm typecheck（tsc --build）
-pnpm test client          # 46 个用例；断言信号前记得 flush()
+pn dev:ext              # 启动扩展开发模式（加载 `.output/chrome-mv3`）
+pn typecheck:frontend   # 完整检查用 pnpm typecheck（tsc --build）
+pn test client          # 46 个用例；断言信号前记得 flush()
+pn lint                 # 代码风格检查 (TypeScript 7.x 与 typescript-eslint 不兼容, 暂时不要用)
 ```
-
-- 涉及界面时**用浏览器实际看一眼**：扩展形态 `pnpm dev:ext`（+ 加载 `.output/chrome-mv3`）；纯 UI 迭代用 `pnpm dev` + `http://localhost:3333`
-- `pnpm lint` 在本仓库不可用（TypeScript 7.x 与 typescript-eslint 不兼容），别拿它当验收
-- web 形态（`pnpm dev`）**在开发模式下取不到数据**（`/api/proxy/*` 被 Vite 的 HTML fallback 接走），要看有数据的界面请用扩展形态

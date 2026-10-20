@@ -1,7 +1,7 @@
 import type { JSX } from '@solidjs/web'
 import { Dynamic, Portal } from '@solidjs/web'
 import { clsx } from 'cn/lite'
-import { createUniqueId } from 'solid-js'
+import { createUniqueId, Show } from 'solid-js'
 import './popover.css'
 
 export interface PopoverApi {
@@ -10,7 +10,17 @@ export interface PopoverApi {
   hide: () => void
 }
 
+export interface PopoverTriggerProps {
+  ref: (element: HTMLElement) => void
+  popovertarget: string | undefined
+}
+
 export interface PopoverProps {
+  /** Custom trigger without introducing an extra element. */
+  renderTrigger?: (props: PopoverTriggerProps) => JSX.Element
+  /** Manual triggers use the exposed API instead of native click toggling. */
+  triggerMode?: 'click' | 'manual'
+  contentId?: string
   /** popover 属性，默认 `auto` */
   popover?: 'auto' | 'hint' | 'manual'
   /** 触发器标签名，默认 `button` */
@@ -38,7 +48,8 @@ export interface PopoverProps {
  * 动态的 `anchor-name` / `position-anchor` 行内样式，只需要一个唯一 id。
  */
 export default function Popover(props: PopoverProps) {
-  const popoverId = createUniqueId()
+  const generatedId = createUniqueId()
+  const popoverId = () => props.contentId ?? generatedId
   let popoverRef: HTMLElement | undefined
   let triggerRef: HTMLElement | undefined
 
@@ -51,20 +62,29 @@ export default function Popover(props: PopoverProps) {
 
   return (
     <>
-      <Dynamic
-        component={props.triggerTag ?? 'button'}
-        {...(props.triggerAttrs ?? {})}
-        ref={triggerRef}
-        popovertarget={popoverId}
-      >
-        {props.trigger}
-      </Dynamic>
+      <Show when={props.renderTrigger} keyed fallback={(
+        <Dynamic
+          component={props.triggerTag ?? 'button'}
+          {...(props.triggerAttrs ?? {})}
+          ref={triggerRef}
+          popovertarget={props.triggerMode === 'manual' ? undefined : popoverId()}
+        >
+          {props.trigger}
+        </Dynamic>
+      )}>
+        {renderTrigger => renderTrigger({
+          ref: element => (triggerRef = element),
+          get popovertarget() {
+            return props.triggerMode === 'manual' ? undefined : popoverId()
+          },
+        })}
+      </Show>
 
       <Portal>
         <Dynamic
           component={props.contentTag ?? 'div'}
           {...(props.contentAttrs ?? {})}
-          id={popoverId}
+          id={popoverId()}
           popover={props.popover ?? 'auto'}
           ref={popoverRef}
           class={clsx('t-popover-content', props.contentAttrs?.class)}
