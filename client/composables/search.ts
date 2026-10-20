@@ -36,6 +36,7 @@ const [selectedSource, setSelectedSource] = createSignal<SourceValue>(sourceOpti
 const [selectedType, setSelectedType] = createSignal<TypeValue>(typeOptions[0].value)
 const [keyword, setKeyword] = createSignal('')
 const [searching, setSearching] = createSignal(false)
+const [hasSearched, setHasSearched] = createSignal(false)
 /** 上一次搜索的失败原因；为空表示没失败过（或已被下一次搜索清掉） */
 const [searchError, setSearchError] = createSignal<string | null>(null)
 /** 当前结果所属的搜索类型（可能与所选类型不同，取决于最后一次成功的搜索） */
@@ -47,6 +48,7 @@ const [albumResults, setAlbumResults] = createSignal<AlbumInfo[]>([])
 
 export {
   albumResults,
+  hasSearched,
   artistResults,
   keyword,
   musicResults,
@@ -94,12 +96,14 @@ export async function handleSearch(page: number, type: SearchType) {
   setSearchError(null)
   const kw = keyword().trim()
   if (!kw) {
+    setHasSearched(false)
     clearResults()
     return
   }
   setPagination({ ...pagination(), page })
   const provider = providers[selectedSource()] as Provider
   setSearching(true)
+  setHasSearched(true)
 
   let searchFn: Provider['search'] | Provider['searchArtist'] | Provider['searchAlbum']
   if (type === 'music')

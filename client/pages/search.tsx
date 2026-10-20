@@ -11,6 +11,7 @@ import {
   availableTypeOptions,
   currentResults,
   handleSearch,
+  hasSearched,
   keyword,
   musicResults,
   pagination,
@@ -34,13 +35,14 @@ export default function SearchPage() {
   }
 
   return (
-    <div class="flex-1 min-w-0 flex flex-col gap-2 py-2">
+    <div class="search-page flex-1 min-w-0 flex flex-col gap-2">
+      <header class="search-heading"><h1>发现音乐</h1><p>搜索歌曲和创作者，找到你想听的声音。</p></header>
       {/*
         搜索栏：宽度收在 max-w-2xl（原来是 flex-1，1700px 窗口下输入框拉到 1275px），
         左缘与下方结果网格对齐；高度用 h-10，btn-group 内部各段都是 h-full，一改整条跟着长高。
       */}
       <form
-        class="w-full max-w-2xl grow-0 shrink-0 flex gap-2 px-4"
+        class="search-form w-full grow-0 shrink-0 flex gap-2"
         onSubmit={(event) => {
           event.preventDefault()
           handleSearch(1, selectedType())
@@ -65,30 +67,31 @@ export default function SearchPage() {
           />
           <input
             name="search"
-            placeholder="Search..."
+            placeholder="搜索歌曲、创作者…"
+            aria-label="搜索关键词"
             class="h-full input"
             value={keyword()}
             onInput={event => setKeyword(event.currentTarget.value)}
           />
         </div>
-        <button class="btn h-10 px-4" type="submit">
+        <button class="btn h-10 px-4" type="submit" disabled={searching()}>
           <Show when={searching()}>
             <div class="i-lucide:loader-circle text-4 animate-spin" />
           </Show>
-          搜 索
+          搜索
         </button>
       </form>
 
       <Show
-        when={currentResults().length}
+        when={!searchError() && !searching() && currentResults().length}
         fallback={(
           <Show
             when={searchError()}
             fallback={(
               <div class="empty">
-                <div class="i-lucide:search-slash text-6" />
-                <span class="text-sm/relaxed font-medium">没有找到相关内容</span>
-                <span class="text-xs text-muted-foreground">试试换个关键词？</span>
+                <div class="search-empty-icon"><span class={searching() ? 'i-lucide:loader-circle text-6 animate-spin' : 'i-lucide:search text-6'} /></div>
+                <span class="text-sm/relaxed font-medium">{searching() ? '正在寻找好声音…' : hasSearched() ? '没有找到相关内容' : '你的下一首喜欢，从这里开始'}</span>
+                <span class="text-xs text-muted-foreground">{searching() ? '稍等片刻，音乐即将抵达。' : hasSearched() ? '试试换个关键词？' : '输入关键词，按 Enter 或点击搜索。'}</span>
               </div>
             )}
           >
@@ -100,7 +103,7 @@ export default function SearchPage() {
         )}
       >
         {/* 列宽与列数见 uno.config.ts 的 responsive-cols */}
-        <div class="min-h-0 flex-1 overflow-auto grid gap-4 responsive-cols grid-auto-rows-max px-4 pb-4 pt-2">
+        <div class="search-results min-h-0 flex-1 overflow-auto grid gap-4 responsive-cols grid-auto-rows-max">
           <Switch>
             <Match when={searchType() === 'music'}>
               <For each={musicResults()}>

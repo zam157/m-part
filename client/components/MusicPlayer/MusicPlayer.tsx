@@ -203,10 +203,10 @@ export default function MusicPlayer() {
       </div>
 
       {/* Music player */}
-      <div class="@container flex h-19">
+      <div class="@container flex h-21 items-center px-5 gap-1 bg-background border-t border-border">
         {/* Music image */}
         <div
-          class="cover-wrapper overflow-hidden relative dark:bg-neutral-200 bg-neutral-500 h-full aspect-1"
+          class="cover-wrapper overflow-hidden relative bg-muted size-13 rounded-lg shrink-0"
           onClick={() => setShowExpended(v => !v)}
         >
           <Show when={currentSong()?.coverUrl}>
@@ -224,10 +224,10 @@ export default function MusicPlayer() {
         {/* Music info */}
         <div class="mx-4 flex flex-1 flex-col gap-2 min-w-0 items-start justify-center">
           {/* Song name */}
-          <span class="text-primary font-bold max-w-full min-w-0 truncate" innerHTML={currentSong()?.title || 'Unknown Song'} />
+          <span class="text-foreground text-sm font-semibold max-w-full min-w-0 truncate" innerHTML={currentSong()?.title || '未命名歌曲'} />
           {/* Artist name */}
-          <span class="text-xs text-zinc-400 max-w-full min-w-0 truncate">
-            {currentSong()?.artist || 'Unknown Artist'}
+          <span class="text-xs text-muted-foreground max-w-full min-w-0 truncate">
+            {currentSong()?.artist || '未知创作者'}
           </span>
         </div>
 
@@ -252,15 +252,9 @@ export default function MusicPlayer() {
 
         {/* Play button */}
         <div class="btn-wrapper ml-2 mr-2 flex gap-2 items-center @lg:mr-6 @md:mr-4 @lg:gap-4 @md:gap-3">
-          <div class="i-solar:skip-previous-bold text-5 text-primary transition-color hover:text-primary/80" onClick={() => prevNext(0)} />
-          <div
-            class={clsx(
-              'text-9 text-primary transition-[transform,color] hover:scale-110 hover:text-primary/80',
-              playing() ? 'i-solar:pause-circle-bold' : 'i-solar:play-circle-bold',
-            )}
-            onClick={() => setPlaying(!playing())}
-          />
-          <div class="i-solar:skip-next-bold text-5 text-primary transition-color hover:text-primary/80" onClick={() => prevNext(1)} />
+          <button class="ghost-btn size-9" aria-label="上一首" onClick={() => prevNext(0)}><span class="i-lucide:skip-back text-4" /></button>
+          <button class="btn size-10 rounded-full" aria-label={playing() ? '暂停' : '播放'} onClick={() => setPlaying(!playing())}><span class={clsx('text-5', playing() ? 'i-lucide:pause' : 'i-lucide:play')} /></button>
+          <button class="ghost-btn size-9" aria-label="下一首" onClick={() => prevNext(1)}><span class="i-lucide:skip-forward text-4" /></button>
         </div>
       </div>
       <Expended show={showExpended()} onShowChange={setShowExpended} />

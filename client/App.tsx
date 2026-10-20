@@ -1,5 +1,6 @@
 import type { JSX } from '@solidjs/web'
-import { Loading } from 'solid-js'
+import { Loading, Show } from 'solid-js'
+import { playQueue } from './composables/player'
 import MusicPlayer from './components/MusicPlayer/MusicPlayer'
 import PlayQueue from './components/PlayQueue/PlayQueue'
 import Sidebar from './components/Sidebar/Sidebar'
@@ -44,7 +45,13 @@ export default function App(props: AppProps) {
         <Loading fallback={<PageLoading />}>{props.children}</Loading>
         <PlayQueue />
       </main>
-      <MusicPlayer />
+      <Show when={playQueue().length} fallback={(
+        <footer class="player-empty">
+          <div class="player-empty-cover text-muted-foreground"><span class="i-lucide:music-2 text-5" /></div>
+          <div class="player-empty-copy"><strong>准备好，听点喜欢的。</strong><p>搜索一首歌曲，开启你的播放队列。</p></div>
+          <div class="player-empty-controls" aria-hidden="true"><span class="i-lucide:skip-back text-4" /><span class="i-lucide:circle-play text-8" /><span class="i-lucide:skip-forward text-4" /></div>
+        </footer>
+      )}><MusicPlayer /></Show>
     </div>
   )
 }
