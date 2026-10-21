@@ -14,7 +14,7 @@ import { createMemo, createSignal } from 'solid-js'
 
 export const sourceOptions = [
   { label: 'BiliBili', value: 'bili' },
-  // { label: '网易云', value: 'netease' },
+  { label: '网易云', value: 'netease' },
   // { label: 'QQ音乐', value: 'qq' },
 ] as const satisfies Option<ProviderName>[]
 
@@ -32,7 +32,8 @@ function emptyPagination(): Pagination {
   return { page: 1, total: 0, pageSize: 20 }
 }
 
-const [selectedSource, setSelectedSource] = createSignal<SourceValue>(sourceOptions[0].value)
+const [selectedSource, setSelectedSourceState] = createSignal<SourceValue>(sourceOptions[0].value)
+let searchRevision = 0
 const [selectedType, setSelectedType] = createSignal<TypeValue>(typeOptions[0].value)
 const [keyword, setKeyword] = createSignal('')
 const [searching, setSearching] = createSignal(false)
@@ -100,6 +101,7 @@ export async function handleSearch(page: number, type: SearchType) {
     clearResults()
     return
   }
+  const revision = ++searchRevision
   setPagination({ ...pagination(), page })
   const provider = providers[selectedSource()] as Provider
   setSearching(true)
@@ -122,6 +124,8 @@ export async function handleSearch(page: number, type: SearchType) {
 
   try {
     const [items, pageData] = await searchFn(kw, page)
+    if (revision !== searchRevision)
+      return
     setSearchType(type)
     if (type === 'music')
       setMusicResults(items as MusicInfo[])
@@ -132,14 +136,29 @@ export async function handleSearch(page: number, type: SearchType) {
     setPagination(pageData)
   }
   catch (error) {
+    if (revision !== searchRevision)
+      return
     console.error('Search error:', error)
     // 失败了就不是「没搜到」，把原因留在页面上而不是冒充空结果
     clearResults()
     setSearchError(errorMessage(error))
   }
   finally {
-    setSearching(false)
+    if (revision === searchRevision)
+      setSearching(false)
   }
+}
+
+/** 切换音源时清空旧结果，并忽略仍在途的旧音源响应。 */
+function setSelectedSource(source: SourceValue) {
+  if (source === selectedSource())
+    return
+  ++searchRevision
+  setSelectedSourceState(source)
+  clearResults()
+  setHasSearched(false)
+  setSearchError(null)
+  setSearching(false)
 }
 
 function clearResults() {

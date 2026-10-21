@@ -1,6 +1,6 @@
 import type { AlbumInfo, ArtistInfo, MusicInfo, SourceInfo } from './music-info'
 
-export type ProviderName = 'bili'
+export type ProviderName = 'bili' | 'netease'
 export type SearchType = 'music' | 'album' | 'artist'
 
 export interface Pagination {

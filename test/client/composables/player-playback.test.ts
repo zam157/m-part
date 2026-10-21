@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * 写入要到下一次 flush 才提交，所以读到的是旧值 null，函数直接提前返回，
  * 音频地址从未被设置（现象：接口正常返回但没声音）。
  */
-const { tRequestMock } = vi.hoisted(() => ({ tRequestMock: vi.fn() }))
+const { tRequestMock, sourceInfoMock } = vi.hoisted(() => ({ tRequestMock: vi.fn(), sourceInfoMock: vi.fn() }))
 
 const SOURCE_INFO = {
   headers: { referer: 'https://www.bilibili.com/' },
@@ -23,14 +23,14 @@ vi.mock('#shared/utils/providers', () => ({
   providers: {
     bili: {
       name: 'bili',
-      getSourceInfo: vi.fn(async () => SOURCE_INFO),
+      getSourceInfo: sourceInfoMock,
     },
   },
 }))
 
 vi.mock('#shared/utils/fetch', () => ({ tRequest: tRequestMock }))
 
-const { audio, changeQuality, resetPlayer, setPlayQueue } = await import('~/composables/player')
+const { audio, changeQuality, playbackError, resetPlayer, setPlayQueue, setSrc } = await import('~/composables/player')
 
 const song = {
   provider: 'bili' as const,
@@ -43,6 +43,7 @@ const song = {
 describe('播放链路', () => {
   beforeEach(() => {
     tRequestMock.mockReset()
+    sourceInfoMock.mockReset().mockResolvedValue(SOURCE_INFO)
     tRequestMock.mockResolvedValue([true, { blob: async () => new Blob(['audio']) }])
 
     // jsdom 没实现 createObjectURL
@@ -88,5 +89,23 @@ describe('播放链路', () => {
     await changeQuality(SOURCE_INFO.qualities[0])
 
     expect(tRequestMock).not.toHaveBeenCalled()
+  })
+
+  it('音源不可播放时保留原因并移除旧音频，重试成功后清除错误', async () => {
+    const pause = vi.spyOn(audio, 'pause').mockImplementation(() => {})
+    const play = vi.spyOn(audio, 'play').mockResolvedValue()
+    sourceInfoMock.mockRejectedValueOnce(new Error('网易云暂未提供可播放音源'))
+    audio.src = 'https://cdn.example/old.mp3'
+    await setPlayQueue([song])
+    flush()
+    expect(playbackError()).toBe('网易云暂未提供可播放音源')
+    expect(audio.hasAttribute('src')).toBe(false)
+    expect(pause).toHaveBeenCalled()
+    expect(play).not.toHaveBeenCalled()
+    await setSrc(null, 'bili')
+    flush()
+    expect(playbackError()).toBeNull()
+    pause.mockRestore()
+    play.mockRestore()
   })
 })

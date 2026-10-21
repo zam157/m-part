@@ -1,0 +1,31 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "referer", "operation": "set", "value": "https://music.163.com/" },
+        { "header": "origin", "operation": "set", "value": "https://music.163.com" }
+      ]
+    },
+    "condition": {
+      "requestDomains": ["music.163.com"],
+      "resourceTypes": ["xmlhttprequest"]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "referer", "operation": "set", "value": "https://music.163.com/" }
+      ]
+    },
+    "condition": {
+      "requestDomains": ["music.126.net"],
+      "resourceTypes": ["xmlhttprequest", "media"]
+    }
+  }
+]

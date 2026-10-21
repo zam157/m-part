@@ -44,10 +44,14 @@ export default defineConfig({
       'https://*.bilivideo.com/*',
       'https://*.bilivideo.cn/*',
       'https://*.hdslb.com/*',
+      'https://music.163.com/*',
+      'https://*.music.163.com/*',
+      'https://*.music.126.net/*',
     ],
     declarative_net_request: {
       rule_resources: [
         { id: 'bilibili', enabled: true, path: 'rules/bilibili.json' },
+        { id: 'netease', enabled: true, path: 'rules/netease.json' },
       ],
     },
   },

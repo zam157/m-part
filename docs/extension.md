@@ -28,6 +28,8 @@
 
 `shared/utils/fetch.ts` 的 `applyExtensionPolicy`（`TARGET_EXTENSION` 时生效）：
 
+网易云的 WEAPI 加密、权限和请求规则见 [网易云音乐音源](./netease.md)；下面的域名与 DNR 示例针对 BiliBili。
+
 - 默认 `credentials: 'include'`：登录态靠它自动携带
 - 剥掉 fetch 规范禁止 / 浏览器自管的请求头：`cookie`、`referer`、`origin`、`user-agent`、`accept-encoding`、`connection`、`content-length`、`host`
 - `referer` / `origin` 由 `public/rules/bilibili.json` 的 DNR `modifyHeaders` 注入：`api.bilibili.com` → `www`；`x/space/*`、`x/polymer/*`、`x/series/*` → `space.bilibili.com`；`bilivideo.*` → 播放用 referer

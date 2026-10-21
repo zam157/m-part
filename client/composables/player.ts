@@ -1,6 +1,7 @@
 import type { MusicInfo, MusicQuality, SourceInfo } from '#shared/types/music-info'
 import type { ProviderName } from '#shared/types/provider'
 import { tRequest } from '#shared/utils/fetch'
+import { errorMessage } from '#shared/utils'
 import { providers } from '#shared/utils/providers'
 import { createMemo, createRoot, createSignal } from 'solid-js'
 
@@ -20,6 +21,7 @@ const [currentTime, setCurrentTimeState] = createSignal(0)
 const [volume, setVolumeState] = createSignal(1)
 const [seeking, setSeekingState] = createSignal(false)
 const [waiting, setWaiting] = createSignal(false)
+const [playbackError, setPlaybackError] = createSignal<string | null>(null)
 const [currentIndex, setCurrentIndexState] = createSignal<number | null>(null)
 const [showPlayQueue, setShowPlayQueue] = createSignal(false)
 const [playMode, setPlayModeState] = createSignal<PlayMode>('order')
@@ -34,6 +36,7 @@ export {
   duration,
   playQueue,
   playing,
+  playbackError,
   playMode,
   randomPlayQueue,
   seeking,
@@ -221,6 +224,7 @@ export async function changeQuality(quality?: MusicQuality) {
  * 还不可见，会拿到上一首歌（或 null）。
  */
 async function playSource(music: MusicInfo | undefined, src: string | null, provider?: ProviderName) {
+  setPlaybackError(null)
   setCurrentSourceInfo(null)
   if (abortController) {
     abortController.abort()
@@ -247,6 +251,11 @@ async function playSource(music: MusicInfo | undefined, src: string | null, prov
       }
       catch (error) {
         console.error(`Error fetching source info from provider ${provider}:`, error)
+        setPlaybackError(errorMessage(error))
+        audio.pause()
+        audio.removeAttribute('src')
+        audio.load()
+        setPlayingState(false)
         setWaiting(false)
       }
       finally {
@@ -272,6 +281,11 @@ export async function setSrc(src: string | null, provider?: ProviderName) {
  */
 export async function setPlaying(isPlaying: boolean) {
   if (isPlaying) {
+    // 音源请求失败后，调用方仍可能尝试自动播放；不能重播上一首残留的媒体。
+    if (!audio.getAttribute('src')) {
+      setPlayingState(false)
+      return
+    }
     try {
       await audio.play()
     }

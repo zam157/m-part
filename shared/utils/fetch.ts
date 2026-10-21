@@ -5,7 +5,7 @@ export type TRequestSuccessTuple<T> = [isOk: true, data: T]
 export type TRequestResult<T> = TRequestErrorTuple | TRequestSuccessTuple<T>
 
 type TRequestOptions = Omit<RequestInit, 'body'> & {
-  body?: Record<string, any> | undefined | null
+  body?: Record<string, any> | URLSearchParams | undefined | null
   searchParams?: Record<string, any> | undefined | null
   url?: null | undefined
   returnJson?: boolean
@@ -65,7 +65,7 @@ export async function tRequest(url: string, options?: TRequestOptions): Promise<
 
   if (options) {
     if (options.body)
-      body = JSON.stringify(options.body)
+      body = options.body instanceof URLSearchParams ? options.body.toString() : JSON.stringify(options.body)
 
     if (options.searchParams && Object.keys(options.searchParams).length > 0) {
       const newUrl = new URL(url, globalWindow?.location.origin)

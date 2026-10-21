@@ -2,6 +2,8 @@
 
 多音源音乐播放器。前端是 Solid 2 + Vite，按 Provider 的 API 取数并播放。
 
+音源支持 BiliBili 与网易云音乐；网易云支持歌曲、歌手、专辑搜索和官方音频播放，接入与调试说明见 [网易云音乐音源](./docs/netease.md)。
+
 ## 两种运行形态
 
 | | 扩展形态（推荐） | web 调试形态 |
@@ -103,6 +105,7 @@ m-part/
 | [docs/solid-2.md](./docs/solid-2.md) | Solid 2 响应式规则与 API 差异（写入暂存、渲染期禁止写信号 / 读 store、Loading 边界） |
 | [docs/styling.md](./docs/styling.md) | 类名合并（`cn/lite` 的 `clsx`）、快捷方式与网格、Popover 定位 |
 | [docs/extension.md](./docs/extension.md) | 扩展形态：WXT 配置、传输层、MV3 坑、验证手法、412 调查结论 |
+| [docs/netease.md](./docs/netease.md) | 网易云音源：浏览器端 WEAPI、权限、接口、播放限制与验证 |
 
 ## 已知限制
 

@@ -100,4 +100,22 @@ describe('tRequest（扩展形态）', () => {
     expect(ok).toBe(true)
     expect(data).toEqual({ code: 0 })
   })
+
+  it('保留加密表单的 URL 编码，而不是把表单序列化为 JSON', async () => {
+    const fetchMock = stubFetch()
+    await tRequest('https://music.163.com/weapi/cloudsearch/pc', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ params: 'a+b/c=', encSecKey: '0123' }),
+    })
+    expect(initOf(fetchMock).body).toBe('params=a%2Bb%2Fc%3D&encSecKey=0123')
+    expect((initOf(fetchMock).headers as Headers).get('content-type')).toBe('application/x-www-form-urlencoded')
+    expect(initOf(fetchMock).credentials).toBe('include')
+  })
+
+  it('普通对象请求体仍然使用 JSON', async () => {
+    const fetchMock = stubFetch()
+    await tRequest('https://example.com/api', { method: 'POST', body: { value: 1 } })
+    expect(initOf(fetchMock).body).toBe('{"value":1}')
+  })
 })

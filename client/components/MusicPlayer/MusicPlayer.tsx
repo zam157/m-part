@@ -1,6 +1,7 @@
 import type { MusicQuality } from '#shared/types/music-info'
 import { clsx } from 'cn/lite'
 import { Show, createMemo, createSignal } from 'solid-js'
+import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
 import {
   changeQuality,
   currentSong,
@@ -8,6 +9,7 @@ import {
   currentTime,
   duration,
   playing,
+  playbackError,
   playQueue,
   playMode,
   prevNext,
@@ -15,6 +17,7 @@ import {
   seeking,
   setCurrentTime,
   setPlaying,
+  setSrc,
   setShowPlayQueue,
   setVolume,
   setWaiting,
@@ -143,6 +146,16 @@ export default function MusicPlayer() {
         playQueue().length === 0 && 'translate-y-full hidden',
       )}
     >
+      <Show when={playbackError()}>
+        <ErrorMessage
+          message={playbackError() ?? ''}
+          onRetry={async () => {
+            await setSrc(null, currentSong()?.provider)
+            await setPlaying(true)
+          }}
+          class="flex-none flex-row gap-3 p-3 border-t border-border"
+        />
+      </Show>
       {/* Progress bar */}
       <div class="relative h-[--progress-height]">
         <div
