@@ -156,9 +156,8 @@ export default function VolumeBtn(props: VolumeBtnProps) {
       />
 
       <div
-        style="transition: opacity 0.2s var(--default-transition-timingFunction), translate 0.2s var(--default-transition-timingFunction), display 0.2s var(--default-transition-timingFunction) allow-discrete;"
         class={clsx(
-          'starting:opacity-0 starting:translate-y-2',
+          'starting:opacity-0 starting:translate-y-2 transition-[opacity,translate,display] duration-200 transition-discrete',
           'mb-2 pb-1.5 pt-3 rounded-lg bg-popover flex flex-col w-9 shadow-lg items-center',
           'bottom-full left-1/2 justify-center absolute z-2 -translate-x-1/2',
           isHovering() ? 'opacity-100' : 'opacity-0 hidden translate-y-2',
@@ -173,16 +172,14 @@ export default function VolumeBtn(props: VolumeBtnProps) {
           onContextMenu={event => event.preventDefault()}
         >
           <div
-            class="rounded-full bg-primary w-full bottom-0 absolute"
-            style={{ height: 'var(--volume-percent)' }}
+            class="rounded-full bg-primary w-full bottom-0 absolute h-[--volume-percent]"
           />
           <div
             class={clsx(
-              'rounded-full shadow-2xl translate-y-1/2 left-1/2 absolute -translate-x-1/2',
+              'rounded-full shadow-2xl translate-y-1/2 left-1/2 absolute -translate-x-1/2 bottom-[--volume-percent]',
               'transition-[transform,height,width,background-color] hover:scale-110',
               isDragging() ? 'scale-110 bg-primary/30 w-3.5 h-5' : 'bg-primary size-3',
             )}
-            style={{ bottom: 'var(--volume-percent)' }}
           />
         </div>
         <div class="text-2.5 mt-1 font-mono">

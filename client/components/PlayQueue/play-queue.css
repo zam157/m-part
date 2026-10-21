@@ -2,12 +2,8 @@
   /* Animate display discretely so the panel leaves layout after its exit.
      Only the clipping shell shrinks; content keeps its final width. */
   .play-queue-panel {
-    --queue-width: 20rem;
     display: none;
-    flex: 0 0 auto;
     width: 0;
-    min-height: 0;
-    overflow: hidden;
     transition: width 300ms ease, display 300ms allow-discrete;
   }
 
@@ -20,35 +16,5 @@
     .play-queue-panel[data-open='true'] {
       width: 0;
     }
-  }
-
-  .play-queue-content {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    width: var(--queue-width);
-    height: 100%;
-    overflow: hidden;
-  }
-
-  .play-queue-content > header,
-  .play-queue-content > :last-child {
-    flex-shrink: 0;
-  }
-
-  @media (max-width: 760px) {
-    .play-queue-panel {
-      --queue-width: min(20rem, calc(100vw - 64px));
-      position: fixed;
-      right: 0;
-      top: 0;
-      bottom: 84px;
-      z-index: 30;
-      box-shadow: -8px 0 30px #0002;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .play-queue-panel { transition: none; }
   }
 }

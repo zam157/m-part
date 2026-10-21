@@ -1,14 +1,5 @@
 .t-tooltip {
-  position: fixed;
   inset: auto;
-  margin: 0;
-  max-width: calc(100vw - 16px);
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-  pointer-events: none;
   bottom: calc(anchor(top) + var(--tooltip-offset));
   justify-self: anchor-center;
   position-try-fallbacks: flip-block;

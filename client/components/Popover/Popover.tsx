@@ -87,7 +87,7 @@ export default function Popover(props: PopoverProps) {
           id={popoverId()}
           popover={props.popover ?? 'auto'}
           ref={popoverRef}
-          class={clsx('t-popover-content', props.contentAttrs?.class)}
+          class={clsx('t-popover-content popover-surface', props.contentAttrs?.class)}
           onBeforeToggle={props.onBeforeToggle}
         >
           {props.content}

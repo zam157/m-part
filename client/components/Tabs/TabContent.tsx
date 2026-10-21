@@ -1,4 +1,5 @@
 import type { JSX } from '@solidjs/web'
+import { clsx } from 'cn/lite'
 import { useTabsContext } from './tabs-context'
 
 export interface TabContentProps {
@@ -13,8 +14,7 @@ export default function TabContent(props: TabContentProps) {
   // 等价于原实现的 v-show：保持挂载，仅切换 display
   return (
     <div
-      class={props.class}
-      style={{ display: activeTab() === props.value ? undefined : 'none' }}
+      class={clsx(props.class, activeTab() !== props.value && '!hidden')}
     >
       {props.children}
     </div>

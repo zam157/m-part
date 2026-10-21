@@ -12,6 +12,11 @@ import { presetShadcn } from './shadcn'
 
 export default defineConfig({
   shortcuts: [
+    ['page-title', 'text-7 leading-[1.4] font-[650] tracking-[-1px]'],
+    ['page-description', 'text-[13px] text-muted-foreground mt-[7px]'],
+    ['sidebar-item', 'flex w-full items-center gap-3 min-h-10 py-2.5 px-3 rounded-[7px] text-[13px] text-left transition-colors duration-150 hover:bg-accent group-data-[collapsed=true]/sidebar:size-10 group-data-[collapsed=true]/sidebar:mx-auto group-data-[collapsed=true]/sidebar:justify-center'],
+    ['sidebar-label', 'whitespace-nowrap group-data-[collapsed=true]/sidebar:hidden'],
+    ['popover-surface', 'mb-2 p-2.5 rounded-lg bg-popover text-popover-foreground ring-1 shadow-md ring-foreground/10 outline-hidden'],
     [
       'btn',
       'active:translate-y-px bg-clip-padding bg-primary border border-transparent disabled:opacity-50 disabled:cursor-not-allowed focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 font-medium gap-1.5 h-8 inline-flex items-center justify-center outline-none px-2.5 rounded-lg select-none shrink-0 text-primary-foreground text-sm transition-all whitespace-nowrap',

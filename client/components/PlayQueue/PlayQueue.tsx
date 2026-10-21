@@ -1,5 +1,5 @@
 import { clsx } from 'cn/lite'
-import { For, Show } from 'solid-js'
+import { createEffect, For, Show, untrack } from 'solid-js'
 import {
   clearPlayQueue,
   currentIndex,
@@ -14,6 +14,29 @@ import {
 import './play-queue.css'
 
 export default function PlayQueue() {
+  let panelRef: HTMLDivElement | undefined
+  let returnFocus: HTMLElement | undefined
+
+  createEffect(showPlayQueue, (open) => {
+    const activeElement = document.activeElement
+    const fallbackTrigger = () => document.querySelector<HTMLButtonElement>('button[aria-controls="play-queue"]')
+
+    if (open) {
+      returnFocus = activeElement instanceof HTMLElement && activeElement !== document.body && !panelRef?.contains(activeElement)
+        ? activeElement
+        : fallbackTrigger() ?? undefined
+      return
+    }
+
+    // inert 可能已经把队列内的焦点移到 body；外部控件已有焦点时不抢焦点。
+    if (returnFocus && (activeElement === document.body || panelRef?.contains(activeElement))) {
+      const target = returnFocus.isConnected ? returnFocus : fallbackTrigger()
+      // focus 会同步触发入口的 Tooltip 事件，避免让事件继承 effect 的严格读取上下文。
+      untrack(() => target?.focus({ preventScroll: true }))
+    }
+    returnFocus = undefined
+  })
+
   async function handleItemClick(index: number) {
     if (currentIndex() === index) {
       await setPlaying(!playing())
@@ -30,13 +53,14 @@ export default function PlayQueue() {
 
   return (
     <div
-      class="play-queue-panel"
+      id="play-queue"
+      ref={panelRef}
+      class="play-queue-panel [--queue-width:20rem] flex-none min-h-0 overflow-hidden max-[760px]:[--queue-width:min(20rem,calc(100vw-64px))] max-[760px]:fixed max-[760px]:right-0 max-[760px]:top-0 max-[760px]:bottom-21 max-[760px]:z-30 max-[760px]:shadow-[-8px_0_30px_#0002] motion-reduce:transition-none"
       data-open={showPlayQueue() ? 'true' : 'false'}
-      aria-hidden={showPlayQueue() ? 'false' : 'true'}
       inert={!showPlayQueue()}
     >
-      <div class="play-queue-content bg-sidebar text-sidebar-foreground border-l border-sidebar-border">
-        <header class="flex items-center justify-between px-4 py-5 border-b border-border">
+      <div class="flex flex-col gap-0.5 w-[--queue-width] h-full overflow-hidden bg-sidebar text-sidebar-foreground border-l border-sidebar-border">
+        <header class="shrink-0 flex items-center justify-between px-4 py-5 border-b border-border">
           <div><h2 class="text-sm font-semibold">播放队列</h2><p class="text-xs text-muted-foreground mt-1">{playQueue().length} 首待聆听的声音</p></div>
           <button class="ghost-btn size-8" aria-label="关闭播放队列" onClick={() => setShowPlayQueue(false)}><span class="i-lucide:x text-4" /></button>
         </header>

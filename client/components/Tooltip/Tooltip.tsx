@@ -69,7 +69,7 @@ export default function Tooltip(props: TooltipProps) {
       }))}
       contentAttrs={{
         role: 'tooltip',
-        get class() { return clsx('t-tooltip', props.class) },
+        get class() { return clsx('t-tooltip fixed m-0 px-2.5 py-1.5 rounded-[6px] max-w-[calc(100vw-16px)] text-xs leading-normal [overflow-wrap:anywhere] pointer-events-none', props.class) },
         get 'data-placement'() { return props.placement ?? 'top' },
         get style() { return { '--tooltip-offset': `${props.offset ?? 8}px` } },
       }}

@@ -1,54 +1,10 @@
-/**
- * 从 MusicPlayer.vue 的 <style scoped> 迁移而来。
- * 原来的 scoped 依赖 Vue 生成的 data 属性做作用域，这里靠本文件里唯一的类名
- * （.progress-bar-wrapper / .time-tooltip / .progress-bar / .thumb / .cover-wrapper）保持隔离。
- * 保持不加 @layer，与原来「组件样式可覆盖工具类」的行为一致。
- */
-.progress-bar-wrapper {
-  .time-tooltip {
-    position: absolute;
+@layer components {
+  /* The thumb is the explicit anchor for the playback time tooltip. */
+  .progress-bar-wrapper .thumb { anchor-name: --thumb; }
+
+  .progress-bar-wrapper .time-tooltip {
     position-anchor: --thumb;
     justify-self: anchor-center;
     inset-block-end: calc(anchor(top) + 2 * var(--spacing));
-  }
-  .progress-bar {
-    .thumb {
-      anchor-name: --thumb;
-      visibility: hidden;
-      opacity: 0;
-    }
-  }
-  &:hover .progress-bar,
-  .t-loading.progress-bar {
-    --progress-height: calc(var(--spacing) * 2);
-    .thumb {
-      visibility: visible;
-      opacity: 1;
-    }
-  }
-  &:hover .time-tooltip {
-    opacity: 1;
-    visibility: visible;
-  }
-  /** Extra hover area */
-  &::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 100%;
-    height: calc(4 * var(--spacing) + 100%);
-    transform: translateY(-50%);
-  }
-}
-
-.cover-wrapper {
-  &:hover {
-    > img {
-      @apply filter-blur-xs;
-    }
-    > .i-lucide\:chevrons-up {
-      @apply text-black/70 z-2;
-    }
   }
 }

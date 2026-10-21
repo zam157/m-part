@@ -136,12 +136,9 @@ export default function MusicPlayer() {
     <div
       style={{
         '--progress-percent': `${displayProgress() * 100}%`,
-        '--thumb-width': 'calc(var(--spacing) * 3.5)',
-        '--thumb-height': 'var(--thumb-width)',
-        '--progress-height': 'var(--spacing)',
       }}
       class={clsx(
-        'grow-0 shrink-0 flex flex-col select-none relative',
+        'grow-0 shrink-0 flex flex-col select-none relative [--thumb-width:calc(var(--spacing)*3.5)] [--thumb-height:var(--thumb-width)] [--progress-height:var(--spacing)]',
         'transition-[transform,display] transition-discrete starting:translate-y-full',
         playQueue().length === 0 && 'translate-y-full hidden',
       )}
@@ -150,7 +147,7 @@ export default function MusicPlayer() {
       <div class="relative h-[--progress-height]">
         <div
           ref={progressBarRef}
-          class="progress-bar-wrapper cursor-pointer absolute bottom-0 left-0 w-full z-1"
+          class="progress-bar-wrapper group/progress cursor-pointer absolute bottom-0 left-0 w-full z-1 after:content-empty after:absolute after:top-1/2 after:left-0 after:w-full after:h-[calc(4*var(--spacing)+100%)] after:-translate-y-1/2"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -162,7 +159,7 @@ export default function MusicPlayer() {
               class="
                 time-tooltip
                 absolute text-sm text-neutral-50 font-mono whitespace-nowrap px-2 py-1 rounded-lg bg-neutral-700 opacity-0 invisible pointer-events-none
-                transition-[opacity,visibility] duration-200
+                transition-[opacity,visibility] duration-200 group-hover/progress:opacity-100 group-hover/progress:visible
               "
             >
               {displayTime()}
@@ -171,23 +168,21 @@ export default function MusicPlayer() {
 
           <div
             class={clsx(
-              'progress-bar h-[--progress-height] transition-height duration-300 relative touch-none',
+              'progress-bar group/bar h-[--progress-height] transition-height duration-300 relative touch-none group-hover/progress:[--progress-height:calc(var(--spacing)*2)]',
               'bg-neutral-200 dark:bg-neutral-500 will-change-transform',
-              showSpinner() && 't-loading',
+              showSpinner() && 't-loading [--progress-height:calc(var(--spacing)*2)]',
             )}
           >
             <div
-              class="relative rounded-r-full bg-primary h-full"
-              style={{ width: 'var(--progress-percent)' }}
+              class="relative rounded-r-full bg-primary h-full w-[--progress-percent]"
             >
               <div
                 class={clsx(
-                  'thumb rounded-full flex items-center justify-center shadow-md w-[--thumb-width] h-[--thumb-height]',
+                  'thumb invisible opacity-0 group-hover/progress:visible group-hover/progress:opacity-100 group-[.t-loading]/bar:visible group-[.t-loading]/bar:opacity-100 rounded-full flex items-center justify-center shadow-md w-[--thumb-width] h-[--thumb-height]',
                   'transition-[opacity,visibility,height,width,background-color]',
                   'absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2',
-                  scrubbing() ? 'bg-primary/30' : 'bg-primary',
+                  scrubbing() ? 'bg-primary/30 [--thumb-width:calc(var(--spacing)*6)]' : 'bg-primary',
                 )}
-                style={scrubbing() ? { '--thumb-width': 'calc(var(--spacing) * 6)' } : undefined}
               >
                 <div
                   class={clsx(
@@ -206,18 +201,18 @@ export default function MusicPlayer() {
       <div class="@container flex h-21 items-center px-5 gap-1 bg-background border-t border-border">
         {/* Music image */}
         <div
-          class="cover-wrapper overflow-hidden relative bg-muted size-13 rounded-lg shrink-0"
+          class="group/cover overflow-hidden relative bg-muted size-13 rounded-lg shrink-0"
           onClick={() => setShowExpended(v => !v)}
         >
           <Show when={currentSong()?.coverUrl}>
             <img
               src={currentSong()!.coverUrl}
               referrerpolicy="no-referrer"
-              class="h-full w-full object-cover transition-filter"
+              class="h-full w-full object-cover transition-filter group-hover/cover:filter-blur-xs"
             />
           </Show>
           <div
-            class="i-lucide:chevrons-up absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-transparent text-10 transition-[color,transform] duration-200"
+            class="i-lucide:chevrons-up absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-transparent text-10 transition-[color,transform] duration-200 group-hover/cover:text-black/70 group-hover/cover:z-2"
           />
         </div>
 

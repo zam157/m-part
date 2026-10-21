@@ -21,9 +21,17 @@ cn('text-9 text-primary', 'i-solar:play-circle-bold')
 
 ## 快捷方式（shortcut）与工具类的叠加
 
-`uno.config.ts` 里的 shortcut（`btn` / `ghost-btn` / `border-btn` / `card` / `empty` / `skeleton` / `responsive-cols` …）会展开成一串工具类，**和调用处写的工具类同属一层，冲突时靠产出顺序决定**。
+`uno.config.ts` 里的 shortcut（`btn` / `ghost-btn` / `border-btn` / `card` / `empty` / `skeleton` / `responsive-cols` …）会展开成一串工具类。本项目开启了 `outputToCssLayers`：shortcut 在 `shortcuts` 层，直接工具类在后面的 `default` 层，因此调用处的工具类可覆盖 shortcut 的默认值；同一层内仍需检查生成顺序与选择器优先级，不能依赖 class 字符串的先后顺序。
 
 踩过的实例：`card` 曾自带 `w-full max-w-sm`，搜索页网格里每格超过 384px 时卡片被卡住、剩余宽度变成视觉 gap（容器宽度 > 约 2016px 才出现，很容易漏掉）。排查手法是直接看产物 CSS 里 shortcut 展开成了什么。
+
+## 原子类优先与 CSS 的保留范围
+
+- 布局、间距、字号、颜色和响应式状态直接写 UnoCSS 类；重复的组合放在 `uno.config.ts` 的 shortcuts（如 `sidebar-item`、`page-title`、`popover-surface`），不要再增加只负责这些属性的语义 CSS 类。
+- 全局 CSS 只保留文档默认值和减少动画设置。组件 CSS 主要保留原生锚点、`@starting-style` 与 `display` / `overlay` 离散过渡等规则，避免迁移时丢失浮层定位或退场效果。
+- 连续变化的进度、音量通过行内 CSS 自定义属性传值，宽高与定位使用 `w-[--progress-percent]` 等类，不动态拼接 UnoCSS 类名。
+- 当前 `presetWind4` 会把 `bg-[repeating-radial-gradient(...)]` 解析成 `background-color`，导致渐变无效；使用 `[background-image:repeating-radial-gradient(...)]`。锚点名 `--thumb` 保留原生 CSS：`[anchor-name:--thumb]` 会被改写成 `anchor-name: var(--thumb)`。
+- 迁移后检查实际生成的 CSS，并在宽屏、760px 以下以及浮层打开时验证；类型检查不会发现原子类没有生成或覆盖顺序不对。
 
 ## 搜索页结果网格
 

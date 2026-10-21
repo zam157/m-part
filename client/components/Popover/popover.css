@@ -1,6 +1,5 @@
 @layer components {
   .t-popover-content {
-    @apply mb-2 p-2.5 rounded-lg bg-popover text-popover-foreground ring-1 shadow-md ring-foreground/10 outline-hidden;
     /* 隐式锚点：触发器用 popovertarget 指向本元素，二者自动建立关联，
        因此 anchor() / anchor-center 不需要显式的 anchor-name。 */
     position-anchor: auto;
