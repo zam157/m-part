@@ -110,6 +110,14 @@ interface AlbumResponse extends NeteaseResponse {
   songs: NeteaseSong[]
 }
 
+interface LyricsResponse extends NeteaseResponse {
+  lrc?: { lyric?: string }
+  tlyric?: { lyric?: string }
+  romalrc?: { lyric?: string }
+  nolyric?: boolean
+  pureMusic?: boolean
+}
+
 interface SongUrlResponse extends NeteaseResponse {
   data: {
     id: number
@@ -201,6 +209,15 @@ async function search(keyword: string, page: number, type: 1 | 10 | 100 | 1000) 
 
 const NeteaseProvider: Provider = {
   name: 'netease',
+  async getLyrics(id, options) {
+    const result = await request<LyricsResponse>('/api/song/lyric', { id, tv: -1, lv: -1, rv: -1, kv: -1, _nmclfl: 1 }, options?.signal)
+    return {
+      original: result.lrc?.lyric ?? '',
+      translated: result.tlyric?.lyric,
+      romanized: result.romalrc?.lyric,
+      instrumental: !!(result.nolyric || result.pureMusic),
+    }
+  },
   async getCurrentUser() {
     try {
       const result = await request<AccountResponse>('/api/w/nuser/account/get')

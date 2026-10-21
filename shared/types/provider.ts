@@ -28,8 +28,18 @@ export interface PlaylistTracksOptions {
   onProgress?: (progress: { items: MusicInfo[], total: number }) => void
 }
 
+export interface LyricsInfo {
+  /** 原文、翻译、音译均为 LRC 或纯文本；纯音乐可没有原文。 */
+  original: string
+  translated?: string
+  romanized?: string
+  instrumental?: boolean
+}
+
 export interface Provider {
   name: ProviderName
+  /** 读取官方歌词；不支持歌词的音源可不实现。 */
+  getLyrics?: (id: string, options?: { signal?: AbortSignal }) => Promise<LyricsInfo>
   /** 首页推荐音乐；无需登录可用，返回值可直接加入播放队列。 */
   getRecommendations?: () => Promise<MusicInfo[]>
   /** Retrieves the source information for a given music item */

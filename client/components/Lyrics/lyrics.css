@@ -1,0 +1,11 @@
+@layer components {
+  .lyrics-scroll { scrollbar-width: thin; }
+  .lyric-line {
+    color: color-mix(in oklab, oklch(var(--foreground)) 35%, transparent);
+    transition: color 250ms ease, opacity 250ms ease;
+  }
+  .lyric-line[aria-current='true'] { color: oklch(var(--foreground)); }
+  .lyric-line:not([aria-current]):not(:disabled):hover { color: color-mix(in oklab, oklch(var(--foreground)) 75%, transparent); }
+  .lyric-line:disabled { cursor: default; }
+  @media (prefers-reduced-motion: reduce) { .lyric-line { transition: none; } }
+}

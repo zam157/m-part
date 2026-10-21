@@ -16,6 +16,26 @@ describe('网易云 Provider', () => {
   })
   afterEach(() => vi.restoreAllMocks())
 
+  it('歌词复用 WEAPI 加密，返回原文 / 翻译 / 音译，并传递取消信号', async () => {
+    requestMock.mockResolvedValueOnce([true, { code: 200, lrc: { lyric: '[00:01]Hello' }, tlyric: { lyric: '[00:01]你好' }, romalrc: { lyric: '[00:01]he-llo' } }])
+    const controller = new AbortController()
+    expect(await provider.getLyrics!('1', { signal: controller.signal })).toEqual({ original: '[00:01]Hello', translated: '[00:01]你好', romanized: '[00:01]he-llo', instrumental: false })
+    expect(encryptMock).toHaveBeenCalledWith({ id: '1', tv: -1, lv: -1, rv: -1, kv: -1, _nmclfl: 1, csrf_token: '' })
+    expect(requestMock).toHaveBeenCalledWith('https://music.163.com/weapi/song/lyric', expect.objectContaining({ signal: controller.signal }))
+  })
+
+  it('歌词区分纯音乐、无歌词和失败，不请求已取消的任务', async () => {
+    requestMock.mockResolvedValueOnce([true, { code: 200, nolyric: true }])
+    expect(await provider.getLyrics!('1')).toMatchObject({ original: '', instrumental: true })
+    requestMock.mockResolvedValueOnce([true, { code: 200 }])
+    expect(await provider.getLyrics!('2')).toMatchObject({ original: '', instrumental: false })
+    requestMock.mockResolvedValueOnce([true, { code: 500, message: '歌词服务异常' }])
+    await expect(provider.getLyrics!('3')).rejects.toThrow('歌词服务异常')
+    const count = requestMock.mock.calls.length
+    await expect(provider.getLyrics!('1', { signal: AbortSignal.abort() })).rejects.toThrow()
+    expect(requestMock).toHaveBeenCalledTimes(count)
+  })
+
   it('推荐新歌使用公开 WEAPI 接口，并展开嵌套的 song 字段', async () => {
     requestMock.mockResolvedValue([true, { code: 200, result: [{ id: 99, name: '推荐卡片', song }] }])
     expect(await provider.getRecommendations!()).toEqual([expect.objectContaining({ provider: 'netease', id: '1', title: '歌曲', duration: 180.5, artist: '歌手', coverUrl: 'https://p1.music.126.net/cover.jpg' })])

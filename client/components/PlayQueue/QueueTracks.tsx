@@ -1,6 +1,6 @@
 import { clsx } from 'cn/lite'
 import { createEffect, createMemo, createSignal, For, Show, untrack } from 'solid-js'
-import MusicContextMenu from '~/components/MusicContextMenu/MusicContextMenu'
+import ContextMenu from '~/components/ContextMenu/ContextMenu'
 import { currentIndex, playing, playMode, playQueue, randomPlayQueue, removeFromPlayQueue, setCurrentIndex, setPlaying } from '~/composables/player'
 import { formatTime } from '~/components/MusicPlayer/components/player-controls'
 
@@ -29,7 +29,13 @@ export default function QueueTracks(props: { open: boolean }) {
     <div ref={listRef} class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 scroll-pt-4" aria-label="队列歌曲">
       <Show when={playQueue().length} fallback={<p class="empty text-sm text-muted-foreground">队列还是空的</p>}>
         <div class="grid grid-cols-1 gap-2"><For each={visibleOrder()}>{index => (
-          <MusicContextMenu music={playQueue()[index]!}>{trigger => (
+          <ContextMenu label="队列歌曲操作" getItems={() => [{
+            id: 'remove-from-queue',
+            label: '从队列中移除',
+            icon: 'i-lucide:trash-2',
+            destructive: true,
+            onSelect: () => removeFromPlayQueue(index),
+          }]}>{trigger => (
             <div {...trigger} class={clsx('group flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-accent/60', currentIndex() === index && 'bg-accent')} aria-current={currentIndex() === index ? 'true' : undefined}>
               <button class="flex flex-1 min-w-0 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`播放 ${playQueue()[index]?.title}`} onClick={() => play(index)}>
                 <span class="relative size-11 shrink-0 overflow-hidden rounded-md bg-muted grid place-items-center">
@@ -43,7 +49,7 @@ export default function QueueTracks(props: { open: boolean }) {
               <span class="text-[11px] tabular-nums text-muted-foreground max-[400px]:hidden">{formatTime(playQueue()[index]?.duration ?? 0)}</span>
               <button class="ghost-btn size-8 shrink-0 text-muted-foreground hover:text-destructive" aria-label={`移除 ${playQueue()[index]?.title}`} onClick={() => removeFromPlayQueue(index)}><span class="i-lucide:x text-3.5" /></button>
             </div>
-          )}</MusicContextMenu>
+          )}</ContextMenu>
         )}</For></div>
         <Show when={visibleOrder().length < order().length}>
           <button class="border-btn w-full h-9 mt-3 text-xs" onClick={() => setReach(value => value + 50)}>显示更多歌曲（{visibleOrder().length} / {order().length}）</button>

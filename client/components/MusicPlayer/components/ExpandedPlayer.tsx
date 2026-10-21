@@ -7,6 +7,7 @@ import {
   currentSong, currentSourceInfo, playbackError, playing, playQueue,
   setPlaying, setVolume, volume,
 } from '~/composables/player'
+import Lyrics from '~/components/Lyrics/Lyrics'
 import PlayQueue from '~/components/PlayQueue/PlayQueue'
 import PlaybackControls from './PlaybackControls'
 import PlaybackProgress from './PlaybackProgress'
@@ -22,6 +23,7 @@ export interface ExpandedPlayerProps {
 
 export default function ExpandedPlayer(props: ExpandedPlayerProps) {
   let dialogRef!: HTMLDialogElement
+  const [showLyrics, setShowLyrics] = createSignal(false)
   const [showQueue, setShowQueue] = createSignal(false)
   const close = () => props.onShowChange(false)
   function closeDialog() {
@@ -72,14 +74,14 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
           <div class="absolute inset-0 bg-background/80" />
         </div>
         <header class="relative z-1 shrink-0 h-18 px-8 flex items-center justify-between gap-3 border-b border-border/60 max-[900px]:h-15 max-[900px]:px-4">
-          <button class="ghost-btn size-10" autofocus aria-label="收起播放器" onClick={close}><span class="i-lucide:chevron-down text-5" /></button>
+          <div class="w-10 max-[900px]:w-21 shrink-0"><button class="ghost-btn size-10" autofocus aria-label="收起播放器" onClick={close}><span class="i-lucide:chevron-down text-5" /></button></div>
           <div class="text-center"><p class="text-xs tracking-[0.15em] text-muted-foreground">正在播放</p><p class="text-xs font-medium mt-1">{currentSong()?.provider === 'netease' ? '网易云音乐' : 'BiliBili'}</p></div>
-          <div class="size-10"><button class={clsx('ghost-btn size-10', showQueue() && 'bg-accent')} aria-label="展开播放队列" aria-controls="expanded-play-queue" aria-expanded={showQueue() ? 'true' : 'false'} onClick={() => setShowQueue(value => !value)}><span class="i-lucide:list-music text-5" /></button></div>
+          <div class="flex items-center gap-1"><button class={clsx('ghost-btn size-10 min-[901px]:hidden', showLyrics() && 'bg-accent')} aria-label="显示歌词" aria-controls="expanded-lyrics" aria-expanded={showLyrics() ? 'true' : 'false'} onClick={() => setShowLyrics(value => !value)}><span class="i-lucide:captions text-5" /></button><button class={clsx('ghost-btn size-10', showQueue() && 'bg-accent')} aria-label="展开播放队列" aria-controls="expanded-play-queue" aria-expanded={showQueue() ? 'true' : 'false'} onClick={() => setShowQueue(value => !value)}><span class="i-lucide:list-music text-5" /></button></div>
         </header>
         <div class="relative z-1 min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <div class="grid grid-cols-1 items-center gap-16 max-w-6xl min-h-full mx-auto px-12 py-8 max-[1100px]:gap-9 max-[900px]:grid-cols-1 max-[900px]:px-6 max-[900px]:py-5 max-[400px]:px-5">
-            <section aria-label="正在播放的歌曲" class="expanded-now-playing w-full max-w-110 mx-auto min-w-0">
-              <div class="expanded-artwork aspect-square w-[min(44dvh,100%)] max-w-110 mx-auto overflow-hidden rounded-2xl border border-foreground/5 bg-muted shadow-[0_24px_70px_-20px_#0005] grid place-items-center max-[900px]:w-[min(38dvh,100%)]">
+          <div class="grid grid-cols-[minmax(0,1fr)_minmax(300px,0.9fr)] items-center gap-16 max-w-6xl min-h-full mx-auto px-12 py-8 max-[1100px]:gap-9 max-[900px]:grid-cols-1 max-[900px]:px-6 max-[900px]:py-5 max-[900px]:gap-5 max-[400px]:px-5">
+            <section aria-label="正在播放的歌曲" class={clsx('expanded-now-playing w-full max-w-110 mx-auto min-w-0', showLyrics() && 'max-[900px]:order-2')}>
+              <div class={clsx('expanded-artwork aspect-square w-[min(44dvh,100%)] max-w-110 mx-auto overflow-hidden rounded-2xl border border-foreground/5 bg-muted shadow-[0_24px_70px_-20px_#0005] grid place-items-center max-[900px]:w-[min(38dvh,100%)]', showLyrics() && 'max-[900px]:hidden')}>
                 <Show when={currentSong()?.coverUrl} fallback={<span class="i-lucide:music-2 text-16 text-muted-foreground/40" />}>
                   <img src={currentSong()!.coverUrl} alt="当前歌曲封面" referrerpolicy="no-referrer" class="size-full object-cover" />
                 </Show>
@@ -92,7 +94,9 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
                 <div class="flex items-center gap-4"><VolumeSlider expanded value={volume()} onValueChange={setVolume} /><Show when={currentSourceInfo()?.qualities?.length}><QualityBtn portalMount={dialogRef} qualities={currentSourceInfo()!.qualities!} onSelect={selectQuality} /></Show></div>
               </div>
             </section>
-
+            <div id="expanded-lyrics" class={clsx('min-w-0', showLyrics() ? 'max-[900px]:order-1' : 'max-[900px]:hidden')}>
+              <Lyrics visible={props.show} class="h-[min(72dvh,720px)] max-[900px]:h-[38dvh]" />
+            </div>
           </div>
         </div>
         <PlayQueue floating open={props.show && showQueue()} onOpenChange={setShowQueue} />
