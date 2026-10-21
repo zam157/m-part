@@ -111,9 +111,10 @@ describe('展开播放器', () => {
     flush()
     expect(player.playQueue()).toEqual([])
     expect(dialog.open).toBe(false)
+    expect(dialog.querySelector<HTMLButtonElement>('[aria-label="定位当前歌曲"]')?.disabled).toBe(true)
   })
 
-  it('大队列初始只渲染当前曲目附近，仍能展开查看其他歌曲', async () => {
+  it('完整渲染大队列，定位按钮滚动到当前歌曲且不改变播放', async () => {
     const many = Array.from({ length: 500 }, (_, i) => ({ ...songs[0]!, id: String(i), title: `song-${i}` }))
     await player.setPlayQueue(many)
     await player.setCurrentIndex(250)
@@ -123,10 +124,20 @@ describe('展开播放器', () => {
     click('展开播放队列')
     const list = dialog.querySelector('[aria-label="队列歌曲"]')!
     expect(list.querySelector('[aria-current="true"]')?.textContent).toContain('song-250')
-    expect(list.querySelectorAll('[aria-haspopup="menu"]').length).toBeLessThan(100)
-    ;([...list.querySelectorAll('button')].find(button => button.textContent?.includes('显示更多歌曲')) as HTMLButtonElement).click()
-    flush()
-    expect(list.querySelectorAll('[aria-haspopup="menu"]').length).toBeGreaterThan(100)
+    expect(list.querySelectorAll('[aria-haspopup="menu"]')).toHaveLength(500)
+    expect(list.querySelector('[aria-label="播放 song-0"]')).not.toBeNull()
+    expect(list.querySelector('[aria-label="播放 song-499"]')).not.toBeNull()
+    expect(list.textContent).not.toContain('显示更多歌曲')
+    const scroll = vi.mocked(HTMLElement.prototype.scrollIntoView)
+    scroll.mockClear()
+    vi.mocked(player.audio.load).mockClear()
+    vi.mocked(player.audio.play).mockClear()
+    click('定位当前歌曲')
+    expect(scroll.mock.contexts.at(-1)).toBe(list.querySelector('[aria-current="true"]'))
+    expect(scroll).toHaveBeenLastCalledWith({ block: 'center', inline: 'nearest', container: 'nearest', behavior: 'smooth' })
+    expect(player.currentSong()?.id).toBe('250')
+    expect(player.audio.load).not.toHaveBeenCalled()
+    expect(player.audio.play).not.toHaveBeenCalled()
   })
 
   it('随机模式不重排队列界面，上一首和下一首按独立的随机顺序切歌', async () => {

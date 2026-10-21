@@ -57,6 +57,7 @@
 ## 样式约定
 
 - 尽量用 UnoCSS 的原子类，避免写自定义 CSS；必要时在组件目录下建 `.css` 文件
+- 完整长列表可在每个内容项加 `content-visibility-auto`，固定行高或提供内在尺寸占位，让浏览器延迟屏外渲染；节点仍全量创建。播放队列使用此方式，不添加“显示更多”分页 → [docs/styling.md](./docs/styling.md#长列表使用-content-visibility-auto)
 
 ## 错误态约定
 

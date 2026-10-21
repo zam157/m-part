@@ -1,6 +1,7 @@
 import { clsx } from 'cn/lite'
 import { createEffect, untrack } from 'solid-js'
-import { clearPlayQueue, playQueue, setShowPlayQueue, showPlayQueue } from '~/composables/player'
+import { clearPlayQueue, currentIndex, playQueue, setShowPlayQueue, showPlayQueue } from '~/composables/player'
+import type { QueueTracksApi } from './QueueTracks'
 import QueueTracks from './QueueTracks'
 import './play-queue.css'
 
@@ -9,6 +10,7 @@ export default function PlayQueue(props: { floating?: boolean, open?: boolean, o
   const setOpen = (open: boolean) => props.floating ? props.onOpenChange?.(open) : setShowPlayQueue(open)
   let panelRef: HTMLDivElement | undefined
   let returnFocus: HTMLElement | undefined
+  let tracks: QueueTracksApi | undefined
 
   createEffect(isOpen, (open) => {
     if (!props.floating || !panelRef) return
@@ -56,14 +58,17 @@ export default function PlayQueue(props: { floating?: boolean, open?: boolean, o
       inert={!isOpen()}
     >
       <div class={clsx('flex flex-col h-full overflow-hidden', props.floating ? 'w-full' : 'w-[--queue-width] bg-sidebar text-sidebar-foreground border-l border-sidebar-border')}>
-        <header class="shrink-0 flex items-center justify-between px-4 py-5 border-b border-border">
+        <header class="shrink-0 flex items-center justify-between px-3 py-3 border-b border-border">
           <div><h2 class="text-sm font-semibold">播放队列</h2><p class="text-xs text-muted-foreground mt-1">{playQueue().length} 首待聆听的声音</p></div>
-          <button class="ghost-btn size-8" aria-label="关闭播放队列" onClick={() => setOpen(false)}><span class="i-lucide:x text-4" /></button>
+          <div class="flex items-center gap-1">
+            <button type="button" class="ghost-btn size-8" aria-label="定位当前歌曲" title="定位当前歌曲" disabled={currentIndex() === null || !playQueue()[currentIndex()!]} onClick={() => tracks?.scrollToCurrent()}><span class="i-lucide:locate-fixed text-4" /></button>
+            <button class="ghost-btn size-8" aria-label="关闭播放队列" onClick={() => setOpen(false)}><span class="i-lucide:x text-4" /></button>
+          </div>
         </header>
-        <QueueTracks open={isOpen()} />
+        <QueueTracks open={isOpen()} ref={(api) => { tracks = api }} />
 
         {/* footer */}
-        <div class="shrink-0 p-3 flex items-center border-t border-border">
+        <div class="shrink-0 p-2 flex items-center border-t border-border">
           <button aria-label="清空播放队列" class="ghost-btn px-3 text-muted-foreground" disabled={!playQueue().length} onClick={handleClear}>
             <span class="i-lucide:trash-2 text-4" />清空队列
           </button>

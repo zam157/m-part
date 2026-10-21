@@ -33,6 +33,23 @@ cn('text-9 text-primary', 'i-solar:play-circle-bold')
 - 当前 `presetWind4` 会把 `bg-[repeating-radial-gradient(...)]` 解析成 `background-color`，导致渐变无效；使用 `[background-image:repeating-radial-gradient(...)]`。锚点名 `--thumb` 保留原生 CSS：`[anchor-name:--thumb]` 会被改写成 `anchor-name: var(--thumb)`。
 - 迁移后检查实际生成的 CSS，并在宽屏、760px 以下以及浮层打开时验证；类型检查不会发现原子类没有生成或覆盖顺序不对。
 
+## 长列表使用 `content-visibility-auto`
+
+播放队列直接用 `<For each={playQueue()}>` 渲染完整列表，在**每个歌曲项的根元素**加上 UnoCSS 的 `content-visibility-auto`，由浏览器跳过屏外内容的布局和绘制，滚动接近时再渲染。无需“显示更多”按钮或手动截取当前歌曲附近的列表。
+
+```tsx
+<div class="content-visibility-auto h-12.5 flex items-center px-2 py-1.5">
+  {/* 歌曲项内容 */}
+</div>
+```
+
+- 所有 DOM 节点仍会创建，框架组件和事件绑定仍有成本；这是延迟渲染，不是 DOM 虚拟化，也不会自动延迟请求。图片继续使用 `loading="lazy"`。
+- 固定高度的歌曲行用 `h-12.5`（50px）预留空间，避免屏外内容被跳过后高度塌陷、滚动条跳动或定位不准。可变高度内容应配合 `contain-intrinsic-size` 估算占位，并实际检查滚动效果。
+- 将原子类写成 TSX 中的完整字面量；验证开发和生产 CSS 都生成 `content-visibility:auto`。不要逐行读取后代的尺寸，以免强制布局抵消收益。
+- 完整 DOM 保留浏览器查找及辅助功能访问；当前项可以直接 `scrollIntoView`。队列使用 `container: 'nearest'` 限制滚动到最近容器；手动定位居中，自动定位保留顶部留白。该选项尚未包含在当前 DOM 类型库中，先构造选项对象再调用。
+
+参考：[MDN content-visibility](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/content-visibility)、[MDN scrollIntoView](https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView)。
+
 ## 搜索页结果网格
 
 列数由「最小卡宽」反推，而这个下限跟着视口走（`responsive-cols` 快捷方式）：
