@@ -50,7 +50,7 @@
 
 ## 命名约定（2026-09 改名后）
 
-- `playlist` / `getPlaylist` = **歌单**（用户收藏的集合）：目前只有 `shared/types/provider.ts` 的占位，尚未实现
+- `playlist` / `getPlaylist` = **歌单**（用户收藏的集合）：`getCurrentUser` 识别账号，`getPlaylists` 列歌单，`getPlaylist` 列曲目，页面 `/playlists` 与 `/playlist-detail/:provider/:id` → [docs/playlists.md](./docs/playlists.md)
 - **播放列表 / 播放队列 = `playQueue` 系**：`playQueue` / `setPlayQueue` / `addToPlayQueue` / `removeFromPlayQueue` / `clearPlayQueue` / `randomPlayQueue` / `showPlayQueue` / `setShowPlayQueue`，组件在 `client/components/PlayQueue/`
 - 例外：`i-solar-playlist-bold` 是 Iconify 图标 id，不是「歌单」语义，勿改
 

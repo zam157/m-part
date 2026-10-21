@@ -29,7 +29,7 @@ export default defineConfig({
     minimum_chrome_version: '116',
     // 没有 popup，点击图标交给 background 里的 action.onClicked 处理
     action: { default_title: 'm-part' },
-    permissions: ['declarativeNetRequestWithHostAccess'],
+    permissions: ['declarativeNetRequestWithHostAccess', 'cookies'],
     // 音频 CDN 必须逐一列全：playurl 会返回 bilivideo.com（upos 镜像）或
     // mcdn.bilivideo.cn 之类的地址。**漏掉域名不会报权限错误**，而是该请求
     // 不再豁免 CORS，表现为浏览器报

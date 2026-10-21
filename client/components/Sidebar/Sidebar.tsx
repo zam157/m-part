@@ -8,6 +8,7 @@ import Tooltip from '~/components/Tooltip/Tooltip'
 const menuItems = [
   { icon: 'i-lucide:house', label: '开始聆听', route: '/' },
   { icon: 'i-lucide:search', label: '搜索', route: '/search' },
+  { icon: 'i-lucide:library', label: '我的歌单', route: '/playlists' },
 ]
 
 export default function Sidebar() {
@@ -15,6 +16,7 @@ export default function Sidebar() {
   const location = useLocation()
   const compactQuery = window.matchMedia('(max-width: 760px)')
   const [collapsed, setCollapsed] = createSignal(compactQuery.matches)
+  const isActive = (route: string) => location.pathname === route || route === '/playlists' && location.pathname.startsWith('/playlist-detail/')
 
   createEffect(() => compactQuery, (query) => {
     const handleResize = (event: MediaQueryListEvent) => setCollapsed(event.matches)
@@ -35,7 +37,7 @@ export default function Sidebar() {
         <For each={menuItems}>{item => (
           <Tooltip content={item.label} disabled={!collapsed()} placement="right">
             {triggerProps => (
-              <button {...triggerProps} class={clsx('sidebar-item', location.pathname === item.route && 'font-semibold bg-accent text-accent-foreground')} aria-current={location.pathname === item.route ? 'page' : undefined} aria-label={item.label} onClick={() => navigate(item.route)}>
+              <button {...triggerProps} class={clsx('sidebar-item', isActive(item.route) && 'font-semibold bg-accent text-accent-foreground')} aria-current={isActive(item.route) ? 'page' : undefined} aria-label={item.label} onClick={() => navigate(item.route)}>
                 <span class={clsx(item.icon, 'text-4 shrink-0')} /><span class="sidebar-label">{item.label}</span>
               </button>
             )}

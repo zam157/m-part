@@ -16,6 +16,10 @@
 | --- | --- |
 | 歌曲 / 专辑 / 歌手搜索 | `/api/cloudsearch/pc`，type 分别为 1 / 10 / 100 |
 | 首页推荐新歌 | `/api/personalized/newsong`，`type: recommend`、`limit: 20`、`areaId: 0` |
+| 当前登录账号 | `/api/w/nuser/account/get` |
+| 创建 / 收藏的歌单 | `/api/user/playlist`，使用当前账号 `uid` |
+| 歌单曲目 ID | `/api/v6/playlist/detail`，使用完整 `trackIds` 分页 |
+| 批量歌曲详情 | `/api/v3/song/detail`，`c` 为本页歌曲 ID 列表 |
 | 播放地址 | `/api/song/enhance/player/url` |
 | 歌手信息 | `/api/v1/artist/<id>` |
 | 歌手单曲 | `/api/v1/artist/songs` |
@@ -28,13 +32,13 @@
 
 `wxt.config.ts` 声明 `music.163.com` 及其子域、`*.music.126.net` 的 HTTPS 权限。`public/rules/netease.json` 为 API 请求设置网易云 Referer / Origin，为音频请求设置 Referer。
 
-登录 cookie 由浏览器 `credentials: 'include'` 携带，不在代码中复制、记录或拼接 Cookie 头。这里使用的是现有只读接口，不提供登录 UI；调试登录相关行为时，应在 MCP 实际控制的 Chrome 配置中登录网易云，不能假定它共享日常浏览器的登录态。
+登录 cookie 由浏览器 `credentials: 'include'` 携带，不在代码中复制、记录或拼接 Cookie 头。扩展增加 `cookies` 权限，只通过 `chrome.cookies.get` 读取 `music.163.com` 的 `__csrf`，作为 WEAPI 加密参数，不读取或持久化 `MUSIC_U`。这里使用的是现有只读接口，页面提供前往官方站点登录与返回刷新入口；调试时应在实际运行扩展的 Chrome 配置中登录，不能假定 MCP 共享日常浏览器的登录态。
 
 新增或修改 manifest 权限 / DNR 配置后，等待 WXT 重新构建，再用 MCP `reload_extension` 重载开发扩展。仅刷新 app.html 不会重新加载 manifest。
 
 ## 播放限制与错误态
 
-- 向官方请求最高 320kbps，展示实际返回的码率；返回试听地址时标注「试听」。当前未提供多音质列表、歌词或歌单能力。
+- 向官方请求最高 320kbps，展示实际返回的码率；返回试听地址时标注「试听」。当前未提供多音质列表或歌词；歌单浏览与播放见 [收藏歌单](./playlists.md)。
 - URL 为空或歌曲状态不可播放时，播放器显示原因和「重试」。会员、登录状态、地域与版权限制仍由网易云决定，不尝试解锁或从其他来源替换音频。
 - 音源失败会停止旧音频，避免界面已经切到新歌曲却继续播放上一首。再次选择可播放歌曲或重试成功后清除错误。
 - 扩展通过原生 Audio 直接加载官方音频 URL，边缓冲边播放；不先将完整文件下载为 Blob。CDN Referer 由 DNR 的 `media` 规则注入，浏览器管理缓冲和 Range 请求。

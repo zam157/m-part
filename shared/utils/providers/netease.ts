@@ -1,8 +1,10 @@
-import type { AlbumInfo, ArtistInfo, MusicInfo, SourceInfo } from '#shared/types/music-info'
+import type { AlbumInfo, ArtistInfo, MusicInfo, PlaylistInfo, SourceInfo } from '#shared/types/music-info'
 import type { Pagination, Provider } from '#shared/types/provider'
 import { tRequest } from '../fetch'
 import { toHttpsUrl } from '../url'
 import { encryptWeapi } from './netease-crypto'
+import { LoginRequiredError } from './login-required'
+import { getNeteaseCsrfToken } from './netease-session'
 
 const API_HOST = 'https://music.163.com'
 const PAGE_SIZE = 20
@@ -59,6 +61,33 @@ interface RecommendationsResponse extends NeteaseResponse {
   result: { song: NeteaseSong }[]
 }
 
+interface NeteasePlaylist {
+  id: number
+  name: string
+  coverImgUrl?: string
+  trackCount: number
+  description?: string
+  creator?: { userId: number, nickname: string }
+}
+
+interface AccountResponse extends NeteaseResponse {
+  account?: { id: number } | null
+  profile?: { userId: number, nickname: string, avatarUrl?: string } | null
+}
+
+interface PlaylistsResponse extends NeteaseResponse {
+  playlist: NeteasePlaylist[]
+  more: boolean
+}
+
+interface PlaylistResponse extends NeteaseResponse {
+  playlist: { trackIds: { id: number }[] }
+}
+
+interface SongsResponse extends NeteaseResponse {
+  songs: NeteaseSong[]
+}
+
 interface ArtistResponse extends NeteaseResponse {
   artist: NeteaseArtist
 }
@@ -91,7 +120,7 @@ interface SongUrlResponse extends NeteaseResponse {
 
 /** 扩展的 cookie 由浏览器携带，Referer/Origin 由 netease DNR 规则设置。 */
 async function request<T extends NeteaseResponse>(path: string, data: Record<string, unknown> = {}): Promise<T> {
-  const encrypted = encryptWeapi({ ...data, csrf_token: '' })
+  const encrypted = encryptWeapi({ ...data, csrf_token: await getNeteaseCsrfToken() })
   const result = await tRequest<T>(`${API_HOST}/weapi${path.slice(4)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -99,6 +128,8 @@ async function request<T extends NeteaseResponse>(path: string, data: Record<str
   })
   if (!result[0])
     throw new Error(`网易云请求失败：${result[1]} ${result[2]}`)
+  if (result[1].code === 301)
+    throw new LoginRequiredError(result[1].message || result[1].msg)
   if (result[1].code !== 200)
     throw new Error(result[1].message || result[1].msg || `网易云请求失败（${result[1].code}）`)
   return result[1]
@@ -164,6 +195,46 @@ async function search(keyword: string, page: number, type: 1 | 10 | 100) {
 
 const NeteaseProvider: Provider = {
   name: 'netease',
+  async getCurrentUser() {
+    try {
+      const result = await request<AccountResponse>('/api/w/nuser/account/get')
+      if (!result.profile || !result.account)
+        return null
+      return { id: String(result.profile.userId), name: result.profile.nickname, coverUrl: toHttpsUrl(result.profile.avatarUrl) }
+    }
+    catch (error) {
+      if (error instanceof LoginRequiredError)
+        return null
+      throw error
+    }
+  },
+  async getPlaylists(userId, page) {
+    const result = await request<PlaylistsResponse>('/api/user/playlist', {
+      uid: userId, offset: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE, includeVideo: true,
+    })
+    return {
+      items: result.playlist.map((item): PlaylistInfo => ({
+        provider: 'netease', id: String(item.id), title: item.name, coverUrl: toHttpsUrl(item.coverImgUrl),
+        totalTracks: item.trackCount, creator: item.creator?.nickname, description: item.description,
+        owned: String(item.creator?.userId) === userId,
+      })),
+      hasMore: result.more,
+    }
+  },
+  async getPlaylist(id, page) {
+    // tracks 可能被服务端截断；用完整 trackIds 分页查询歌曲，保留原歌单顺序。
+    const result = await request<PlaylistResponse>('/api/v6/playlist/detail', { id, n: 100000, s: 0 })
+    const start = (page - 1) * PAGE_SIZE
+    const ids = result.playlist.trackIds.slice(start, start + PAGE_SIZE)
+    if (!ids.length)
+      return { items: [], hasMore: false }
+    const detail = await request<SongsResponse>('/api/v3/song/detail', { c: JSON.stringify(ids.map(item => ({ id: item.id }))) })
+    const songs = new Map(detail.songs.map(song => [song.id, song]))
+    return {
+      items: ids.flatMap(item => songs.has(item.id) ? [mapSong(songs.get(item.id)!)] : []),
+      hasMore: start + PAGE_SIZE < result.playlist.trackIds.length,
+    }
+  },
   async getRecommendations() {
     const result = await request<RecommendationsResponse>('/api/personalized/newsong', {
       type: 'recommend',

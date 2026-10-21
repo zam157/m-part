@@ -33,6 +33,12 @@ declare module "virtual:file-routes" {
   /** The flat route manifest, in scan order. */
   const routes: readonly [
     {
+      path: "/*all";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./pages/[...all]")>;
+      $$route?: undefined;
+    },
+    {
       path: "/";
       page: true;
       $component: FileRouteLazyRef<typeof import("./pages/index")>;
@@ -51,12 +57,6 @@ declare module "virtual:file-routes" {
       $$route?: undefined;
     },
     {
-      path: "/*all";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./pages/[...all]")>;
-      $$route?: undefined;
-    },
-    {
       path: "/album-detail/:provider/:id";
       page: true;
       $component: FileRouteLazyRef<typeof import("./pages/album-detail/[provider]/[id]")>;
@@ -66,6 +66,18 @@ declare module "virtual:file-routes" {
       path: "/artist-detail/:provider/:id";
       page: true;
       $component: FileRouteLazyRef<typeof import("./pages/artist-detail/[provider]/[id]")>;
+      $$route?: undefined;
+    },
+    {
+      path: "/playlist-detail/:provider/:id";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./pages/playlist-detail/[provider]/[id]")>;
+      $$route?: undefined;
+    },
+    {
+      path: "/playlists";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./pages/playlists")>;
       $$route?: undefined;
     }
   ];
@@ -98,6 +110,14 @@ declare module "virtual:file-routes" {
       children?: undefined;
     },
     {
+      path: "/playlists";
+      id: "/playlists";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./pages/playlists")>;
+      $$route?: undefined;
+      children?: undefined;
+    },
+    {
       path: "/playground";
       id: "/playground";
       page: true;
@@ -118,6 +138,14 @@ declare module "virtual:file-routes" {
       id: "/artist-detail/:provider/:id";
       page: true;
       $component: FileRouteLazyRef<typeof import("./pages/artist-detail/[provider]/[id]")>;
+      $$route?: undefined;
+      children?: undefined;
+    },
+    {
+      path: "/playlist-detail/:provider/:id";
+      id: "/playlist-detail/:provider/:id";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./pages/playlist-detail/[provider]/[id]")>;
       $$route?: undefined;
       children?: undefined;
     }

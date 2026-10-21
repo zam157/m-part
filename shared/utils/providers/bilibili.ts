@@ -1,10 +1,11 @@
-import type { AlbumInfo, ArtistInfo, MusicInfo, MusicQuality } from '#shared/types/music-info'
+import type { AlbumInfo, ArtistInfo, MusicInfo, MusicQuality, PlaylistInfo } from '#shared/types/music-info'
 import type { Provider } from '../../types/provider'
 import type { TRequestErrorTuple } from '../fetch'
 import { MD5 } from 'crypto-es'
 import { TARGET_EXTENSION, USE_GM_FETCH, USE_PROXY } from '../constants'
 import { tRequest } from '../fetch'
 import { toHttpsUrl } from '../url'
+import { LoginRequiredError } from './login-required'
 
 // #region types
 export type BiliSearchType = 'video' | 'bili_user'
@@ -351,6 +352,31 @@ interface AlbumExtra {
   cover?: string
   artist?: string
   title?: string
+}
+
+interface FavoriteFolder {
+  id: number
+  title: string
+  cover?: string
+  media_count: number
+  intro?: string
+  upper?: { name: string }
+}
+
+interface FavoriteResource {
+  bvid: string
+  type: number
+  title: string
+  cover: string
+  duration: number
+  intro: string
+  upper?: { name: string }
+  attr: number
+}
+
+interface FavoritesResponse<T> {
+  list?: T[] | null
+  has_more?: boolean
 }
 
 // #endregion
@@ -811,6 +837,60 @@ async function fetchSeriesArchives(id: string | number, page: number, mid: numbe
 
 const biliProvider = {
   name: 'bili',
+  async getCurrentUser() {
+    const result = await tRequest<BiliResponse<{ isLogin: boolean, mid: number, uname: string, face: string }>>(`${API_HOST}/x/web-interface/nav`, { headers: COMMON_HEADERS })
+    if (!result[0])
+      throw new Error(`BiliBili 登录状态获取失败：${result[2]}`)
+    if (result[1].code === -101)
+      return null
+    if (result[1].code !== 0)
+      throw new Error(result[1].message || 'BiliBili 登录状态获取失败')
+    const user = result[1].data
+    return user.isLogin ? { id: String(user.mid), name: user.uname, coverUrl: toHttpsUrl(user.face) } : null
+  },
+  async getPlaylists(userId: string, page: number) {
+    const collected = await biliRequestHelper<FavoritesResponse<FavoriteFolder>>(`${API_HOST}/x/v3/fav/folder/collected/list`, {
+      searchParams: { up_mid: userId, pn: page, ps: DEFAULT_PAGE_SIZE, platform: 'web' },
+    })
+    if (!collected[0]) {
+      if (collected[1] === -101)
+        throw new LoginRequiredError()
+      throw new Error(`收藏歌单获取失败：${collected[2]}`)
+    }
+    const mapFolder = (item: FavoriteFolder, owned: boolean): PlaylistInfo => ({
+      provider: 'bili', id: String(item.id), title: item.title, coverUrl: toHttpsUrl(item.cover),
+      totalTracks: item.media_count, description: item.intro, creator: item.upper?.name, owned,
+    })
+    let created: PlaylistInfo[] = []
+    if (page === 1) {
+      const result = await biliRequestHelper<FavoritesResponse<FavoriteFolder> | null>(`${API_HOST}/x/v3/fav/folder/created/list-all`, { searchParams: { up_mid: userId, type: 2 } })
+      if (!result[0]) {
+        if (result[1] === -101)
+          throw new LoginRequiredError()
+        throw new Error(`收藏夹获取失败：${result[2]}`)
+      }
+      created = (result[1].data?.list ?? []).map(item => mapFolder(item, true))
+    }
+    return { items: [...created, ...(collected[1].data?.list ?? []).map(item => mapFolder(item, false))], hasMore: collected[1].data?.has_more ?? false }
+  },
+  async getPlaylist(id: string, page: number) {
+    const result = await biliRequestHelper<{ medias: FavoriteResource[] | null, has_more: boolean }>(`${API_HOST}/x/v3/fav/resource/list`, {
+      searchParams: { media_id: id, pn: page, ps: DEFAULT_PAGE_SIZE, order: 'mtime', type: 0, tid: 0, platform: 'web' },
+    })
+    if (!result[0]) {
+      if (result[1] === -101)
+        throw new LoginRequiredError()
+      throw new Error(`歌单曲目获取失败：${result[2]}`)
+    }
+    return {
+      // 收藏夹可包含音频以外的资源，失效稿件也不能进入播放队列。
+      items: (result[1].data.medias ?? []).filter(item => item.type === 2 && item.bvid && (item.attr & 1) === 0).map((item): MusicInfo => ({
+        provider: 'bili', id: item.bvid, title: item.title, coverUrl: toHttpsUrl(item.cover),
+        duration: item.duration, artist: item.upper?.name, description: item.intro,
+      })),
+      hasMore: result[1].data.has_more,
+    }
+  },
   async getRecommendations(): Promise<MusicInfo[]> {
     const res = await biliRequestHelper<VideoSearchItem[]>(`${API_HOST}/x/web-interface/ranking/region`, {
       searchParams: { rid: 3, day: 3 },

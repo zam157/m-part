@@ -1,4 +1,4 @@
-import type { AlbumInfo, ArtistInfo, MusicInfo, SourceInfo } from './music-info'
+import type { AlbumInfo, ArtistInfo, MusicInfo, PlaylistInfo, SourceInfo } from './music-info'
 
 export type ProviderName = 'bili' | 'netease'
 export type SearchType = 'music' | 'album' | 'artist'
@@ -9,18 +9,29 @@ export interface Pagination {
   total: number
 }
 
+export interface ProviderUser {
+  id: string
+  name: string
+  coverUrl?: string
+}
+
+export interface CollectionPage<T> {
+  items: T[]
+  hasMore: boolean
+}
+
 export interface Provider {
   name: ProviderName
   /** 首页推荐音乐；无需登录可用，返回值可直接加入播放队列。 */
   getRecommendations?: () => Promise<MusicInfo[]>
   /** Retrieves the source information for a given music item */
   getSourceInfo?: (musicInfo: MusicInfo) => Promise<SourceInfo>
-  /**
-   * 获取歌单（用户收藏的歌曲集合）。
-   *
-   * 注意：与“播放列表 / 播放队列”（`client/composables/player.ts` 的 `playQueue`）无关。
-   */
-  getPlaylist?: () => Promise<[MusicInfo[], Pagination]>
+  /** 读取浏览器登录态，未登录返回 null；网络失败仍抛错。 */
+  getCurrentUser?: () => Promise<ProviderUser | null>
+  /** 当前用户创建及收藏的歌单 / 收藏夹，page 从 1 开始。 */
+  getPlaylists?: (userId: string, page: number) => Promise<CollectionPage<PlaylistInfo>>
+  /** 歌单曲目分页，与本地 playQueue 播放队列无关。 */
+  getPlaylist?: (id: string, page: number) => Promise<CollectionPage<MusicInfo>>
   /** Searches for music items based on keyword */
   search?: (keyword: string, page: number) => Promise<[MusicInfo[], Pagination]>
   /** Searches for artists based on keyword */

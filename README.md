@@ -6,6 +6,8 @@
 
 首页通过统一的 Provider 推荐接口展示 BiliBili 音乐分区榜单和网易云推荐新歌，点击即可加入播放队列；接口与状态约定见 [首页推荐](./docs/recommendations.md)。
 
+「我的歌单」复用当前浏览器登录态，展示网易云创建 / 收藏的歌单及 BiliBili 收藏夹，支持分页查看曲目与加入播放队列；登录与验证步骤见 [收藏歌单](./docs/playlists.md)。
+
 ## 两种运行形态
 
 | | 扩展形态（推荐） | web 调试形态 |
@@ -109,6 +111,7 @@ m-part/
 | [docs/extension.md](./docs/extension.md) | 扩展形态：WXT 配置、传输层、MV3 坑、验证手法、412 调查结论 |
 | [docs/netease.md](./docs/netease.md) | 网易云音源：浏览器端 WEAPI、权限、接口、播放限制与验证 |
 | [docs/recommendations.md](./docs/recommendations.md) | Provider 推荐接口、首页状态与验证 |
+| [docs/playlists.md](./docs/playlists.md) | 登录态、收藏歌单与曲目、手动验证步骤 |
 
 ## 已知限制
 

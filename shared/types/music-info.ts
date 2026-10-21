@@ -24,6 +24,17 @@ export interface ArtistInfo {
   description?: string
 }
 
+export interface PlaylistInfo {
+  provider: ProviderName
+  id: string
+  title: string
+  coverUrl: string
+  totalTracks: number
+  creator?: string
+  description?: string
+  owned: boolean
+}
+
 export interface AlbumInfo {
   provider: ProviderName
   id: string
