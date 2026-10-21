@@ -1,4 +1,4 @@
-import type { AlbumInfo, ArtistInfo } from '#shared/types/music-info'
+import type { AlbumInfo, ArtistInfo, PlaylistInfo } from '#shared/types/music-info'
 import { useNavigate } from '@solidjs/router'
 import { For, Match, Show, Switch } from 'solid-js'
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
@@ -15,6 +15,7 @@ import {
   keyword,
   musicResults,
   pagination,
+  playlistResults,
   searching,
   searchType,
   searchError,
@@ -39,9 +40,14 @@ export default function SearchPage() {
     navigate(`/album-detail/${album.provider}/${album.id}?${query}`)
   }
 
+  function handlePlaylistCardClick(playlist: PlaylistInfo) {
+    const query = new URLSearchParams({ title: playlist.title, creator: playlist.creator ?? '', cover: playlist.coverUrl, from: 'search' })
+    navigate(`/playlist-detail/${playlist.provider}/${playlist.id}?${query}`)
+  }
+
   return (
     <div class="flex-1 min-w-0 flex flex-col gap-2 px-9 pt-8 pb-5 max-[760px]:px-4.5 max-[760px]:py-6">
-      <header class="pb-6"><h1 class="page-title">发现音乐</h1><p class="page-description">搜索歌曲和创作者，找到你想听的声音。</p></header>
+      <header class="pb-6"><h1 class="page-title">发现音乐</h1><p class="page-description">搜索歌曲、创作者和公开歌单，找到你想听的声音。</p></header>
       {/*
         搜索栏与结果网格左缘对齐，最大宽度 800px。
         窄屏将筛选与输入框排为网格；! 覆盖 btn-group 的相邻按钮拼接规则。
@@ -72,7 +78,7 @@ export default function SearchPage() {
           />
           <input
             name="search"
-            placeholder="搜索歌曲、创作者…"
+            placeholder="搜索歌曲、创作者、歌单…"
             aria-label="搜索关键词"
             class="h-full input max-[760px]:col-span-full max-[760px]:h-10 max-[760px]:!rounded-[8px] max-[760px]:!border-s-1"
             value={keyword()}
@@ -110,6 +116,19 @@ export default function SearchPage() {
         {/* 列宽与列数见 uno.config.ts 的 responsive-cols */}
         <div class="py-5.5 px-px border-t border-border min-h-0 flex-1 overflow-auto grid gap-4 responsive-cols max-[760px]:grid-cols-1 grid-auto-rows-max">
           <Switch>
+            <Match when={searchType() === 'playlist'}>
+              <For each={playlistResults()}>
+                {result => (
+                  <button class="card gap-2 p-2 text-left hover:bg-muted transition-colors" aria-label={`打开歌单 ${result.title}`} onClick={() => handlePlaylistCardClick(result)}>
+                    <Show when={result.coverUrl} fallback={<div class="w-full aspect-ratio-video bg-muted rounded-md grid place-items-center"><span class="i-lucide:library text-8 text-muted-foreground" /></div>}>
+                      <img src={result.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />
+                    </Show>
+                    <span class="text-sm/relaxed font-semibold line-clamp-2 h-[calc(2*var(--leading-relaxed)*1em)]">{result.title}</span>
+                    <span class="text-xs text-muted-foreground truncate w-full">{result.creator || '未知创建者'} · {result.totalTracks} 首</span>
+                  </button>
+                )}
+              </For>
+            </Match>
             <Match when={searchType() === 'music'}>
               <For each={musicResults()}>
                 {result => (

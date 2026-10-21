@@ -32,7 +32,8 @@ export interface PlaylistInfo {
   totalTracks: number
   creator?: string
   description?: string
-  owned: boolean
+  /** 仅在已识别当前账号时标记归属；公开搜索结果不推断归属。 */
+  owned?: boolean
 }
 
 export interface AlbumInfo {

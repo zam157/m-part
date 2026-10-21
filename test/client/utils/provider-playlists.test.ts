@@ -86,4 +86,49 @@ describe('已登录用户与收藏歌单', () => {
     expect(result.hasMore).toBe(false)
     expect(encrypt).toHaveBeenLastCalledWith(expect.objectContaining({ c: '[{"id":20},{"id":21},{"id":22}]' }))
   })
+
+  it('网易云整单读取只查询一次歌单详情，每批最多 1000 首且维持原始顺序', async () => {
+    const ids = Array.from({ length: 1025 }, (_, id) => ({ id }))
+    const songs = ids.map(item => ({ id: item.id, name: `歌曲 ${item.id}`, dt: 1000 }))
+    request.mockResolvedValueOnce([true, { code: 200, playlist: { trackIds: ids } }])
+    request.mockResolvedValueOnce([true, { code: 200, songs: songs.slice(0, 1000).reverse() }])
+    request.mockResolvedValueOnce([true, { code: 200, songs: songs.slice(1000).reverse() }])
+    const progress = vi.fn()
+    const items = await netease.getAllPlaylistTracks!('10', { onProgress: progress })
+    expect(items.map(item => Number(item.id))).toEqual(ids.map(item => item.id))
+    expect(request).toHaveBeenCalledTimes(3)
+    expect(request.mock.calls.filter(([url]) => url.endsWith('/v6/playlist/detail'))).toHaveLength(1)
+    expect(encrypt.mock.calls.filter(([data]) => data.c).map(([data]) => JSON.parse(data.c).length)).toEqual([1000, 25])
+    expect(progress.mock.calls.map(([value]) => [value.items.length, value.total])).toEqual([[0, 1025], [1000, 1025], [1025, 1025]])
+  })
+
+  it('整单读取复用已有曲目，剔除已移除曲目、重复 ID 与平台未返回的歌曲', async () => {
+    const known = { provider: 'netease' as const, id: '1', title: '已获取', duration: 1, coverUrl: '' }
+    request.mockResolvedValueOnce([true, { code: 200, playlist: { trackIds: [{ id: 1 }, { id: 2 }, { id: 2 }, { id: 3 }] } }])
+    request.mockResolvedValueOnce([true, { code: 200, songs: [{ id: 3, name: '第三首', dt: 3000 }] }])
+    const items = await netease.getAllPlaylistTracks!('10', { knownItems: [known, { ...known, id: '99' }, { ...known, provider: 'bili', id: '2' }] })
+    expect(items.map(item => item.id)).toEqual(['1', '3'])
+    expect(items[0]).toBe(known)
+    expect(encrypt).toHaveBeenLastCalledWith(expect.objectContaining({ c: '[{"id":2},{"id":3}]' }))
+  })
+
+  it('空歌单不查歌曲详情，批次失败明确抛错并保留已报告的进度', async () => {
+    request.mockResolvedValueOnce([true, { code: 200, playlist: { trackIds: [] } }])
+    expect(await netease.getAllPlaylistTracks!('10')).toEqual([])
+    expect(request).toHaveBeenCalledTimes(1)
+    request.mockResolvedValueOnce([true, { code: 200, playlist: { trackIds: Array.from({ length: 1001 }, (_, id) => ({ id })) } }])
+    request.mockResolvedValueOnce([true, { code: 200, songs: [{ id: 0, name: '第一首' }] }])
+    request.mockRejectedValueOnce(new Error('断网'))
+    const progress = vi.fn()
+    await expect(netease.getAllPlaylistTracks!('11', { onProgress: progress })).rejects.toThrow('断网')
+    expect(progress).toHaveBeenLastCalledWith({ items: [expect.objectContaining({ id: '0' })], total: 1001 })
+  })
+
+  it('取消整单读取会传递 signal，并停止发起后续批次', async () => {
+    const controller = new AbortController()
+    request.mockResolvedValueOnce([true, { code: 200, playlist: { trackIds: [{ id: 1 }] } }])
+    await expect(netease.getAllPlaylistTracks!('10', { signal: controller.signal, onProgress: () => controller.abort() })).rejects.toMatchObject({ name: 'AbortError' })
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(request).toHaveBeenCalledWith(expect.stringContaining('/playlist/detail'), expect.objectContaining({ signal: controller.signal }))
+  })
 })

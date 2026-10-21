@@ -1,4 +1,4 @@
-import type { AlbumInfo, ArtistInfo, MusicInfo } from '#shared/types/music-info'
+import type { AlbumInfo, ArtistInfo, MusicInfo, PlaylistInfo } from '#shared/types/music-info'
 import type { Pagination, Provider, ProviderName, SearchType } from '#shared/types/provider'
 import { errorMessage } from '#shared/utils'
 import type { Option } from '~/components/Select/type'
@@ -22,6 +22,7 @@ export const typeOptions = [
   { label: '歌曲', value: 'music' },
   { label: '专辑', value: 'album' },
   { label: '歌手', value: 'artist' },
+  { label: '歌单', value: 'playlist' },
 ] as const satisfies Option<SearchType>[]
 
 type SourceValue = typeof sourceOptions[number]['value']
@@ -46,6 +47,7 @@ const [pagination, setPagination] = createSignal<Pagination>(emptyPagination())
 const [musicResults, setMusicResults] = createSignal<MusicInfo[]>([])
 const [artistResults, setArtistResults] = createSignal<ArtistInfo[]>([])
 const [albumResults, setAlbumResults] = createSignal<AlbumInfo[]>([])
+const [playlistResults, setPlaylistResults] = createSignal<PlaylistInfo[]>([])
 
 export {
   albumResults,
@@ -54,6 +56,7 @@ export {
   keyword,
   musicResults,
   pagination,
+  playlistResults,
   searching,
   searchError,
   searchType,
@@ -65,7 +68,7 @@ export {
 }
 
 /** 当前类型对应的结果列表，用于空状态判断 */
-export const currentResults = createMemo<AlbumInfo[] | ArtistInfo[] | MusicInfo[]>(() => {
+export const currentResults = createMemo<AlbumInfo[] | ArtistInfo[] | MusicInfo[] | PlaylistInfo[]>(() => {
   switch (searchType()) {
     case 'music':
       return musicResults()
@@ -73,6 +76,8 @@ export const currentResults = createMemo<AlbumInfo[] | ArtistInfo[] | MusicInfo[
       return artistResults()
     case 'album':
       return albumResults()
+    case 'playlist':
+      return playlistResults()
   }
 })
 
@@ -86,6 +91,8 @@ export const availableTypeOptions = createMemo<Option<SearchType>[]>(() => {
     else if (opt.value === 'album' && !provider.searchAlbum)
       isDisabled = true
     else if (opt.value === 'artist' && !provider.searchArtist)
+      isDisabled = true
+    else if (opt.value === 'playlist' && !provider.searchPlaylist)
       isDisabled = true
     return { ...opt, disabled: isDisabled }
   })
@@ -107,17 +114,20 @@ export async function handleSearch(page: number, type: SearchType) {
   setSearching(true)
   setHasSearched(true)
 
-  let searchFn: Provider['search'] | Provider['searchArtist'] | Provider['searchAlbum']
+  let searchFn: Provider['search'] | Provider['searchArtist'] | Provider['searchAlbum'] | Provider['searchPlaylist']
   if (type === 'music')
     searchFn = provider.search
   else if (type === 'artist')
     searchFn = provider.searchArtist
   else if (type === 'album')
     searchFn = provider.searchAlbum
+  else if (type === 'playlist')
+    searchFn = provider.searchPlaylist
 
   if (!searchFn) {
     console.warn(`Provider ${selectedSource()} does not support searching for type ${type}`)
     clearResults()
+    setSearchError('当前音源不支持此搜索类型，请切换音源或类型')
     setSearching(false)
     return
   }
@@ -131,8 +141,10 @@ export async function handleSearch(page: number, type: SearchType) {
       setMusicResults(items as MusicInfo[])
     else if (type === 'artist')
       setArtistResults(items as ArtistInfo[])
-    else
+    else if (type === 'album')
       setAlbumResults(items as AlbumInfo[])
+    else
+      setPlaylistResults(items as PlaylistInfo[])
     setPagination(pageData)
   }
   catch (error) {
@@ -155,6 +167,10 @@ function setSelectedSource(source: SourceValue) {
     return
   ++searchRevision
   setSelectedSourceState(source)
+  const provider = providers[source]
+  const capabilities = { music: provider.search, artist: provider.searchArtist, album: provider.searchAlbum, playlist: provider.searchPlaylist }
+  if (!capabilities[selectedType()])
+    setSelectedType('music')
   clearResults()
   setHasSearched(false)
   setSearchError(null)
@@ -165,5 +181,6 @@ function clearResults() {
   setMusicResults([])
   setArtistResults([])
   setAlbumResults([])
+  setPlaylistResults([])
   setPagination(emptyPagination())
 }

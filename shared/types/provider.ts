@@ -1,7 +1,7 @@
 import type { AlbumInfo, ArtistInfo, MusicInfo, PlaylistInfo, SourceInfo } from './music-info'
 
 export type ProviderName = 'bili' | 'netease'
-export type SearchType = 'music' | 'album' | 'artist'
+export type SearchType = 'music' | 'album' | 'artist' | 'playlist'
 
 export interface Pagination {
   page: number
@@ -20,6 +20,14 @@ export interface CollectionPage<T> {
   hasMore: boolean
 }
 
+export interface PlaylistTracksOptions {
+  signal?: AbortSignal
+  /** 已获取的曲目资料，可用于复用首屏结果或续读失败批次。 */
+  knownItems?: MusicInfo[]
+  /** items 是按歌单顺序排列的累计结果；total 是歌单曲目 ID 总数。 */
+  onProgress?: (progress: { items: MusicInfo[], total: number }) => void
+}
+
 export interface Provider {
   name: ProviderName
   /** 首页推荐音乐；无需登录可用，返回值可直接加入播放队列。 */
@@ -32,12 +40,16 @@ export interface Provider {
   getPlaylists?: (userId: string, page: number) => Promise<CollectionPage<PlaylistInfo>>
   /** 歌单曲目分页，与本地 playQueue 播放队列无关。 */
   getPlaylist?: (id: string, page: number) => Promise<CollectionPage<MusicInfo>>
+  /** 高效读取整单曲目；未实现时由客户端按 getPlaylist 分页回退。 */
+  getAllPlaylistTracks?: (id: string, options?: PlaylistTracksOptions) => Promise<MusicInfo[]>
   /** Searches for music items based on keyword */
   search?: (keyword: string, page: number) => Promise<[MusicInfo[], Pagination]>
   /** Searches for artists based on keyword */
   searchArtist?: (keyword: string, page: number) => Promise<[ArtistInfo[], Pagination]>
   /** Searches for albums based on keyword */
   searchAlbum?: (keyword: string, page: number) => Promise<[AlbumInfo[], Pagination]>
+  /** 搜索公开歌单，不要求先获取当前登录账号。 */
+  searchPlaylist?: (keyword: string, page: number) => Promise<[PlaylistInfo[], Pagination]>
   /** Retrieves the details of a given artist */
   getArtistInfo?: (id: string | number) => Promise<ArtistInfo>
   /** Retrieves the works of a given artist */

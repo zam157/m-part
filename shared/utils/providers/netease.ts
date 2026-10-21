@@ -54,6 +54,8 @@ interface SearchResponse extends NeteaseResponse {
     artistCount?: number
     albums?: NeteaseAlbum[]
     albumCount?: number
+    playlists?: NeteasePlaylist[]
+    playlistCount?: number
   }
 }
 
@@ -119,13 +121,17 @@ interface SongUrlResponse extends NeteaseResponse {
 }
 
 /** 扩展的 cookie 由浏览器携带，Referer/Origin 由 netease DNR 规则设置。 */
-async function request<T extends NeteaseResponse>(path: string, data: Record<string, unknown> = {}): Promise<T> {
+async function request<T extends NeteaseResponse>(path: string, data: Record<string, unknown> = {}, signal?: AbortSignal): Promise<T> {
+  signal?.throwIfAborted()
   const encrypted = encryptWeapi({ ...data, csrf_token: await getNeteaseCsrfToken() })
+  signal?.throwIfAborted()
   const result = await tRequest<T>(`${API_HOST}/weapi${path.slice(4)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams(encrypted),
+    signal,
   })
+  signal?.throwIfAborted()
   if (!result[0])
     throw new Error(`网易云请求失败：${result[1]} ${result[2]}`)
   if (result[1].code === 301)
@@ -182,7 +188,7 @@ function pagination(page: number, total: number): Pagination {
   return { page, pageSize: PAGE_SIZE, total }
 }
 
-async function search(keyword: string, page: number, type: 1 | 10 | 100) {
+async function search(keyword: string, page: number, type: 1 | 10 | 100 | 1000) {
   const response = await request<SearchResponse>('/api/cloudsearch/pc', {
     s: keyword,
     type,
@@ -235,6 +241,25 @@ const NeteaseProvider: Provider = {
       hasMore: start + PAGE_SIZE < result.playlist.trackIds.length,
     }
   },
+  async getAllPlaylistTracks(id, options = {}) {
+    const { signal, onProgress, knownItems = [] } = options
+    const result = await request<PlaylistResponse>('/api/v6/playlist/detail', { id, n: 100000, s: 0 }, signal)
+    const ids = [...new Set(result.playlist.trackIds.map(item => item.id))]
+    const songs = new Map(knownItems.filter(item => item.provider === 'netease').map(item => [item.id, item]))
+    const remaining = ids.filter(id => !songs.has(String(id)))
+    const ordered = () => ids.flatMap(id => songs.has(String(id)) ? [songs.get(String(id))!] : [])
+    onProgress?.({ items: ordered(), total: ids.length })
+    // song/detail 支持批量 ID，单批不超过 1000；歌单 ID 列表只读取一次。
+    for (let start = 0; start < remaining.length; start += 1000) {
+      signal?.throwIfAborted()
+      const batch = remaining.slice(start, start + 1000)
+      const detail = await request<SongsResponse>('/api/v3/song/detail', { c: JSON.stringify(batch.map(id => ({ id }))) }, signal)
+      for (const song of detail.songs)
+        songs.set(String(song.id), mapSong(song))
+      onProgress?.({ items: ordered(), total: ids.length })
+    }
+    return ordered()
+  },
   async getRecommendations() {
     const result = await request<RecommendationsResponse>('/api/personalized/newsong', {
       type: 'recommend',
@@ -254,6 +279,13 @@ const NeteaseProvider: Provider = {
   async searchAlbum(keyword, page) {
     const result = await search(keyword, page, 10)
     return [(result.albums ?? []).map(mapAlbum), pagination(page, result.albumCount ?? 0)]
+  },
+  async searchPlaylist(keyword, page) {
+    const result = await search(keyword, page, 1000)
+    return [(result.playlists ?? []).map((item): PlaylistInfo => ({
+      provider: 'netease', id: String(item.id), title: item.name, coverUrl: toHttpsUrl(item.coverImgUrl),
+      totalTracks: item.trackCount, creator: item.creator?.nickname, description: item.description,
+    })), pagination(page, result.playlistCount ?? 0)]
   },
   async getSourceInfo(music): Promise<SourceInfo> {
     const result = await request<SongUrlResponse>('/api/song/enhance/player/url', {

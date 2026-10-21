@@ -14,12 +14,12 @@
 
 | 能力 | API 路径（请求时将 `/api/` 改为 `/weapi/`） |
 | --- | --- |
-| 歌曲 / 专辑 / 歌手搜索 | `/api/cloudsearch/pc`，type 分别为 1 / 10 / 100 |
+| 歌曲 / 专辑 / 歌手 / 公开歌单搜索 | `/api/cloudsearch/pc`，type 分别为 1 / 10 / 100 / 1000 |
 | 首页推荐新歌 | `/api/personalized/newsong`，`type: recommend`、`limit: 20`、`areaId: 0` |
 | 当前登录账号 | `/api/w/nuser/account/get` |
 | 创建 / 收藏的歌单 | `/api/user/playlist`，使用当前账号 `uid` |
 | 歌单曲目 ID | `/api/v6/playlist/detail`，使用完整 `trackIds` 分页 |
-| 批量歌曲详情 | `/api/v3/song/detail`，`c` 为本页歌曲 ID 列表 |
+| 批量歌曲详情 | `/api/v3/song/detail`，`c` 为歌曲 ID 列表；整单播放每批最多 1000 首 |
 | 播放地址 | `/api/song/enhance/player/url` |
 | 歌手信息 | `/api/v1/artist/<id>` |
 | 歌手单曲 | `/api/v1/artist/songs` |

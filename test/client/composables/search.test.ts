@@ -1,11 +1,11 @@
 import { flush } from 'solid-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { biliSearch, neteaseSearch } = vi.hoisted(() => ({ biliSearch: vi.fn(), neteaseSearch: vi.fn() }))
+const { biliSearch, neteaseSearch, playlistSearch } = vi.hoisted(() => ({ biliSearch: vi.fn(), neteaseSearch: vi.fn(), playlistSearch: vi.fn() }))
 vi.mock('#shared/utils/providers/index', () => ({
   providers: {
     bili: { name: 'bili', search: biliSearch },
-    netease: { name: 'netease', search: neteaseSearch },
+    netease: { name: 'netease', search: neteaseSearch, searchPlaylist: playlistSearch },
   },
 }))
 const search = await import('~/composables/search')
@@ -19,9 +19,11 @@ describe('切换音源', () => {
     flush()
     search.setSelectedSource('bili')
     search.setKeyword('关键词')
+    search.setSelectedType('music')
     flush()
     biliSearch.mockReset().mockResolvedValue([[biliSong], page])
     neteaseSearch.mockReset().mockResolvedValue([[neteaseSong], page])
+    playlistSearch.mockReset().mockResolvedValue([[{ provider: 'netease', id: '42', title: '公开歌单', coverUrl: '', totalTracks: 30 }], page])
   })
 
   it('切换音源后清除旧结果与分页', async () => {
@@ -52,5 +54,56 @@ describe('切换音源', () => {
     flush()
     expect(search.musicResults()).toEqual([neteaseSong])
     expect(search.searching()).toBe(false)
+  })
+
+  it('歌单搜索写入独立结果，并在切换不支持的音源时重置类型和结果', async () => {
+    search.setSelectedSource('netease')
+    search.setSelectedType('playlist')
+    flush()
+    expect(search.availableTypeOptions().find(item => item.value === 'playlist')?.disabled).toBe(false)
+    await search.handleSearch(2, 'playlist')
+    flush()
+    expect(playlistSearch).toHaveBeenCalledWith('关键词', 2)
+    expect(search.searchType()).toBe('playlist')
+    expect(search.currentResults()).toEqual(search.playlistResults())
+    expect(search.playlistResults()[0]?.id).toBe('42')
+    search.setSelectedSource('bili')
+    flush()
+    expect(search.selectedType()).toBe('music')
+    expect(search.playlistResults()).toEqual([])
+    expect(search.availableTypeOptions().find(item => item.value === 'playlist')?.disabled).toBe(true)
+  })
+
+  it('歌单请求失败显示错误并清理结果，重试后恢复', async () => {
+    search.setSelectedSource('netease')
+    flush()
+    playlistSearch.mockRejectedValueOnce(new Error('歌单暂不可用'))
+    await search.handleSearch(1, 'playlist')
+    flush()
+    expect(search.searchError()).toBe('歌单暂不可用')
+    expect(search.currentResults()).toEqual([])
+    await search.handleSearch(1, 'playlist')
+    flush()
+    expect(search.searchError()).toBeNull()
+    expect(search.playlistResults()).toHaveLength(1)
+  })
+
+  it('迟到的歌单搜索结果不能覆盖切换后的歌曲结果', async () => {
+    let finish!: (value: unknown) => void
+    search.setSelectedSource('netease')
+    flush()
+    playlistSearch.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+    const pending = search.handleSearch(1, 'playlist')
+    flush()
+    search.setSelectedSource('bili')
+    flush()
+    await search.handleSearch(1, 'music')
+    flush()
+    finish([[{ id: 'old' }], page])
+    await pending
+    flush()
+    expect(search.searchType()).toBe('music')
+    expect(search.musicResults()).toEqual([biliSong])
+    expect(search.playlistResults()).toEqual([])
   })
 })

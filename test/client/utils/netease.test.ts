@@ -44,6 +44,27 @@ describe('网易云 Provider', () => {
     expect((await provider.search!('test', 1))[0][0]).toMatchObject({ duration: 3, artist: '歌手', album: '专辑' })
   })
 
+  it('不查询登录账号即可搜索公开歌单，保留元数据与真实总数', async () => {
+    requestMock.mockResolvedValueOnce([true, { code: 200, result: { playlists: [{
+      id: 42, name: '<em>纯音乐</em>', coverImgUrl: '//p1.music.126.net/playlist.jpg',
+      trackCount: 58, creator: { userId: 7, nickname: '创建者' }, description: '公开歌单',
+    }], playlistCount: 558 } }])
+    const [items, page] = await provider.searchPlaylist!('纯音乐', 2)
+    expect(items).toEqual([{ provider: 'netease', id: '42', title: '<em>纯音乐</em>', coverUrl: 'https://p1.music.126.net/playlist.jpg', totalTracks: 58, creator: '创建者', description: '公开歌单' }])
+    expect(items[0]?.owned).toBeUndefined()
+    expect(page).toEqual({ page: 2, pageSize: 20, total: 558 })
+    expect(encryptMock).toHaveBeenCalledWith(expect.objectContaining({ s: '纯音乐', type: 1000, offset: 20, limit: 20 }))
+    expect(requestMock).toHaveBeenCalledTimes(1)
+    expect(requestMock).toHaveBeenCalledWith('https://music.163.com/weapi/cloudsearch/pc', expect.anything())
+  })
+
+  it('公开歌单搜索区分空结果和请求失败', async () => {
+    requestMock.mockResolvedValueOnce([true, { code: 200, result: {} }])
+    expect(await provider.searchPlaylist!('无结果', 1)).toEqual([[], { page: 1, pageSize: 20, total: 0 }])
+    requestMock.mockRejectedValueOnce(new Error('网络异常'))
+    await expect(provider.searchPlaylist!('纯音乐', 1)).rejects.toThrow('网络异常')
+  })
+
   it('没有结果时返回空分页，不把业务失败当成空结果', async () => {
     requestMock.mockResolvedValueOnce([true, { code: 200, result: {} }])
     expect(await provider.search!('none', 1)).toEqual([[], { page: 1, pageSize: 20, total: 0 }])
