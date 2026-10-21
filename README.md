@@ -114,6 +114,7 @@ m-part/
 | [docs/netease.md](./docs/netease.md) | 网易云音源：浏览器端 WEAPI、权限、接口、播放限制与验证 |
 | [docs/recommendations.md](./docs/recommendations.md) | Provider 推荐接口、首页状态与验证 |
 | [docs/playlists.md](./docs/playlists.md) | 登录态、收藏歌单与曲目、手动验证步骤 |
+| [docs/context-menu.md](./docs/context-menu.md) | 通用右键菜单、歌曲入口与添加到下一首的队列规则 |
 
 ## 已知限制
 

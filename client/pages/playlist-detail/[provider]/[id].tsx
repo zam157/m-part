@@ -2,6 +2,7 @@ import type { ProviderName } from '#shared/types/provider'
 import { useNavigate, useParams, useSearchParams } from '@solidjs/router'
 import { For, Match, onCleanup, Show, Switch, untrack } from 'solid-js'
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
+import MusicContextMenu from '~/components/MusicContextMenu/MusicContextMenu'
 import PlatformLogin from '~/components/PlatformLogin/PlatformLogin'
 import { createPlaylistTracks } from '~/composables/playlist-tracks'
 import { addToPlayQueue, setPlayQueue } from '~/composables/player'
@@ -70,13 +71,15 @@ function PlaylistDetailView(props: { source: ProviderName, id: string }) {
         <Match when={state().items.length}>
           <div class="flex flex-col gap-1">
             <For each={state().items}>{music => (
-              <button class="ghost-btn h-auto min-h-16 p-2 justify-start text-left w-full" disabled={tracks.loadingAll()} aria-label={`播放 ${music.title}`} onClick={() => addToPlayQueue(music)}>
-                <Show when={music.coverUrl} fallback={<span class="size-12 shrink-0 bg-muted rounded-md grid place-items-center"><span class="i-lucide:music text-5" /></span>}>
-                  <img src={music.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="size-12 shrink-0 rounded-md object-cover" />
-                </Show>
-                <span class="flex flex-col min-w-0 flex-1 gap-1"><span class="text-sm font-medium truncate">{music.title}</span><span class="text-xs text-muted-foreground truncate">{music.artist}</span></span>
-                <span class="i-lucide:play text-4 shrink-0 mx-2" />
-              </button>
+              <MusicContextMenu music={music} disabled={tracks.loadingAll()}>{trigger => (
+                <button {...trigger} class="ghost-btn h-auto min-h-16 p-2 justify-start text-left w-full" disabled={tracks.loadingAll()} aria-label={`播放 ${music.title}`} onClick={() => addToPlayQueue(music)}>
+                  <Show when={music.coverUrl} fallback={<span class="size-12 shrink-0 bg-muted rounded-md grid place-items-center"><span class="i-lucide:music text-5" /></span>}>
+                    <img src={music.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="size-12 shrink-0 rounded-md object-cover" />
+                  </Show>
+                  <span class="flex flex-col min-w-0 flex-1 gap-1"><span class="text-sm font-medium truncate">{music.title}</span><span class="text-xs text-muted-foreground truncate">{music.artist}</span></span>
+                  <span class="i-lucide:play text-4 shrink-0 mx-2" />
+                </button>
+              )}</MusicContextMenu>
             )}</For>
           </div>
         </Match>

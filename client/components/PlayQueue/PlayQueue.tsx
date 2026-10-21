@@ -1,5 +1,6 @@
 import { clsx } from 'cn/lite'
 import { createEffect, For, Show, untrack } from 'solid-js'
+import MusicContextMenu from '~/components/MusicContextMenu/MusicContextMenu'
 import {
   clearPlayQueue,
   currentIndex,
@@ -68,40 +69,43 @@ export default function PlayQueue() {
         <div class="flex-1 min-h-0 p-2 of-y-auto">
           <For each={playQueue()}>
             {(song, index) => (
-              <div
-                class={clsx(
-                  'ghost-btn flex px-2 h-12 justify-start content-visibility-auto',
-                  currentIndex() === index() && 'bg-accent text-accent-foreground',
-                )}
-              >
+              <MusicContextMenu music={song}>{trigger => (
                 <div
-                  class="group cover-container relative size-9 rounded-md bg-neutral-200 dark:bg-neutral-500 shrink-0"
-                  onClick={() => handleItemClick(index())}
+                  {...trigger}
+                  class={clsx(
+                    'ghost-btn flex px-2 h-12 justify-start content-visibility-auto',
+                    currentIndex() === index() && 'bg-accent text-accent-foreground',
+                  )}
                 >
-                  <Show when={song.coverUrl}>
-                    <img src={song.coverUrl} class="w-full h-full rounded-md" />
-                  </Show>
                   <div
-                    class={clsx(
-                      'play-icon text-3 block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
-                      'transition-[opacity,display] transition-discrete group-hover:opacity-100 group-hover:block',
-                      playing() && currentIndex() === index() ? 'i-solar:pause-bold' : 'i-solar:play-bold',
-                      currentIndex() !== index() && 'opacity-0 hidden',
-                    )}
+                    class="group cover-container relative size-9 rounded-md bg-neutral-200 dark:bg-neutral-500 shrink-0"
+                    onClick={() => handleItemClick(index())}
+                  >
+                    <Show when={song.coverUrl}>
+                      <img src={song.coverUrl} class="w-full h-full rounded-md" />
+                    </Show>
+                    <div
+                      class={clsx(
+                        'play-icon text-3 block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
+                        'transition-[opacity,display] transition-discrete group-hover:opacity-100 group-hover:block',
+                        playing() && currentIndex() === index() ? 'i-solar:pause-bold' : 'i-solar:play-bold',
+                        currentIndex() !== index() && 'opacity-0 hidden',
+                      )}
+                    />
+                  </div>
+                  <div class="flex-1 min-w-0 flex flex-col">
+                    <span class="max-w-full truncate" innerHTML={song.title} />
+                    <span class="text-xs text-muted-foreground truncate max-w-full truncate">{song.artist}</span>
+                  </div>
+                  <div
+                    class="i-solar:close-circle-bold text-3.5 hover:text-destructive transition-color grow-0 shrink-0"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      removeFromPlayQueue(index())
+                    }}
                   />
                 </div>
-                <div class="flex-1 min-w-0 flex flex-col">
-                  <span class="max-w-full truncate" innerHTML={song.title} />
-                  <span class="text-xs text-muted-foreground truncate max-w-full truncate">{song.artist}</span>
-                </div>
-                <div
-                  class="i-solar:close-circle-bold text-3.5 hover:text-destructive transition-color grow-0 shrink-0"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    removeFromPlayQueue(index())
-                  }}
-                />
-              </div>
+              )}</MusicContextMenu>
             )}
           </For>
         </div>

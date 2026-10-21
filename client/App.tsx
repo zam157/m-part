@@ -4,6 +4,7 @@ import { playQueue } from './composables/player'
 import MusicPlayer from './components/MusicPlayer/MusicPlayer'
 import PlayQueue from './components/PlayQueue/PlayQueue'
 import Sidebar from './components/Sidebar/Sidebar'
+import ContextMenuHost from './components/ContextMenu/ContextMenuHost'
 
 export interface AppProps {
   children?: JSX.Element
@@ -52,6 +53,7 @@ export default function App(props: AppProps) {
           <div class="flex gap-5.5 items-center text-muted-foreground opacity-45 mr-5 max-[760px]:gap-3 max-[760px]:mr-0" aria-hidden="true"><span class="i-lucide:skip-back text-4" /><span class="i-lucide:circle-play text-8" /><span class="i-lucide:skip-forward text-4" /></div>
         </footer>
       )}><MusicPlayer /></Show>
+      <ContextMenuHost />
     </div>
   )
 }

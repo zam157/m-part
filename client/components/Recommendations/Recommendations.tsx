@@ -1,6 +1,7 @@
 import type { ProviderName } from '#shared/types/provider'
 import { createEffect, For, Match, Switch } from 'solid-js'
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
+import MusicContextMenu from '~/components/MusicContextMenu/MusicContextMenu'
 import { addToPlayQueue } from '~/composables/player'
 import { loadRecommendations, recommendations } from '~/composables/recommendations'
 
@@ -34,11 +35,13 @@ export default function Recommendations(props: RecommendationsProps) {
         <Match when={state().items.length}>
           <div class="grid grid-cols-4 gap-4 max-[1100px]:grid-cols-3 max-[760px]:grid-cols-2">
             <For each={state().items}>{music => (
-              <button class="card p-2 gap-2 text-left hover:bg-muted transition-colors focus-visible:outline-ring" onClick={() => addToPlayQueue(music)} aria-label={`播放 ${music.title}`}>
-                <img src={music.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full aspect-ratio-video object-cover rounded-md" />
-                <span class="text-sm/relaxed font-semibold line-clamp-2 min-h-10">{music.title}</span>
-                <span class="text-xs text-muted-foreground truncate w-full">{music.artist}</span>
-              </button>
+              <MusicContextMenu music={music}>{trigger => (
+                <button {...trigger} class="card p-2 gap-2 text-left hover:bg-muted transition-colors focus-visible:outline-ring" onClick={() => addToPlayQueue(music)} aria-label={`播放 ${music.title}`}>
+                  <img src={music.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full aspect-ratio-video object-cover rounded-md" />
+                  <span class="text-sm/relaxed font-semibold line-clamp-2 min-h-10">{music.title}</span>
+                  <span class="text-xs text-muted-foreground truncate w-full">{music.artist}</span>
+                </button>
+              )}</MusicContextMenu>
             )}</For>
           </div>
         </Match>

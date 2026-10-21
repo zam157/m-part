@@ -474,6 +474,37 @@ export async function addToPlayQueue(item: MusicInfo) {
   await setPlaying(true)
 }
 
+/** 将歌曲放到当前曲目之后，保留当前播放；空队列直接播放。 */
+export async function addNextToPlayQueue(item: MusicInfo) {
+  const list = playQueue()
+  const current = currentIndex()
+  if (current === null || !list[current]) {
+    await addToPlayQueue(item)
+    return
+  }
+  const sameSong = (song: MusicInfo) => song.provider === item.provider && song.id === item.id
+  if (sameSong(list[current]!))
+    return
+
+  const existing = list.find(sameSong)
+  const remaining = list.map((song, index) => ({ song, index })).filter(entry => !sameSong(entry.song))
+  const nextCurrent = remaining.findIndex(entry => entry.index === current)
+  const insertAt = nextCurrent + 1
+  const nextQueue = remaining.map(entry => entry.song)
+  nextQueue.splice(insertAt, 0, existing ?? item)
+  setPlayQueueState(nextQueue)
+  setCurrentIndexState(nextCurrent)
+
+  if (playMode() === 'random') {
+    // 队列重排后重映射索引，并在实际随机播放顺序里同样放到下一首。
+    const indexMap = new Map(remaining.map((entry, index) => [entry.index, index >= insertAt ? index + 1 : index]))
+    const random = randomPlayQueue() ?? createRandomOrder(list.length) ?? []
+    const order = random.flatMap(index => indexMap.has(index) ? [indexMap.get(index)!] : [])
+    order.splice(order.indexOf(nextCurrent) + 1, 0, insertAt)
+    setRandomPlayQueueState(order)
+  }
+}
+
 /**
  * 从播放列表中移除
  */

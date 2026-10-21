@@ -5,6 +5,7 @@ import { providers } from '#shared/utils/providers/index'
 import { useParams, useSearchParams } from '@solidjs/router'
 import { createSignal, For, Match, Show, Switch, untrack } from 'solid-js'
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
+import MusicContextMenu from '~/components/MusicContextMenu/MusicContextMenu'
 import Pagination from '~/components/Pagination/Pagination'
 import { addToPlayQueue, setPlayQueue } from '~/composables/player'
 
@@ -169,25 +170,28 @@ function AlbumDetailView(props: AlbumDetailViewProps) {
           <Match when={works().length}>
             <For each={works()}>
               {work => (
-                <div
-                  class="ghost-btn flex items-center gap-2 p-1.5 h-12"
-                  onClick={() => handlePlay(work)}
-                >
-                  <img
-                    src={work.coverUrl}
-                    referrerpolicy="no-referrer"
-                    alt="Track Cover"
-                    class="h-10 aspect-square object-cover rounded-lg shrink-0"
-                  />
-                  <div class="flex flex-col flex-1 min-w-0">
-                    <div class="text-sm font-medium w-full truncate min-h-1em">
-                      {work.title}
-                    </div>
-                    <div class="text-xs text-muted-foreground w-full truncate min-h-1em">
-                      {work.artist}
+                <MusicContextMenu music={work}>{trigger => (
+                  <div
+                    {...trigger}
+                    class="ghost-btn flex items-center gap-2 p-1.5 h-12"
+                    onClick={() => handlePlay(work)}
+                  >
+                    <img
+                      src={work.coverUrl}
+                      referrerpolicy="no-referrer"
+                      alt="Track Cover"
+                      class="h-10 aspect-square object-cover rounded-lg shrink-0"
+                    />
+                    <div class="flex flex-col flex-1 min-w-0">
+                      <div class="text-sm font-medium w-full truncate min-h-1em">
+                        {work.title}
+                      </div>
+                      <div class="text-xs text-muted-foreground w-full truncate min-h-1em">
+                        {work.artist}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}</MusicContextMenu>
               )}
             </For>
             <Pagination

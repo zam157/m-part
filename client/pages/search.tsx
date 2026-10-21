@@ -2,6 +2,7 @@ import type { AlbumInfo, ArtistInfo, PlaylistInfo } from '#shared/types/music-in
 import { useNavigate } from '@solidjs/router'
 import { For, Match, Show, Switch } from 'solid-js'
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
+import MusicContextMenu from '~/components/MusicContextMenu/MusicContextMenu'
 import Pagination from '~/components/Pagination/Pagination'
 import Select from '~/components/Select/Select'
 import { addToPlayQueue } from '~/composables/player'
@@ -132,21 +133,24 @@ export default function SearchPage() {
             <Match when={searchType() === 'music'}>
               <For each={musicResults()}>
                 {result => (
-                  <div
-                    class="card gap-2 p-2 cursor-default hover:bg-muted transition-colors"
-                    onClick={() => addToPlayQueue(result)}
-                  >
-                    <div class="flex flex-col gap-2 h-full">
-                      <img src={result.coverUrl} alt="cover" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />
-                      <Show
-                        when={result.provider === 'bili'}
-                        fallback={<span class="text-sm/relaxed font-semibold line-clamp-2 h-[calc(2*var(--leading-relaxed)*1em)]">{result.title}</span>}
-                      >
-                        <span class="text-sm/relaxed font-semibold line-clamp-2 h-[calc(2*var(--leading-relaxed)*1em)]" innerHTML={result.title} />
-                      </Show>
-                      <span class="text-xs text-muted-foreground shrink-0 truncate">{result.artist}</span>
+                  <MusicContextMenu music={result}>{trigger => (
+                    <div
+                      {...trigger}
+                      class="card gap-2 p-2 cursor-default hover:bg-muted transition-colors"
+                      onClick={() => addToPlayQueue(result)}
+                    >
+                      <div class="flex flex-col gap-2 h-full">
+                        <img src={result.coverUrl} alt="cover" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />
+                        <Show
+                          when={result.provider === 'bili'}
+                          fallback={<span class="text-sm/relaxed font-semibold line-clamp-2 h-[calc(2*var(--leading-relaxed)*1em)]">{result.title}</span>}
+                        >
+                          <span class="text-sm/relaxed font-semibold line-clamp-2 h-[calc(2*var(--leading-relaxed)*1em)]" innerHTML={result.title} />
+                        </Show>
+                        <span class="text-xs text-muted-foreground shrink-0 truncate">{result.artist}</span>
+                      </div>
                     </div>
-                  </div>
+                  )}</MusicContextMenu>
                 )}
               </For>
             </Match>
