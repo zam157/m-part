@@ -1,123 +1,93 @@
 import type { MusicQuality } from '#shared/types/music-info'
 import { clsx } from 'cn/lite'
-import { Show, createMemo, createSignal } from 'solid-js'
+import { createMemo, createSignal, Show } from 'solid-js'
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
+import Tooltip from '~/components/Tooltip/Tooltip'
 import {
-  changeQuality,
-  currentSong,
-  currentSourceInfo,
-  currentTime,
-  duration,
-  playing,
-  playbackError,
-  playQueue,
-  playMode,
-  prevNext,
-  progress,
-  seeking,
-  setCurrentTime,
-  setPlaying,
-  setSrc,
-  setShowPlayQueue,
-  setVolume,
-  setWaiting,
-  showPlayQueue,
-  togglePlayMode,
-  volume,
-  waiting,
+  changeQuality, currentSong, currentSourceInfo, currentTime, duration, playbackError,
+  playing, playMode, prevNext, progress, seeking, setCurrentTime,
+  setPlaying, setShowPlayQueue, setSrc, setVolume, setWaiting, showPlayQueue,
+  togglePlayMode, volume, waiting,
 } from '~/composables/player'
-import './music-player.css'
 import Expended from './components/Expended'
 import QualityBtn from './components/QualityBtn'
 import VolumeBtn from './components/VolumeBtn'
+import VolumeSlider from './components/VolumeSlider'
+import './music-player.css'
 
-/**
- * 格式化时间为 MM:SS 格式
- */
 function formatTime(seconds: number): string {
-  const totalSeconds = Math.floor(seconds)
-  const minutes = Math.floor(totalSeconds / 60)
-  const secs = totalSeconds % 60
-  return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  const total = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0))
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
 }
 
 export default function MusicPlayer() {
-  let progressBarRef: HTMLDivElement | undefined
-
+  let progressBarRef!: HTMLDivElement
   const [tempProgress, setTempProgress] = createSignal<number | null>(null)
   const [scrubbing, setScrubbing] = createSignal(false)
   const [showExpended, setShowExpended] = createSignal(false)
-
-  // 本次手势中进度条的位置缓存。刻意用普通变量而不是 signal：它是同一次手势内的中间量，
-  // pointerdown 里写入后需要在同一个同步块里读，而 Solid 2 的 signal 写入要到下一次
-  // flush 才提交（写完立刻读拿到 null），那样没经过 pointermove 的纯点击就算不出位置。
-  let progressBarRect: { width: number, left: number } | null = null
-
+  // 手势中需要同步读写，不能依赖 Solid 2 暂存的 signal 值。
+  let drag: { left: number, width: number, progress: number } | null = null
+  const hasSong = () => !!currentSong()
+  const trackDuration = () => Number.isFinite(duration()) ? Math.max(0, duration()) : 0
+  const canSeek = () => hasSong() && trackDuration() > 0 && !waiting()
   const showSpinner = createMemo(() => waiting() || seeking())
-
-  // 计算显示的进度（拖动时使用 tempProgress）
-  const displayProgress = createMemo(() => tempProgress() ?? progress())
-
-  // 计算显示的时间（拖动时显示拖动位置的时间）
-  const displayTime = createMemo(() => {
-    const temp = tempProgress()
-    if (temp !== null)
-      return `${formatTime(temp * duration())}/${formatTime(duration())}`
-    return `${formatTime(currentTime())}/${formatTime(duration())}`
-  })
-
-  const playModeIcon = createMemo(() => ({
-    'loop': 'i-solar-repeat-bold',
-    'random': 'i-solar:shuffle-linear',
-    'single-loop': 'i-solar:repeat-one-linear',
-    'order': 'i-solar:list-arrow-down-linear',
-  }[playMode()]))
+  const displayProgress = createMemo(() => Math.max(0, Math.min(1, tempProgress() ?? progress())) || 0)
+  const displaySeconds = () => tempProgress() === null ? currentTime() : displayProgress() * trackDuration()
+  const playModeLabel = () => ({ order: '顺序播放', loop: '列表循环', random: '随机播放', 'single-loop': '单曲循环' }[playMode()])
+  const playModeIcon = () => ({
+    order: 'i-lucide:list-ordered', loop: 'i-lucide:repeat',
+    random: 'i-lucide:shuffle', 'single-loop': 'i-lucide:repeat-1',
+  }[playMode()])
 
   function updateTempProgress(clientX: number) {
-    if (!progressBarRect)
+    if (!drag)
       return
-
-    const { width, left } = progressBarRect
-    setTempProgress(Math.max(0, Math.min(1, (clientX - left) / width)))
+    drag.progress = Math.max(0, Math.min(1, (clientX - drag.left) / drag.width))
+    setTempProgress(drag.progress)
   }
 
   function handlePointerDown(event: PointerEvent) {
-    if (waiting())
+    if (!canSeek() || event.button !== 0)
       return
-    if (event.pointerType === 'mouse' && event.button !== 0)
+    const rect = progressBarRef.getBoundingClientRect()
+    if (!rect.width)
       return
+    drag = { left: rect.left, width: rect.width, progress: displayProgress() }
     setScrubbing(true)
-    // 在 pointerdown 时缓存进度条位置，避免频繁的 getBoundingClientRect 调用
-    const rect = progressBarRef!.getBoundingClientRect()
-    progressBarRect = { width: rect.width, left: rect.left }
     updateTempProgress(event.clientX)
-    ;(event.target as HTMLElement).setPointerCapture(event.pointerId)
+    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
   }
 
-  function handlePointerMove(event: PointerEvent) {
-    if (!scrubbing())
+  function finishDrag(event: PointerEvent, commit: boolean) {
+    if (!drag)
       return
-    updateTempProgress(event.clientX)
-  }
-
-  function handlePointerUp(event: PointerEvent) {
-    if (waiting())
-      return
-    if (event.pointerType === 'mouse' && event.button !== 0)
-      return
-    if (!scrubbing())
-      return
-    setScrubbing(false)
-    ;(event.target as HTMLElement).releasePointerCapture(event.pointerId)
-
-    const temp = tempProgress()
-    if (temp !== null) {
-      setCurrentTime(temp * duration())
-      setTempProgress(null)
+    if (commit) {
+      updateTempProgress(event.clientX)
+      setCurrentTime(drag.progress * trackDuration())
     }
+    drag = null
+    setTempProgress(null)
+    setScrubbing(false)
+    if (progressBarRef.hasPointerCapture(event.pointerId))
+      progressBarRef.releasePointerCapture(event.pointerId)
+  }
 
-    // 清除缓存的位置信息
-    progressBarRect = null
+  function handleSeekKey(event: KeyboardEvent) {
+    if (!canSeek())
+      return
+    let next: number
+    if (event.key === 'ArrowRight' || event.key === 'ArrowUp')
+      next = currentTime() + 5
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown')
+      next = currentTime() - 5
+    else if (event.key === 'Home')
+      next = 0
+    else if (event.key === 'End')
+      next = trackDuration()
+    else
+      return
+    event.preventDefault()
+    setCurrentTime(Math.max(0, Math.min(trackDuration(), next)))
   }
 
   async function handleQualitySelect(quality: MusicQuality) {
@@ -126,7 +96,6 @@ export default function MusicPlayer() {
     try {
       await setPlaying(false)
       await changeQuality(quality)
-      // 切换音质后保持当前时间不变
       setCurrentTime(currentTimeBeforeChange)
       await setPlaying(true)
     }
@@ -136,16 +105,7 @@ export default function MusicPlayer() {
   }
 
   return (
-    <div
-      style={{
-        '--progress-percent': `${displayProgress() * 100}%`,
-      }}
-      class={clsx(
-        'grow-0 shrink-0 flex flex-col select-none relative [--thumb-width:calc(var(--spacing)*3.5)] [--thumb-height:var(--thumb-width)] [--progress-height:var(--spacing)]',
-        'transition-[transform,display] transition-discrete starting:translate-y-full',
-        playQueue().length === 0 && 'translate-y-full hidden',
-      )}
-    >
+    <footer aria-label="音乐播放器" class="relative shrink-0 bg-background select-none">
       <Show when={playbackError()}>
         <ErrorMessage
           message={playbackError() ?? ''}
@@ -153,119 +113,86 @@ export default function MusicPlayer() {
             await setSrc(null, currentSong()?.provider)
             await setPlaying(true)
           }}
-          class="flex-none flex-row gap-3 p-3 border-t border-border"
+          class="flex-none flex-row gap-3 p-3 border-b border-border"
         />
       </Show>
-      {/* Progress bar */}
-      <div class="relative h-[--progress-height]">
-        <div
-          ref={progressBarRef}
-          class="progress-bar-wrapper group/progress cursor-pointer absolute bottom-0 left-0 w-full z-1 after:content-empty after:absolute after:top-1/2 after:left-0 after:w-full after:h-[calc(4*var(--spacing)+100%)] after:-translate-y-1/2"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onContextMenu={event => event.preventDefault()}
-        >
-          {/* Tooltip */}
-          <Show when={duration()}>
-            <div
-              class="
-                time-tooltip
-                absolute text-sm text-neutral-50 font-mono whitespace-nowrap px-2 py-1 rounded-lg bg-neutral-700 opacity-0 invisible pointer-events-none
-                transition-[opacity,visibility] duration-200 group-hover/progress:opacity-100 group-hover/progress:visible
-              "
-            >
-              {displayTime()}
-            </div>
-          </Show>
-
-          <div
-            class={clsx(
-              'progress-bar group/bar h-[--progress-height] transition-height duration-300 relative touch-none group-hover/progress:[--progress-height:calc(var(--spacing)*2)]',
-              'bg-neutral-200 dark:bg-neutral-500 will-change-transform',
-              showSpinner() && 't-loading [--progress-height:calc(var(--spacing)*2)]',
+      <div class="grid grid-cols-[minmax(180px,1fr)_minmax(0,460px)_minmax(180px,1fr)] items-center gap-x-5 h-[--player-height] px-6 border-t border-border max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:gap-x-2 max-[760px]:gap-y-1 max-[760px]:px-4 max-[760px]:py-2 max-[400px]:px-3">
+        <div role="group" aria-label="播放控制" class="flex items-center gap-1 justify-self-start max-[760px]:row-start-2">
+          <Tooltip content={`${playModeLabel()}，点击切换`}>
+            {trigger => (
+              <button {...trigger} class="ghost-btn size-8 text-muted-foreground" disabled={!hasSong()} aria-label={`播放模式：${playModeLabel()}`} onClick={togglePlayMode}>
+                <span class={clsx(playModeIcon(), 'text-4')} />
+              </button>
             )}
-          >
-            <div
-              class="relative rounded-r-full bg-primary h-full w-[--progress-percent]"
-            >
+          </Tooltip>
+          <button class="ghost-btn size-9" disabled={!hasSong()} aria-label="上一首" onClick={() => prevNext(0)}><span class="i-solar:skip-previous-bold text-5" /></button>
+          <button class="ghost-btn size-11" disabled={!hasSong()} aria-label={playing() ? '暂停' : '播放'} onClick={() => setPlaying(!playing())}>
+            <span class={clsx('text-7', showSpinner() ? 'i-lucide:loader-circle animate-spin motion-reduce:animate-none' : playing() ? 'i-solar:pause-bold' : 'i-solar:play-bold')} />
+          </button>
+          <button class="ghost-btn size-9" disabled={!hasSong()} aria-label="下一首" onClick={() => prevNext(1)}><span class="i-solar:skip-next-bold text-5" /></button>
+        </div>
+
+        <div role="group" aria-label="当前歌曲" class="flex min-w-0 items-center gap-3 rounded-lg bg-muted/55 p-2 max-[760px]:col-span-2 max-[760px]:row-start-1">
+          <button class="group/cover relative size-12 shrink-0 overflow-hidden rounded-md bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring" disabled={!hasSong()} aria-label="展开播放器" onClick={() => setShowExpended(true)}>
+            <Show when={currentSong()?.coverUrl} fallback={<span class="i-lucide:music-2 text-6 text-muted-foreground" />}>
+              <img src={currentSong()!.coverUrl} alt="当前歌曲封面" referrerpolicy="no-referrer" class="size-full object-cover" />
+            </Show>
+            <span class="absolute inset-0 grid place-items-center bg-black/35 text-white opacity-0 transition-opacity group-hover/cover:opacity-100 group-focus-visible/cover:opacity-100"><span class="i-lucide:chevrons-up text-5" /></span>
+          </button>
+          <div class="flex-1 min-w-0">
+            <div class="text-center min-w-0">
+              <span class="block truncate text-[13px] leading-4 font-semibold" innerHTML={currentSong()?.title || '尚未播放'} />
+              <span class="block truncate text-[11px] leading-4 text-muted-foreground">{hasSong() ? currentSong()?.artist || '未知创作者' : '搜索或选择一首歌曲，开始聆听'}</span>
+            </div>
+            <div class="flex items-center gap-2 text-[10px] leading-3 tabular-nums text-muted-foreground">
+              <span class="min-w-7 text-left">{formatTime(displaySeconds())}</span>
               <div
-                class={clsx(
-                  'thumb invisible opacity-0 group-hover/progress:visible group-hover/progress:opacity-100 group-[.t-loading]/bar:visible group-[.t-loading]/bar:opacity-100 rounded-full flex items-center justify-center shadow-md w-[--thumb-width] h-[--thumb-height]',
-                  'transition-[opacity,visibility,height,width,background-color]',
-                  'absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2',
-                  scrubbing() ? 'bg-primary/30 [--thumb-width:calc(var(--spacing)*6)]' : 'bg-primary',
-                )}
+                ref={progressBarRef}
+                role="slider"
+                aria-label="播放进度"
+                aria-valuemin={0}
+                aria-valuemax={trackDuration()}
+                aria-valuenow={Math.floor(displaySeconds()) || 0}
+                aria-valuetext={`${formatTime(displaySeconds())}，共 ${formatTime(trackDuration())}`}
+                aria-disabled={canSeek() ? 'false' : 'true'}
+                tabindex={canSeek() ? 0 : -1}
+                style={{ '--progress-percent': `${displayProgress() * 100}%` }}
+                class="group/progress relative flex-1 h-4 flex items-center rounded-full touch-none cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:cursor-default"
+                onPointerDown={handlePointerDown}
+                onPointerMove={event => drag && updateTempProgress(event.clientX)}
+                onPointerUp={event => finishDrag(event, true)}
+                onPointerCancel={event => finishDrag(event, false)}
+                onLostPointerCapture={event => finishDrag(event, false)}
+                onKeyDown={handleSeekKey}
+                onContextMenu={event => event.preventDefault()}
               >
-                <div
-                  class={clsx(
-                    'i-solar-refresh-bold text-2.5 text-primary-foreground',
-                    'transition-[opacity,display] transition-discrete starting:opacity-0 animate-spin',
-                    !showSpinner() && 'hidden opacity-0',
-                  )}
-                />
+                <div class="relative h-1 w-full rounded-full bg-foreground/12">
+                  <div class="h-full w-[--progress-percent] rounded-full bg-foreground/55" />
+                  <span class={clsx('absolute top-1/2 left-[--progress-percent] -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-foreground opacity-0 transition-opacity group-hover/progress:opacity-100 group-focus-visible/progress:opacity-100', scrubbing() && 'opacity-100')} />
+                </div>
               </div>
+              <span class="min-w-7 text-right">−{formatTime(trackDuration() - displaySeconds())}</span>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Music player */}
-      <div class="@container flex h-21 items-center px-5 gap-1 bg-background border-t border-border">
-        {/* Music image */}
-        <div
-          class="group/cover overflow-hidden relative bg-muted size-13 rounded-lg shrink-0"
-          onClick={() => setShowExpended(v => !v)}
-        >
-          <Show when={currentSong()?.coverUrl}>
-            <img
-              src={currentSong()!.coverUrl}
-              referrerpolicy="no-referrer"
-              class="h-full w-full object-cover transition-filter group-hover/cover:filter-blur-xs"
-            />
-          </Show>
-          <div
-            class="i-lucide:chevrons-up absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-transparent text-10 transition-[color,transform] duration-200 group-hover/cover:text-black/70 group-hover/cover:z-2"
-          />
-        </div>
-
-        {/* Music info */}
-        <div class="mx-4 flex flex-1 flex-col gap-2 min-w-0 items-start justify-center">
-          {/* Song name */}
-          <span class="text-foreground text-sm font-semibold max-w-full min-w-0 truncate" innerHTML={currentSong()?.title || '未命名歌曲'} />
-          {/* Artist name */}
-          <span class="text-xs text-muted-foreground max-w-full min-w-0 truncate">
-            {currentSong()?.artist || '未知创作者'}
-          </span>
-        </div>
-
-        {/* Extra buttons */}
-        <div class="px-2 flex gap-4 items-center justify-center">
-          <div
-            class="i-solar-playlist-bold text-5 text-primary transition-color hover:text-primary/80"
-            onClick={() => setShowPlayQueue(!showPlayQueue())}
-          />
-          <div
-            class={clsx(playModeIcon(), 'text-5 text-primary transition-color hover:text-primary/80')}
-            onClick={togglePlayMode}
-          />
-          <VolumeBtn value={volume()} onValueChange={setVolume} />
+        <div role="group" aria-label="播放设置" class="flex items-center gap-3 justify-self-end max-[760px]:row-start-2 max-[760px]:gap-2">
+          <div class="max-[1100px]:hidden"><VolumeSlider value={volume()} onValueChange={setVolume} /></div>
+          <div class="hidden max-[1100px]:block"><VolumeBtn value={volume()} onValueChange={setVolume} /></div>
           <Show when={currentSourceInfo()?.qualities?.length}>
-            <QualityBtn
-              qualities={currentSourceInfo()!.qualities!}
-              onSelect={handleQualitySelect}
-            />
+            <QualityBtn qualities={currentSourceInfo()!.qualities!} onSelect={handleQualitySelect} />
           </Show>
-        </div>
-
-        {/* Play button */}
-        <div class="btn-wrapper ml-2 mr-2 flex gap-2 items-center @lg:mr-6 @md:mr-4 @lg:gap-4 @md:gap-3">
-          <button class="ghost-btn size-9" aria-label="上一首" onClick={() => prevNext(0)}><span class="i-lucide:skip-back text-4" /></button>
-          <button class="btn size-10 rounded-full" aria-label={playing() ? '暂停' : '播放'} onClick={() => setPlaying(!playing())}><span class={clsx('text-5', playing() ? 'i-lucide:pause' : 'i-lucide:play')} /></button>
-          <button class="ghost-btn size-9" aria-label="下一首" onClick={() => prevNext(1)}><span class="i-lucide:skip-forward text-4" /></button>
+          <span class="h-5 w-px bg-border max-[760px]:hidden" aria-hidden="true" />
+          <Tooltip content={showPlayQueue() ? '关闭播放队列' : '播放队列'}>
+            {trigger => (
+              <button {...trigger} class={clsx('ghost-btn size-9', showPlayQueue() && 'bg-accent text-accent-foreground')} aria-label="播放队列" aria-controls="play-queue" aria-expanded={showPlayQueue() ? 'true' : 'false'} onClick={() => setShowPlayQueue(!showPlayQueue())}>
+                <span class="i-lucide:list-music text-4.5" />
+              </button>
+            )}
+          </Tooltip>
         </div>
       </div>
       <Expended show={showExpended()} onShowChange={setShowExpended} />
-    </div>
+    </footer>
   )
 }

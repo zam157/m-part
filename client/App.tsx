@@ -1,6 +1,5 @@
 import type { JSX } from '@solidjs/web'
-import { Loading, Show } from 'solid-js'
-import { playQueue } from './composables/player'
+import { Loading } from 'solid-js'
 import MusicPlayer from './components/MusicPlayer/MusicPlayer'
 import PlayQueue from './components/PlayQueue/PlayQueue'
 import Sidebar from './components/Sidebar/Sidebar'
@@ -38,7 +37,7 @@ export default function App(props: AppProps) {
       class="
         h-100svh of-auto
         bg-background text-foreground selection:text-muted selection:bg-muted-foreground
-        flex flex-col
+        flex flex-col [--player-height:88px] max-[760px]:[--player-height:128px]
       "
     >
       <main class="flex-1 min-h-0 flex">
@@ -46,13 +45,7 @@ export default function App(props: AppProps) {
         <Loading fallback={<PageLoading />}>{props.children}</Loading>
         <PlayQueue />
       </main>
-      <Show when={playQueue().length} fallback={(
-        <footer class="h-21 shrink-0 border-t border-border flex items-center px-7 max-[760px]:px-4 gap-3.5 bg-background">
-          <div class="size-12 border border-border rounded-[8px] grid place-items-center bg-muted text-muted-foreground"><span class="i-lucide:music-2 text-5" /></div>
-          <div class="flex-1"><strong class="block text-[13px] font-medium">准备好，听点喜欢的。</strong><p class="text-[11px] mt-1.25 text-muted-foreground">搜索一首歌曲，开启你的播放队列。</p></div>
-          <div class="flex gap-5.5 items-center text-muted-foreground opacity-45 mr-5 max-[760px]:gap-3 max-[760px]:mr-0" aria-hidden="true"><span class="i-lucide:skip-back text-4" /><span class="i-lucide:circle-play text-8" /><span class="i-lucide:skip-forward text-4" /></div>
-        </footer>
-      )}><MusicPlayer /></Show>
+      <MusicPlayer />
       <ContextMenuHost />
     </div>
   )

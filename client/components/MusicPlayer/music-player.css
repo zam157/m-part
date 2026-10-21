@@ -1,10 +1,37 @@
 @layer components {
-  /* The thumb is the explicit anchor for the playback time tooltip. */
-  .progress-bar-wrapper .thumb { anchor-name: --thumb; }
+  /* 原生 range 的轨道和滑块需要浏览器伪元素；颜色沿用播放器主题。 */
+  .player-volume-slider::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(to right, color-mix(in oklab, oklch(var(--foreground)) 55%, transparent) var(--volume-percent), color-mix(in oklab, oklch(var(--foreground)) 12%, transparent) var(--volume-percent));
+  }
 
-  .progress-bar-wrapper .time-tooltip {
-    position-anchor: --thumb;
-    justify-self: anchor-center;
-    inset-block-end: calc(anchor(top) + 2 * var(--spacing));
+  .player-volume-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    margin-top: -3px;
+    border-radius: 50%;
+    background: oklch(var(--foreground));
+  }
+
+  .player-volume-slider::-moz-range-track {
+    height: 4px;
+    border-radius: 999px;
+    background: color-mix(in oklab, oklch(var(--foreground)) 12%, transparent);
+  }
+
+  .player-volume-slider::-moz-range-progress {
+    height: 4px;
+    border-radius: 999px;
+    background: color-mix(in oklab, oklch(var(--foreground)) 55%, transparent);
+  }
+
+  .player-volume-slider::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border: 0;
+    border-radius: 50%;
+    background: oklch(var(--foreground));
   }
 }

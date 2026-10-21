@@ -64,6 +64,13 @@ grid-cols-[repeat(auto-fill,minmax(clamp(300px,15vw,360px),1fr))]
 - ⚠️ 命令式打开必须给来源：`showPopover({ source: triggerEl })` / `togglePopover({ source })`；不带 `source` 时隐式锚点丢失，浮层会掉到视口左上角（`PopoverApi` 里已处理）
 - 退场动画的 `transition-property` 必须同时含 `display` 与 `overlay`，并配 `transition-behavior: allow-discrete`。漏掉 `overlay` 时元素在关闭瞬间就退出 top layer，淡出被下层内容盖住 → 表现为「瞬间消失」
 
+## 播放栏布局
+
+- `MusicPlayer` 始终挂载，空队列与播放状态使用同一套布局，避免首次播放时切换外壳。桌面参照 Apple Music 的横向分区：左侧播放控制，中间封面、歌曲信息与进度，右侧音量、音质和队列；中间列最大 460px，两侧等宽以保持居中。
+- `App.tsx` 定义 `--player-height`：桌面 88px，760px 及以下 128px。窄屏上方为歌曲与进度，下方为播放控制和设置；`PlayQueue` 的移动浮层底边也引用这个变量，调整高度时必须一起保留，不能退回固定的 `bottom-21`。
+- 桌面音量使用原生横向 range；1100px 及以下收进点击展开的 Popover。`music-player.css` 只保留原生 range 的浏览器伪元素，其他布局仍用 UnoCSS。shadcn 的 `--foreground` 是裸 OKLCH 通道，原生 CSS 里用 `oklch(var(--foreground))` 才是合法颜色。
+- 进度条持续显示已播放与剩余时间；拖动时预览、释放时跳转，取消手势不提交；方向键按五秒调整，Home / End 跳到首尾。手势中间值使用普通变量，避免 Solid 2 写入暂存导致单击跳转失效。
+
 ## 两条不能动的构建约定
 
 - `vite-shared.ts` 里的 `solid({ solid: { omitQuotes: false } })`：Solid 编译器默认省略「唯一属性」的引号（`class="empty"` → `class=empty`），编译产物里该 token 就无法被 UnoCSS 提取，单 token 的 class 会**静默丢样式**

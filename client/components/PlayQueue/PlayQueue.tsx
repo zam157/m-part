@@ -56,7 +56,7 @@ export default function PlayQueue() {
     <div
       id="play-queue"
       ref={panelRef}
-      class="play-queue-panel [--queue-width:20rem] flex-none min-h-0 overflow-hidden max-[760px]:[--queue-width:min(20rem,calc(100vw-64px))] max-[760px]:fixed max-[760px]:right-0 max-[760px]:top-0 max-[760px]:bottom-21 max-[760px]:z-30 max-[760px]:shadow-[-8px_0_30px_#0002] motion-reduce:transition-none"
+      class="play-queue-panel [--queue-width:20rem] flex-none min-h-0 overflow-hidden max-[760px]:[--queue-width:min(20rem,calc(100vw-64px))] max-[760px]:fixed max-[760px]:right-0 max-[760px]:top-0 max-[760px]:bottom-[--player-height] max-[760px]:z-30 max-[760px]:shadow-[-8px_0_30px_#0002] motion-reduce:transition-none"
       data-open={showPlayQueue() ? 'true' : 'false'}
       inert={!showPlayQueue()}
     >
