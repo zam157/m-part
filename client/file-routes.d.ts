@@ -19,6 +19,8 @@ declare module "virtual:file-routes" {
   export interface FileRouteEntry {
     path: string;
     page?: boolean;
+    /** The page component is a server function; its `$component` is delivered eagerly. */
+    server?: boolean;
     $component?: FileRouteLazyRef<any> | FileRouteEagerRef<any>;
     $$route?: FileRouteEagerRef<any>;
     [key: string]: unknown;
@@ -39,24 +41,6 @@ declare module "virtual:file-routes" {
       $$route?: undefined;
     },
     {
-      path: "/";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./pages/index")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/playground";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./pages/playground")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/search";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./pages/search")>;
-      $$route?: undefined;
-    },
-    {
       path: "/album-detail/:provider/:id";
       page: true;
       $component: FileRouteLazyRef<typeof import("./pages/album-detail/[provider]/[id]")>;
@@ -69,6 +53,18 @@ declare module "virtual:file-routes" {
       $$route?: undefined;
     },
     {
+      path: "/";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./pages/index")>;
+      $$route?: undefined;
+    },
+    {
+      path: "/playground";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./pages/playground")>;
+      $$route?: undefined;
+    },
+    {
       path: "/playlist-detail/:provider/:id";
       page: true;
       $component: FileRouteLazyRef<typeof import("./pages/playlist-detail/[provider]/[id]")>;
@@ -78,6 +74,12 @@ declare module "virtual:file-routes" {
       path: "/playlists";
       page: true;
       $component: FileRouteLazyRef<typeof import("./pages/playlists")>;
+      $$route?: undefined;
+    },
+    {
+      path: "/search";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./pages/search")>;
       $$route?: undefined;
     }
   ];
