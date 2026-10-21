@@ -1,13 +1,14 @@
 import { clsx } from 'cn/lite'
 import { createEffect, createMemo, createSignal, For, Show, untrack } from 'solid-js'
 import ContextMenu from '~/components/ContextMenu/ContextMenu'
-import { currentIndex, playing, playMode, playQueue, randomPlayQueue, removeFromPlayQueue, setCurrentIndex, setPlaying } from '~/composables/player'
+import { currentIndex, playing, playQueue, removeFromPlayQueue, setCurrentIndex, setPlaying } from '~/composables/player'
 import { formatTime } from '~/components/MusicPlayer/components/player-controls'
 
 export default function QueueTracks(props: { open: boolean }) {
   let listRef!: HTMLDivElement
   const [reach, setReach] = createSignal(30)
-  const order = createMemo(() => playMode() === 'random' && randomPlayQueue()?.length ? randomPlayQueue()! : playQueue().map((_, i) => i))
+  // 队列保持添加顺序；随机顺序仅用于切歌，不重排界面中的歌曲。
+  const order = createMemo(() => playQueue().map((_, i) => i))
   const visibleOrder = createMemo(() => {
     const all = order()
     const position = Math.max(0, all.indexOf(currentIndex() ?? 0))

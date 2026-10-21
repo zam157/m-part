@@ -17,6 +17,31 @@ beforeEach(async () => {
 })
 afterEach(() => vi.restoreAllMocks())
 
+describe('随机切歌', () => {
+  it('恢复随机顺序后，前后切歌及首尾循环都不使用队列索引相邻项', async () => {
+    player.restorePlayerSession({
+      queue: { items: songs, playMode: 'random', randomOrder: [2, 0, 3, 1] },
+      position: { song: { provider: 'bili', id: 'c' }, time: 0 },
+    })
+    flush()
+    const visited: string[] = []
+    for (let step = 0; step < 4; step++) {
+      await player.prevNext(1, false)
+      flush()
+      visited.push(player.currentSong()!.id)
+    }
+    expect(visited).toEqual(['a', 'd', 'b', 'c'])
+    await player.prevNext(0, false)
+    flush()
+    expect(player.currentSong()?.id).toBe('b')
+    await player.prevNext(1, false)
+    flush()
+    expect(player.currentSong()?.id).toBe('c')
+    expect(ids()).toEqual(['a', 'b', 'c', 'd'])
+    expect(player.randomPlayQueue()).toEqual([2, 0, 3, 1])
+  })
+})
+
 describe('添加到下一首', () => {
   it.each(['order', 'loop', 'single-loop'] as const)('在 %s 模式插入下一首，保持当前歌曲、进度及播放状态', async (mode) => {
     await player.setPlayQueue(songs.slice(0, 3))

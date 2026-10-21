@@ -129,6 +129,27 @@ describe('展开播放器', () => {
     expect(list.querySelectorAll('[aria-haspopup="menu"]').length).toBeGreaterThan(100)
   })
 
+  it('随机模式不重排队列界面，上一首和下一首按独立的随机顺序切歌', async () => {
+    player.restorePlayerSession({
+      queue: { items: songs, playMode: 'random', randomOrder: [0, 2, 1] },
+      position: { song: { provider: 'bili', id: 'a' }, time: 0 },
+    })
+    flush()
+    mount()
+    open()
+    click('展开播放队列')
+    const queueOrder = () => [...dialog.querySelectorAll('[aria-label="队列歌曲"] button[aria-label^="播放 "]')].map(button => button.getAttribute('aria-label'))
+    expect(queueOrder()).toEqual(['播放 a', '播放 b', '播放 c'])
+    click('下一首')
+    await vi.waitFor(() => expect(player.currentSong()?.id).toBe('c'))
+    expect(queueOrder()).toEqual(['播放 a', '播放 b', '播放 c'])
+    click('上一首')
+    await vi.waitFor(() => expect(player.currentSong()?.id).toBe('a'))
+    click('上一首')
+    await vi.waitFor(() => expect(player.currentSong()?.id).toBe('b'))
+    expect(queueOrder()).toEqual(['播放 a', '播放 b', '播放 c'])
+  })
+
   it('暂停状态下切换音质保留暂停与进度', async () => {
     await player.setPlayQueue([{ ...songs[0]!, src: undefined }])
     player.audio.dispatchEvent(new Event('pause'))
