@@ -43,6 +43,18 @@ in the response must not be the wildcard '*' when the request's credentials mode
 
 极易误判成「CDN 不支持跨域」。bilibili 音频 CDN 有 `.com`（upos 镜像）与 `.cn`（`mcdn.bilivideo.cn:8082`）两套，域名要改两处：`wxt.config.ts` 的 `host_permissions` + `public/rules/bilibili.json`（DNR 规则已用 `requestDomains: ['bilivideo.com','bilivideo.cn']`，自动覆盖子域）。
 
+### 音频按需缓冲
+
+扩展模式将 Provider 返回的音质 URL 直接赋给模块级 `audio.src`，由 Chrome 的媒体加载处理缓冲和 Range 请求。不要改回先 `fetch` → `response.blob()` → `createObjectURL`：`blob()` 会等待响应体全部下载完，长音频因此迟迟不能开始播放。
+
+- API 请求仍统一走 Provider + `tRequest`；原生 Audio 仅负责加载最终音频 URL。
+- CDN 的 Referer 由 DNR 设置，规则的 `resourceTypes` 必须包含 `media`，不能只覆盖 `xmlhttprequest`。BiliBili 和网易云均已配置。
+- 不设置 `audio.crossOrigin`，保留媒体元素默认的凭据行为；强行设置 anonymous 或 use-credentials 会改变 CDN 的 CORS 要求。
+- 切歌、清空队列时暂停并重置旧媒体，取消旧媒体下载；在途旧音源查询不能覆盖新歌曲。原生加载失败会显示错误与重试入口。
+- 非扩展入口为了兼容自定义 headers / GM fetch，仍保留传输层下载 Blob 的方式，并在替换或清空时回收 Object URL。
+
+验证时可用 MCP `emulate` 设置 `networkConditions: "Slow 4G"`，观察开始播放时的 `audio.buffered`、`duration` 和 `currentTime`：播放进度已增加但缓冲区间尚未覆盖整首，即证明没有等待完整下载。网络面板应出现官方 CDN 的 `media` 请求而不是 `blob:` URL；支持 Range 的 CDN 通常返回 206，但返回 200 也可能支持渐进播放。继续跳转到未缓冲位置、切换音质并确认进度保持。结束后清除限速并暂停测试音频。
+
 ## MV3 / 扩展环境的坑
 
 - 扩展页 CSP 是 `script-src 'self'`，**禁内联脚本** → 深色模式引导移到 `public/scripts/color-mode-bootstrap.js`
@@ -117,7 +129,7 @@ WXT 若提示 `Load ".output/chrome-mv3-dev" as an unpacked extension manually`�
 | 初始渲染 | 首页、搜索页能显示；`take_snapshot` 和截图均能获取内容 |
 | 搜索 | 用 `fill` 输入关键词（例如“周杰伦”），点击搜索或真实按 Enter；等待结果或明确错误态，不能只看到 loading 就结束 |
 | 网络 | `list_network_requests` 过滤 `fetch` / `xhr`，检查 nav、search/type、view、playurl；必要时 `get_network_request` 查看响应，HTTP 200 本身不代表业务成功 |
-| 播放 | 点击一条结果加入队列，等待音源加载；确认播放进度持续增加，能暂停，音频无 error。CDN 请求可能是 fetch 后转 blob 播放，排查时不要只过滤 media |
+| 播放 | 点击一条结果加入队列，确认媒体直接请求官方 CDN、在整首缓冲完之前开始播放，进度持续增加且能暂停；检查跳转进度、切音质和音频 error |
 | 交互 | 侧栏展开/收起、Tooltip 出现/消失、主题切换，再跨断点缩放；操作后查控制台，不能只查初次加载 |
 | 窄屏 | `emulate({ pageId, viewport: "390x844,mobile,touch" })`；比较 `innerWidth` 与 `document.documentElement.scrollWidth`，再结合截图检查布局 |
 | 后台 | `evaluate_script` 指定 Service Worker ID，检查 DNR 规则已启用，见下方示例 |

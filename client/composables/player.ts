@@ -1,5 +1,6 @@
 import type { MusicInfo, MusicQuality, SourceInfo } from '#shared/types/music-info'
 import type { ProviderName } from '#shared/types/provider'
+import { TARGET_EXTENSION } from '#shared/utils/constants'
 import { tRequest } from '#shared/utils/fetch'
 import { errorMessage } from '#shared/utils'
 import { providers } from '#shared/utils/providers'
@@ -10,10 +11,13 @@ export type PlayMode = 'order' | 'loop' | 'random' | 'single-loop'
 // #endregion
 
 let abortController: AbortController | null = null
+let sourceRevision = 0
+let objectUrl: string | null = null
 
 // #region states
 /** 全局共享的 audio 元素 */
 export const audio = new Audio()
+audio.preload = 'auto'
 
 const [playing, setPlayingState] = createSignal(false)
 const [duration, setDuration] = createSignal(0)
@@ -136,8 +140,10 @@ audio.addEventListener('ended', () => {
 })
 audio.addEventListener('error', (e) => {
   console.error('Audio error:', e)
+  setPlaybackError(audio.error?.message || '音频加载失败，请重试或切换音源')
   setWaiting(false)
   setPlayingState(false)
+  setSeekingState(false)
 })
 // #endregion
 
@@ -179,6 +185,7 @@ export function resetPlayer() {
  */
 async function loadQuality(sourceInfo: SourceInfo, quality?: MusicQuality) {
   const { qualities, headers, url } = sourceInfo
+  setPlaybackError(null)
 
   const targetUrl = quality?.url || url
   if (quality && qualities) {
@@ -189,16 +196,29 @@ async function loadQuality(sourceInfo: SourceInfo, quality?: MusicQuality) {
     })
   }
 
-  if (!abortController)
-    abortController = new AbortController()
   if (!targetUrl)
     throw new Error('No valid URL found in qualities.')
+
+  if (TARGET_EXTENSION) {
+    // CDN 的 Referer 等头由 DNR 的 media 规则注入，Cookie 由浏览器管理。
+    // 不设 crossOrigin：保留媒体元素默认的凭据行为，不额外要求 CDN 支持 CORS。
+    // 原生媒体加载可在下载完成前播放，并由浏览器处理缓冲、Range 与拖动进度。
+    audio.src = targetUrl
+    audio.load()
+    return
+  }
+
+  // 非扩展模式保留传输层，兼容需要自定义 headers / GM fetch 的旧入口。
+  if (!abortController)
+    abortController = new AbortController()
   const res = await tRequest(targetUrl, { headers, returnJson: false, signal: abortController.signal })
   if (!res[0])
     throw new Error(`Failed to fetch source URL: ${res[2]}`)
 
   const blob = await res[1].blob()
-  const objectUrl = URL.createObjectURL(blob)
+  if (objectUrl)
+    URL.revokeObjectURL(objectUrl)
+  objectUrl = URL.createObjectURL(blob)
   audio.src = objectUrl
   audio.load()
 }
@@ -224,11 +244,20 @@ export async function changeQuality(quality?: MusicQuality) {
  * 还不可见，会拿到上一首歌（或 null）。
  */
 async function playSource(music: MusicInfo | undefined, src: string | null, provider?: ProviderName) {
+  const revision = ++sourceRevision
   setPlaybackError(null)
   setCurrentSourceInfo(null)
   if (abortController) {
     abortController.abort()
     abortController = null
+  }
+  // 切歌或清空队列时立即中止旧媒体下载与播放。
+  audio.pause()
+  audio.removeAttribute('src')
+  audio.load()
+  if (objectUrl) {
+    URL.revokeObjectURL(objectUrl)
+    objectUrl = null
   }
   if (src) {
     audio.src = src
@@ -243,6 +272,8 @@ async function playSource(music: MusicInfo | undefined, src: string | null, prov
       try {
         setWaiting(true)
         const sourceInfo = await providerInstance.getSourceInfo(music)
+        if (revision !== sourceRevision)
+          return
         setCurrentSourceInfo(sourceInfo)
         // TODO: 记住上次使用的音质，优先选择上次使用的音质, 目前先默认选择第一个音质
         const defaultQuality = sourceInfo.qualities?.[0]
@@ -250,6 +281,8 @@ async function playSource(music: MusicInfo | undefined, src: string | null, prov
         await loadQuality(sourceInfo, defaultQuality)
       }
       catch (error) {
+        if (revision !== sourceRevision)
+          return
         console.error(`Error fetching source info from provider ${provider}:`, error)
         setPlaybackError(errorMessage(error))
         audio.pause()
@@ -259,7 +292,8 @@ async function playSource(music: MusicInfo | undefined, src: string | null, prov
         setWaiting(false)
       }
       finally {
-        abortController = null
+        if (revision === sourceRevision)
+          abortController = null
       }
       return
     }
@@ -290,7 +324,11 @@ export async function setPlaying(isPlaying: boolean) {
       await audio.play()
     }
     catch (err) {
+      // 换歌、切音质或暂停会中断尚未完成的 play()，这不是播放故障。
+      if (err instanceof DOMException && err.name === 'AbortError')
+        return
       console.error('Failed to play audio:', err)
+      setPlaybackError(errorMessage(err))
       setPlayingState(false)
       setSeekingState(false)
       setWaiting(false)
