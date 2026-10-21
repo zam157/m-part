@@ -11,6 +11,8 @@ export interface Pagination {
 
 export interface Provider {
   name: ProviderName
+  /** 首页推荐音乐；无需登录可用，返回值可直接加入播放队列。 */
+  getRecommendations?: () => Promise<MusicInfo[]>
   /** Retrieves the source information for a given music item */
   getSourceInfo?: (musicInfo: MusicInfo) => Promise<SourceInfo>
   /**

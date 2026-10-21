@@ -4,6 +4,8 @@
 
 音源支持 BiliBili 与网易云音乐；网易云支持歌曲、歌手、专辑搜索和官方音频播放，接入与调试说明见 [网易云音乐音源](./docs/netease.md)。
 
+首页通过统一的 Provider 推荐接口展示 BiliBili 音乐分区榜单和网易云推荐新歌，点击即可加入播放队列；接口与状态约定见 [首页推荐](./docs/recommendations.md)。
+
 ## 两种运行形态
 
 | | 扩展形态（推荐） | web 调试形态 |
@@ -106,6 +108,7 @@ m-part/
 | [docs/styling.md](./docs/styling.md) | 类名合并（`cn/lite` 的 `clsx`）、快捷方式与网格、Popover 定位 |
 | [docs/extension.md](./docs/extension.md) | 扩展形态：WXT 配置、传输层、MV3 坑、验证手法、412 调查结论 |
 | [docs/netease.md](./docs/netease.md) | 网易云音源：浏览器端 WEAPI、权限、接口、播放限制与验证 |
+| [docs/recommendations.md](./docs/recommendations.md) | Provider 推荐接口、首页状态与验证 |
 
 ## 已知限制
 

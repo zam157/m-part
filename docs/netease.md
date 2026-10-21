@@ -15,6 +15,7 @@
 | 能力 | API 路径（请求时将 `/api/` 改为 `/weapi/`） |
 | --- | --- |
 | 歌曲 / 专辑 / 歌手搜索 | `/api/cloudsearch/pc`，type 分别为 1 / 10 / 100 |
+| 首页推荐新歌 | `/api/personalized/newsong`，`type: recommend`、`limit: 20`、`areaId: 0` |
 | 播放地址 | `/api/song/enhance/player/url` |
 | 歌手信息 | `/api/v1/artist/<id>` |
 | 歌手单曲 | `/api/v1/artist/songs` |

@@ -352,6 +352,7 @@ interface AlbumExtra {
   artist?: string
   title?: string
 }
+
 // #endregion
 
 // #region constants
@@ -810,6 +811,14 @@ async function fetchSeriesArchives(id: string | number, page: number, mid: numbe
 
 const biliProvider = {
   name: 'bili',
+  async getRecommendations(): Promise<MusicInfo[]> {
+    const res = await biliRequestHelper<VideoSearchItem[]>(`${API_HOST}/x/web-interface/ranking/region`, {
+      searchParams: { rid: 3, day: 3 },
+    })
+    if (!res[0])
+      throw new Error(`BiliBili 推荐加载失败：${res[2]}`)
+    return formateSearchResult(res[1].data.slice(0, DEFAULT_PAGE_SIZE), 'video')
+  },
   async search(keyword, page) {
     const searchRes = await searchBase(keyword, page, 'video')
     const formattedResult = formateSearchResult(searchRes.result, 'video')

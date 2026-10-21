@@ -1,6 +1,7 @@
 import { useNavigate } from '@solidjs/router'
 import { For } from 'solid-js'
 import { clsx } from 'cn/lite'
+import Recommendations from '~/components/Recommendations/Recommendations'
 import { setKeyword, setSelectedType } from '~/composables/search'
 
 const moods = [
@@ -35,6 +36,8 @@ export default function IndexPage() {
             <div class="size-63 rounded-full absolute top-3 -right-1.25 [background-image:repeating-radial-gradient(circle_at_center,#222_0px,#222_2px,#303030_3px,#202020_4px)] shadow-[8px_12px_22px_#0002] grid place-items-center"><div class="size-20.5 rounded-full bg-[#8a9282] text-[#e4e6de] grid place-items-center"><span class="i-lucide:audio-lines text-8" /></div></div>
           </div>
         </section>
+        <Recommendations source="bili" title="BiliBili · 音乐精选" description="从音乐分区榜单，发现值得一听的声音。" />
+        <Recommendations source="netease" title="网易云 · 推荐新歌" description="听听新近发布的旋律，遇见下一首喜欢。" />
         <div class="flex items-center justify-between gap-4 mt-8.5 mb-4.5"><div><h2 class="text-[19px] font-semibold tracking-[-0.5px]">今天，想听点什么？</h2><p class="page-description">选一个方向，开始探索。</p></div><span class="text-xs text-muted-foreground max-[760px]:hidden">搜索灵感</span></div>
         <div class="grid grid-cols-3 gap-5 max-[760px]:grid-cols-1">
           <For each={moods}>{mood => (

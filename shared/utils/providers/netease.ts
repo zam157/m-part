@@ -55,6 +55,10 @@ interface SearchResponse extends NeteaseResponse {
   }
 }
 
+interface RecommendationsResponse extends NeteaseResponse {
+  result: { song: NeteaseSong }[]
+}
+
 interface ArtistResponse extends NeteaseResponse {
   artist: NeteaseArtist
 }
@@ -160,6 +164,14 @@ async function search(keyword: string, page: number, type: 1 | 10 | 100) {
 
 const NeteaseProvider: Provider = {
   name: 'netease',
+  async getRecommendations() {
+    const result = await request<RecommendationsResponse>('/api/personalized/newsong', {
+      type: 'recommend',
+      limit: PAGE_SIZE,
+      areaId: 0,
+    })
+    return result.result.map(item => mapSong(item.song))
+  },
   async search(keyword, page) {
     const result = await search(keyword, page, 1)
     return [(result.songs ?? []).map(mapSong), pagination(page, result.songCount ?? 0)]

@@ -16,6 +16,20 @@ describe('网易云 Provider', () => {
   })
   afterEach(() => vi.restoreAllMocks())
 
+  it('推荐新歌使用公开 WEAPI 接口，并展开嵌套的 song 字段', async () => {
+    requestMock.mockResolvedValue([true, { code: 200, result: [{ id: 99, name: '推荐卡片', song }] }])
+    expect(await provider.getRecommendations!()).toEqual([expect.objectContaining({ provider: 'netease', id: '1', title: '歌曲', duration: 180.5, artist: '歌手', coverUrl: 'https://p1.music.126.net/cover.jpg' })])
+    expect(encryptMock).toHaveBeenCalledWith({ type: 'recommend', limit: 20, areaId: 0, csrf_token: '' })
+    expect(requestMock).toHaveBeenCalledWith('https://music.163.com/weapi/personalized/newsong', expect.objectContaining({ method: 'POST', body: expect.any(URLSearchParams) }))
+  })
+
+  it('推荐为空和业务失败分别处理', async () => {
+    requestMock.mockResolvedValueOnce([true, { code: 200, result: [] }])
+    expect(await provider.getRecommendations!()).toEqual([])
+    requestMock.mockResolvedValueOnce([true, { code: 301, message: '暂不可用' }])
+    await expect(provider.getRecommendations!()).rejects.toThrow('暂不可用')
+  })
+
   it('歌曲搜索转换毫秒时长和封面，并按页计算 offset', async () => {
     requestMock.mockResolvedValue([true, { code: 200, result: { songs: [song], songCount: 41 } }])
     const [songs, page] = await provider.search!('关键词', 2)
