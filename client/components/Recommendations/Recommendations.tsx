@@ -1,5 +1,6 @@
 import type { ProviderName } from '#shared/types/provider'
-import { createEffect, For, Match, Switch } from 'solid-js'
+import { clsx } from 'cn/lite'
+import { createEffect, For, Match, Show, Switch } from 'solid-js'
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
 import MusicContextMenu from '~/components/MusicContextMenu/MusicContextMenu'
 import { addToPlayQueue } from '~/composables/player'
@@ -16,18 +17,21 @@ export default function Recommendations(props: RecommendationsProps) {
   createEffect(() => props.source, source => { void loadRecommendations(source) })
 
   return (
-    <section class="mt-8.5" aria-label={props.title}>
+    <section class="mt-8.5" aria-label={props.title} aria-busy={state().loading ? 'true' : 'false'}>
       <div class="flex items-center justify-between gap-4 mb-4.5">
         <div class="min-w-0"><h2 class="text-[19px] font-semibold tracking-[-0.5px]">{props.title}</h2><p class="page-description">{props.description}</p></div>
         <button class="ghost-btn px-3" disabled={state().loading} onClick={() => loadRecommendations(props.source, true)} aria-label={`刷新${props.title}`}>
-          <span class="i-lucide:refresh-cw text-4" />刷新
+          <span class={clsx('i-lucide:refresh-cw text-4', state().loading && 'animate-spin motion-reduce:animate-none')} />刷新
         </button>
       </div>
+      <Show when={state().loaded && state().error}>
+        <p role="alert" class="mb-4 text-sm text-destructive">刷新失败：{state().error}，已保留上次结果，请重试。</p>
+      </Show>
       <Switch>
-        <Match when={state().error}>
+        <Match when={state().error && !state().loaded}>
           <ErrorMessage message={state().error ?? ''} onRetry={() => loadRecommendations(props.source, true)} />
         </Match>
-        <Match when={state().loading || !state().loaded}>
+        <Match when={!state().loaded}>
           <div class="grid grid-cols-4 gap-4 max-[1100px]:grid-cols-3 max-[760px]:grid-cols-2" role="status" aria-label={`正在加载${props.title}`}>
             <For each={[0, 1, 2, 3]}>{() => <div class="skeleton h-42" />}</For>
           </div>

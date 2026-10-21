@@ -1,22 +1,8 @@
 import { useNavigate } from '@solidjs/router'
-import { For } from 'solid-js'
-import { clsx } from 'cn/lite'
 import Recommendations from '~/components/Recommendations/Recommendations'
-import { setKeyword, setSelectedType } from '~/composables/search'
-
-const moods = [
-  { title: '专注时刻', keyword: 'Lo-fi', description: '让节奏轻一点，让思绪走远一点。', icon: 'i-lucide:headphones', style: 'bg-[#e4e8e1] text-[#52614d]', tag: 'LO-FI / BEATS' },
-  { title: '现场之间', keyword: '音乐现场', description: '把耳机戴好，留一个位置给现场。', icon: 'i-lucide:mic-vocal', style: 'bg-[#e8e1db] text-[#7e6454]', tag: 'LIVE / SESSIONS' },
-  { title: '慢下来', keyword: '爵士音乐', description: '不赶时间，听完这一首再说。', icon: 'i-lucide:coffee', style: 'bg-[#dfe5e9] text-[#526977]', tag: 'JAZZ / CHILL' },
-]
 
 export default function IndexPage() {
   const navigate = useNavigate()
-  function explore(keyword: string) {
-    setKeyword(keyword)
-    setSelectedType('music')
-    navigate('/search')
-  }
   return (
     <div class="flex-1 min-w-0 overflow-auto">
       <header class="h-16 px-9 max-[760px]:px-4.5 border-b border-border flex items-center justify-between"><span class="text-sm text-muted-foreground">你的音乐空间</span></header>
@@ -38,16 +24,6 @@ export default function IndexPage() {
         </section>
         <Recommendations source="bili" title="BiliBili · 音乐精选" description="从音乐分区榜单，发现值得一听的声音。" />
         <Recommendations source="netease" title="网易云 · 推荐新歌" description="听听新近发布的旋律，遇见下一首喜欢。" />
-        <div class="flex items-center justify-between gap-4 mt-8.5 mb-4.5"><div><h2 class="text-[19px] font-semibold tracking-[-0.5px]">今天，想听点什么？</h2><p class="page-description">选一个方向，开始探索。</p></div><span class="text-xs text-muted-foreground max-[760px]:hidden">搜索灵感</span></div>
-        <div class="grid grid-cols-3 gap-5 max-[760px]:grid-cols-1">
-          <For each={moods}>{mood => (
-            <button class="overflow-hidden text-left transition-[transform,box-shadow] duration-200 bg-card hover:-translate-y-0.75 hover:shadow-[0_6px_18px_#0000000a] border border-border rounded-xl" onClick={() => explore(mood.keyword)}>
-              <div class={clsx('h-33 max-[760px]:h-27.5 relative overflow-hidden', mood.style)}><span class="absolute top-4.5 left-5 text-[9px] tracking-[2px]">{mood.tag}</span><span class={clsx(mood.icon, 'absolute text-[74px] right-9.5 bottom-3.5 opacity-50 -rotate-12')} /><span class="absolute left-5 bottom-4.5 grid place-items-center border border-current rounded-full size-6.75 opacity-65"><span class="i-lucide:arrow-up-right text-4" /></span></div>
-              <div class="py-4.5 px-5"><h3 class="text-[15px] font-semibold">{mood.title}</h3><p class="mt-1.5 text-[11px] leading-[1.7] text-muted-foreground">{mood.description}</p></div>
-            </button>
-          )}</For>
-        </div>
-        <div class="flex items-center justify-center gap-2.5 text-[11px] mt-7 text-muted-foreground"><span class="i-lucide:audio-lines text-4" /><span>从一首歌开始，让好声音慢慢排成队。</span></div>
       </div>
     </div>
   )
