@@ -5,6 +5,10 @@ import './styles/main.css'
 import 'uno.css'
 import App from './App'
 import { Router } from './router'
+import { startPlayerPersistence } from './composables/player-persistence'
+
+const playerPersistence = startPlayerPersistence()
+import.meta.hot?.dispose(() => playerPersistence.dispose())
 
 render(
   () => (

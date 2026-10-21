@@ -5,6 +5,7 @@ import { tRequest } from '#shared/utils/fetch'
 import { errorMessage } from '#shared/utils'
 import { providers } from '#shared/utils/providers'
 import { createMemo, createRoot, createSignal } from 'solid-js'
+import type { PlayerCache } from '~/utils/player-storage'
 
 // #region types
 export type PlayMode = 'order' | 'loop' | 'random' | 'single-loop'
@@ -13,6 +14,9 @@ export type PlayMode = 'order' | 'loop' | 'random' | 'single-loop'
 let abortController: AbortController | null = null
 let sourceRevision = 0
 let objectUrl: string | null = null
+let playIntent = 0
+let restoredPlayback: { provider: ProviderName, id: string, time: number } | null = null
+let restoredSeek: { revision: number, time: number } | null = null
 
 // #region states
 /** 全局共享的 audio 元素 */
@@ -96,6 +100,8 @@ audio.addEventListener('playing', () => {
 })
 audio.addEventListener('pause', () => {
   setPlayingState(false)
+  if (audio.getAttribute('src') && !restoredPlayback && !restoredSeek)
+    setCurrentTimeState(audio.currentTime)
 })
 audio.addEventListener('durationchange', () => {
   setDuration(audio.duration)
@@ -109,8 +115,11 @@ audio.addEventListener('loadstart', () => {
 audio.addEventListener('loadeddata', () => {
   setWaiting(false)
 })
+audio.addEventListener('loadedmetadata', applyRestoredSeek)
 audio.addEventListener('timeupdate', () => {
-  setCurrentTimeState(audio.currentTime)
+  // 恢复时加载源会先发出旧位置 0 的事件，元数据就绪前保留缓存进度。
+  if (!restoredPlayback && !restoredSeek)
+    setCurrentTimeState(audio.currentTime)
 })
 audio.addEventListener('seeking', () => {
   setSeekingState(true)
@@ -166,6 +175,9 @@ function createRandomOrder(length: number): number[] | null {
 }
 
 export function resetPlayer() {
+  playIntent++
+  restoredPlayback = null
+  restoredSeek = null
   setSrc(null)
   setCurrentIndexState(null)
   setCurrentTimeState(0)
@@ -245,6 +257,7 @@ export async function changeQuality(quality?: MusicQuality) {
  */
 async function playSource(music: MusicInfo | undefined, src: string | null, provider?: ProviderName) {
   const revision = ++sourceRevision
+  restoredSeek = null
   setPlaybackError(null)
   setCurrentSourceInfo(null)
   if (abortController) {
@@ -262,6 +275,7 @@ async function playSource(music: MusicInfo | undefined, src: string | null, prov
   if (src) {
     audio.src = src
     audio.load()
+    prepareRestoredSeek(music, revision)
     return
   }
   if (provider) {
@@ -279,6 +293,8 @@ async function playSource(music: MusicInfo | undefined, src: string | null, prov
         const defaultQuality = sourceInfo.qualities?.[0]
         // 显式传 sourceInfo，不在这里读 signal（写入尚未提交，读到的还是 null）
         await loadQuality(sourceInfo, defaultQuality)
+        if (revision === sourceRevision)
+          prepareRestoredSeek(music, revision)
       }
       catch (error) {
         if (revision !== sourceRevision)
@@ -314,7 +330,15 @@ export async function setSrc(src: string | null, provider?: ProviderName) {
  * 设置播放状态
  */
 export async function setPlaying(isPlaying: boolean) {
+  const intent = ++playIntent
   if (isPlaying) {
+    if (restoredPlayback && !audio.getAttribute('src')) {
+      const music = currentSong() ?? undefined
+      const revision = sourceRevision + 1
+      await playSource(music, music?.src || null, music?.provider)
+      if (intent !== playIntent || revision !== sourceRevision)
+        return
+    }
     // 音源请求失败后，调用方仍可能尝试自动播放；不能重播上一首残留的媒体。
     if (!audio.getAttribute('src')) {
       setPlayingState(false)
@@ -347,6 +371,9 @@ export async function setPlaying(isPlaying: boolean) {
  * flush 才提交，写入后立刻读取会拿到旧列表。
  */
 async function startPlaying(music: MusicInfo | undefined, index: number) {
+  playIntent++
+  restoredPlayback = null
+  restoredSeek = null
   setCurrentIndexState(index)
   setCurrentTimeState(0)
   setDuration(0)
@@ -421,6 +448,14 @@ export async function prevNext(type: 0 | 1, autoPlay = true) {
  */
 export function setCurrentTime(time: number) {
   setCurrentTimeState(time)
+  if (restoredPlayback) {
+    restoredPlayback.time = time
+    return
+  }
+  if (restoredSeek && audio.readyState < 1) {
+    restoredSeek.time = time
+    return
+  }
   audio.currentTime = time
 }
 
@@ -429,6 +464,51 @@ export function setCurrentTime(time: number) {
  */
 export function setVolume(vol: number) {
   audio.volume = vol
+  setVolumeState(vol)
+}
+
+/** 启动时恢复资料和进度，保持暂停；首次点击播放才获取新的音频地址。 */
+export function restorePlayerSession(cache: PlayerCache) {
+  if (cache.volume !== undefined)
+    setVolume(cache.volume)
+  if (!cache.queue)
+    return
+  resetPlayer()
+  const { items, playMode: mode, randomOrder } = cache.queue
+  const saved = cache.position
+  const found = saved?.song ? items.findIndex(song => song.provider === saved.song!.provider && song.id === saved.song!.id) : -1
+  const index = found >= 0 ? found : items.length ? 0 : null
+  const music = index === null ? undefined : items[index]
+  const time = found >= 0 ? saved?.time ?? 0 : 0
+  setPlayQueueState(items)
+  setPlayModeState(mode)
+  setRandomPlayQueueState(mode === 'random' ? randomOrder ?? createRandomOrder(items.length) : null)
+  setCurrentIndexState(index)
+  setCurrentTimeState(time)
+  setDuration(music?.duration ?? 0)
+  if (music)
+    restoredPlayback = { provider: music.provider, id: music.id, time }
+}
+
+function prepareRestoredSeek(music: MusicInfo | undefined, revision: number) {
+  const saved = restoredPlayback
+  if (!saved || !music || saved.provider !== music.provider || saved.id !== music.id)
+    return
+  restoredPlayback = null
+  restoredSeek = { revision, time: saved.time }
+  setCurrentTimeState(saved.time)
+  if (audio.readyState >= 1)
+    applyRestoredSeek()
+}
+
+function applyRestoredSeek() {
+  if (!restoredSeek || restoredSeek.revision !== sourceRevision)
+    return
+  const saved = restoredSeek
+  restoredSeek = null
+  const time = Number.isFinite(audio.duration) ? Math.min(saved.time, Math.max(0, audio.duration - 0.05)) : saved.time
+  audio.currentTime = time
+  setCurrentTimeState(time)
 }
 
 /**
