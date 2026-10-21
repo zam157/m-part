@@ -65,11 +65,21 @@
 - 渲染顺序统一为 **错误 → loading → 数据 → 空状态**：不要让请求失败冒充「暂无数据」或永久骨架
 - 已接入：歌手页（信息 / 单曲 / 专辑）、专辑页（曲目）、搜索页（`client/composables/search.ts` 的 `searchError`）
 
+## 浏览器调试入口
+
+完整步骤和排障见 [Chrome DevTools MCP 调试流程](./docs/extension.md#chrome-devtools-mcp-调试流程)。
+
+- 用 `pnpm dev:ext` 启动 WXT 扩展开发服务，端口以启动日志为准。
+- 等 WXT 构建完成，用 MCP 的 `install_extension` 加载**绝对路径** `.output/chrome-mv3-dev`；生产构建目录才是 `.output/chrome-mv3`。端口以启动日志为准。
+- 从工具返回值获取 extension ID、page ID、Service Worker ID 和元素 uid，不要复制文档或上一会话里的 ID。打开 `chrome-extension://<extension-id>/app.html#/` 调试实际扩展页面。
+- 除了初次加载，还要操作搜索、播放/暂停、侧栏、Tooltip、主题和跨断点缩放，再查控制台。移动设备模拟可能刷新页面并清空内存状态，操作后重新取快照。
+- 音频由模块内 `new Audio()` 创建，不在 DOM 中；`querySelector('audio')` 为空不代表播放器没有运行。用文档里的模块状态检查确认播放进度。
+
 ## 完成前自检
 
 ```bash
-pn dev:ext              # 启动扩展开发模式（加载 `.output/chrome-mv3`）
-pn typecheck:frontend   # 完整检查用 pnpm typecheck（tsc --build）
-pn test client          # 46 个用例；断言信号前记得 flush()
-pn lint                 # 代码风格检查 (TypeScript 7.x 与 typescript-eslint 不兼容, 暂时不要用)
+pnpm dev:ext             # 启动扩展开发模式（加载 `.output/chrome-mv3-dev`）
+pnpm typecheck:frontend  # 完整检查用 pnpm typecheck（tsc --build）
+pnpm test client         # 客户端用例；断言信号前记得 flush()
+# pnpm lint              # TypeScript 7.x 与 typescript-eslint 不兼容，暂时不要用
 ```

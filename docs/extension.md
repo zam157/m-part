@@ -52,19 +52,129 @@ in the response must not be the wildcard '*' when the request's credentials mode
 
 **无头（不必拉起浏览器）**：临时在 `web-ext.config.ts` 加 `disabled: true`，跑 `pnpm dev:ext`，然后请求
 
-- `http://localhost:3001/app.html` —— 看 script src 是否被改写成 dev server URL
-- `http://localhost:3001/client/main.tsx` —— 看是否已编译成 `_$createComponent`
+- `http://localhost:<启动日志中的端口>/app.html` —— 看 script src 是否被改写成 dev server URL
+- `http://localhost:<启动日志中的端口>/client/main.tsx` —— 看是否已编译成 `_$createComponent`
 
-验完记得去掉 `disabled`。
+验完记得去掉 `disabled`。这只能检查开发资源，涉及 host permissions、DNR 和播放的行为需要在实际扩展页验证。
 
-**Chrome DevTools MCP（已验证可行）**：
+## Chrome DevTools MCP 调试流程
 
-1. `pnpm dev:ext` 起 dev server（WXT 不一定自己拉起浏览器，无所谓）
-2. MCP 的 `install_extension` 指向 `.output/chrome-mv3-dev` → 所得 ID 恒为 `elajjgpmoebebhackoafabbkjafecjij`（未打包扩展的 ID = 绝对路径哈希，路径不变 ID 不变）
-3. 打开 `chrome-extension://<id>/app.html#/<路由>`；扩展形态是**哈希路由**，切换页面用 `location.hash`
+### 1. 配置 MCP
 
-- ⚠️ DevTools MCP 的 Chrome 与 VS Code 内置浏览器是**两个实例**，页面 ID 不能混用
-- 合成事件进不了 Solid 的事件委托：要触发搜索请用真实键盘输入，或让 MCP 点击元素本身
+扩展调试需要启用 MCP 默认关闭的扩展工具。在项目根目录执行以下命令；已配置时先保留其他仍需要的参数：
+
+```bash
+codex mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest \
+  --categoryExtensions \
+  --experimentalIncludeAllPages \
+  --experimentalDevtools \
+  --headless=false \
+  --workspace="$PWD"
+```
+
+| 参数 | 用途 |
+| --- | --- |
+| `--categoryExtensions` | 提供安装、列举、重载、触发动作、卸载扩展的工具 |
+| `--experimentalIncludeAllPages` | 将后台页等页面类型纳入页面列表 |
+| `--experimentalDevtools` | 允许操作 DevTools 页面；可能自动打开 DevTools，影响当前选中的标签 |
+| `--headless=false` | 使用有界面 Chrome，方便人工与 agent 交替查看 |
+| `--workspace=<项目绝对路径>` | 允许 MCP 读取项目内的扩展产物和保存调试文件 |
+
+该命令更新用户级 MCP 配置，`$PWD` 会在执行时展开为本机路径；换 checkout 时要检查目录是否仍适用。未协商 MCP roots 且未指定 workspace 时，文件访问默认限于系统临时目录，会影响从项目目录安装扩展。参数以本机 `--help` 和[官方配置说明](https://github.com/ChromeDevTools/chrome-devtools-mcp/blob/main/docs/configuration.md)为准。修改配置后重启 Codex，确认本会话出现 `install_extension` 等工具。
+
+### 2. 启动 WXT 并加载开发扩展
+
+```bash
+pnpm dev:ext
+```
+
+等终端显示 `Started dev server` 和 `Built extension` 后再安装，端口以当前启动日志为准。服务需要在调试期间持续运行，扩展开发页面会从这里加载模块和 HMR 资源。
+
+WXT 若提示 `Load ".output/chrome-mv3-dev" as an unpacked extension manually`，服务仍然可用，直接交给 MCP 安装即可。目录区别：
+
+| 命令 | 加载目录 |
+| --- | --- |
+| `pnpm dev:ext` | `.output/chrome-mv3-dev`，依赖正在运行的开发服务 |
+| `pnpm build:ext` | `.output/chrome-mv3`，生产构建 |
+
+按以下顺序调用 MCP：
+
+1. `list_pages` 检查连接；`list_extensions` 检查是否已经安装 m-part。
+2. 尚未安装时，用 `install_extension({ path: "<项目绝对路径>/.output/chrome-mv3-dev" })`，记录返回的 extension ID；已安装时按需要 `reload_extension({ id: "<extension-id>" })`。
+3. `new_page({ url: "chrome-extension://<extension-id>/app.html#/" })` 打开应用，随后用 `list_pages` 获取实际扩展页面的 page ID 与后台 Service Worker ID。
+4. `take_snapshot({ pageId })` 获取元素 uid，再用 `fill`、`click`、`hover`、`press_key` 操作。
+
+**不要硬编码 ID**：未打包扩展的 ID 通常随绝对路径而定，换机器或 worktree 会变化，以安装返回值为准。page ID、`sw-*` 和元素 uid 也都只对当前会话/页面状态有效。
+
+`http://localhost:<port>/app.html` 是开发资源入口；验证扩展权限、登录凭据和 DNR 时应打开 `chrome-extension://.../app.html`。扩展使用**哈希路由**，搜索页是 `app.html#/search`。
+
+### 3. 最小冒烟验证
+
+| 检查 | 操作与证据 |
+| --- | --- |
+| 初始渲染 | 首页、搜索页能显示；`take_snapshot` 和截图均能获取内容 |
+| 搜索 | 用 `fill` 输入关键词（例如“周杰伦”），点击搜索或真实按 Enter；等待结果或明确错误态，不能只看到 loading 就结束 |
+| 网络 | `list_network_requests` 过滤 `fetch` / `xhr`，检查 nav、search/type、view、playurl；必要时 `get_network_request` 查看响应，HTTP 200 本身不代表业务成功 |
+| 播放 | 点击一条结果加入队列，等待音源加载；确认播放进度持续增加，能暂停，音频无 error。CDN 请求可能是 fetch 后转 blob 播放，排查时不要只过滤 media |
+| 交互 | 侧栏展开/收起、Tooltip 出现/消失、主题切换，再跨断点缩放；操作后查控制台，不能只查初次加载 |
+| 窄屏 | `emulate({ pageId, viewport: "390x844,mobile,touch" })`；比较 `innerWidth` 与 `document.documentElement.scrollWidth`，再结合截图检查布局 |
+| 后台 | `evaluate_script` 指定 Service Worker ID，检查 DNR 规则已启用，见下方示例 |
+
+控制台检查用 `list_console_messages({ pageId, types: ["error", "warn"], includeStackTraces: true })`。搜索使用 MCP 的真实输入和点击，避免手动修改 input.value 加合成事件未触发 Solid 的事件委托。主题切换顺序是 system → light → dark → system，一次点击不一定切到深色；结合根元素的 `dark` 类和 `mpart-color-mode` 存储值判断。
+
+在 `evaluate_script` 中传入以下 `function`，并设置 `serviceWorkerId`（不传 pageId），可以确认后台规则：
+
+```js
+async () => ({
+  name: chrome.runtime.getManifest().name,
+  enabledRulesets: await chrome.declarativeNetRequest.getEnabledRulesets(),
+})
+```
+
+预期返回 `name: "m-part"`、`enabledRulesets: ["bilibili"]`。这证明规则集启用；具体请求是否匹配仍要结合网络请求排查。
+
+### 4. 检查真正的播放器状态
+
+`client/composables/player.ts` 导出模块级 `audio = new Audio()`，它没有挂进 DOM。`document.querySelectorAll('audio, video')` 为空是正常现象。需要深入定位时，在扩展页的 `evaluate_script` 中运行：
+
+```js
+async () => {
+  const entry = performance.getEntriesByType('resource').find(e =>
+    new URL(e.name).pathname.endsWith('/client/composables/player.ts'),
+  )
+  if (!entry)
+    return { playerModuleFound: false }
+
+  // 复用页面已加载的完整模块 URL，不拼一个不同 URL 创建新的状态单例。
+  const player = await import(entry.name)
+  return {
+    queueLength: player.playQueue().length,
+    playing: player.playing(),
+    paused: player.audio.paused,
+    currentTime: player.audio.currentTime,
+    duration: player.audio.duration,
+    readyState: player.audio.readyState,
+    error: player.audio.error && {
+      code: player.audio.error.code,
+      message: player.audio.error.message,
+    },
+  }
+}
+```
+
+这是开发模式的辅助检查。若经过 HMR 后资源记录中有多个该模块 URL，先刷新页面并重新操作再检查，避免读到旧单例。连续检查两次 `currentTime`，结合 `paused: false`、`readyState: 4` 和 `error: null` 判断实际播放；点击后立即读到 `readyState: 0` 可能只是音源还没加载。
+
+### 5. 工具与会话常见问题
+
+- **安装时报 `Target closed`**：调用 `list_pages` 检查浏览器连接，再重试安装。若反复出现，查看浏览器状态和日志，不要无限重试。
+- **扩展动作报 `Action can only be triggered on a tab target`**：当前可能选中了 DevTools；先 `select_page` 选普通网页标签再 `trigger_extension_action`。本项目 action 没有 popup，预期是新建应用标签；直接 `new_page` 打开 app.html 也可。
+- **`Element with uid ... no longer exists`**：刷新、重连或移动设备模拟后重新 `list_pages` / `take_snapshot`。切换 mobile/touch 模拟可能触发页面刷新，清空搜索和队列等内存状态，需重新输入；不能把这当作普通路由切换丢状态。
+- **窗口宽度与页面宽度不一致**：DevTools 停靠和设备像素比会影响截图尺寸；`resize_page` 后用 `innerWidth` 确认实际视口。跨断点验证可用 `emulate` 指定视口，截图像素宽度不能直接当作 CSS 宽度。
+- **浏览器实例不同**：WXT 自己启动的 Chrome、MCP 的 Chrome、日常 Chrome 与内置浏览器可能是不同实例；page ID、扩展安装和登录态不能混用。需要登录时在实际调试的实例中登录。
+- **截图与收尾**：可保存到被忽略的 `.output/devtools-debug.png`；结束时暂停测试音频，恢复主题/模拟设置或说明保留状态。用户要继续调试时保留服务和扩展标签；说明验证范围。
+- **自动生成文件变化**：启动服务可能重排 `client/file-routes.d.ts`。用 `git diff` 判断；仅为调试产生的排序变化不应混入代码提交，处理前确认没有用户改动。
+
+报告调试结果时说明实际验证范围。搜索/播放成功不能代替歌手/专辑详情、音质切换、登录态或异常重试的单独验证；历史验证记录也不代表当前会话已重测。
 
 ## 已完成的验证（2026-09）
 
