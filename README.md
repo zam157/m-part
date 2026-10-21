@@ -116,6 +116,7 @@ m-part/
 | [docs/playlists.md](./docs/playlists.md) | 登录态、收藏歌单与曲目、手动验证步骤 |
 | [docs/context-menu.md](./docs/context-menu.md) | 通用右键菜单、歌曲入口与添加到下一首的队列规则 |
 | [docs/player-cache.md](./docs/player-cache.md) | IndexedDB 播放器缓存、读写限频与恢复行为 |
+| [docs/expanded-player.md](./docs/expanded-player.md) | 展开播放器、CSS 动画、共享控制及模态浮层 |
 
 ## 已知限制
 

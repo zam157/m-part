@@ -16,6 +16,8 @@ export interface PopoverTriggerProps {
 }
 
 export interface PopoverProps {
+  /** 模态对话框内的浮层必须挂在该对话框内，才能参与焦点和指针交互。 */
+  portalMount?: HTMLElement
   /** Custom trigger without introducing an extra element. */
   renderTrigger?: (props: PopoverTriggerProps) => JSX.Element
   /** Manual triggers use the exposed API instead of native click toggling. */
@@ -80,7 +82,7 @@ export default function Popover(props: PopoverProps) {
         })}
       </Show>
 
-      <Portal>
+      <Portal mount={props.portalMount}>
         <Dynamic
           component={props.contentTag ?? 'div'}
           {...(props.contentAttrs ?? {})}

@@ -16,6 +16,7 @@ export interface TooltipTriggerProps extends PopoverTriggerProps {
 }
 
 export interface TooltipProps {
+  portalMount?: HTMLElement
   content: JSX.Element
   disabled?: boolean
   placement?: 'top' | 'right' | 'bottom' | 'left'
@@ -55,6 +56,7 @@ export default function Tooltip(props: TooltipProps) {
 
   return (
     <Popover
+      portalMount={props.portalMount}
       ref={api => (popover = api)}
       contentId={id}
       popover="manual"

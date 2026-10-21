@@ -1,7 +1,7 @@
 import { clsx } from 'cn/lite'
 
 /** 桌面播放栏使用原生横向滑块，保留键盘及触摸操作。 */
-export default function VolumeSlider(props: { value: number, onValueChange: (value: number) => void }) {
+export default function VolumeSlider(props: { value: number, onValueChange: (value: number) => void, expanded?: boolean }) {
   let previousVolume = 1
   function toggleMuted() {
     if (props.value > 0) {
@@ -13,7 +13,7 @@ export default function VolumeSlider(props: { value: number, onValueChange: (val
     }
   }
   return (
-    <div class="flex items-center gap-2">
+    <div class={clsx('flex items-center gap-2', props.expanded && 'w-full')}>
       <button class="ghost-btn size-7 text-muted-foreground" aria-label={props.value === 0 ? '取消静音' : '静音'} onClick={toggleMuted}>
         <span class={clsx('text-4', props.value === 0 ? 'i-lucide:volume-x' : props.value < 0.5 ? 'i-lucide:volume-1' : 'i-lucide:volume-2')} />
       </button>
@@ -25,7 +25,7 @@ export default function VolumeSlider(props: { value: number, onValueChange: (val
         step={0.01}
         value={props.value}
         style={{ '--volume-percent': `${props.value * 100}%` }}
-        class="player-volume-slider w-22 h-5 cursor-pointer bg-transparent appearance-none outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full"
+        class={clsx('player-volume-slider h-5 cursor-pointer bg-transparent appearance-none outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full', props.expanded ? 'flex-1 min-w-0' : 'w-22')}
         onInput={event => props.onValueChange(event.currentTarget.valueAsNumber)}
       />
     </div>

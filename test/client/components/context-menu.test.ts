@@ -144,4 +144,14 @@ describe('通用右键菜单', () => {
     expect(contextMenuPosition(790, 590, 192, 80, 800, 600)).toEqual({ left: 600, top: 512 })
     expect(contextMenuPosition(-10, -10, 192, 80, 800, 600)).toEqual({ left: 8, top: 8 })
   })
+
+  it('来源位于模态对话框内时，菜单也挂在对话框内，关闭后返回默认容器', () => {
+    const dialog = document.createElement('dialog')
+    container.append(dialog)
+    dialog.append(trigger)
+    open()
+    expect(document.querySelector('[role="menu"]')?.closest('dialog')).toBe(dialog)
+    key('Escape')
+    expect(document.querySelector('[role="menu"]')?.closest('dialog')).toBeNull()
+  })
 })

@@ -12,7 +12,15 @@
     width: var(--queue-width);
   }
 
+  .play-queue-floating {
+    opacity: 0;
+    transform: translateX(24px);
+    transition: opacity 180ms ease, transform 220ms ease, display 220ms allow-discrete, overlay 220ms allow-discrete;
+  }
+  .play-queue-floating:popover-open { opacity: 1; transform: none; }
+
   @starting-style {
+    .play-queue-floating:popover-open { opacity: 0; transform: translateX(24px); }
     .play-queue-panel[data-open='true'] {
       width: 0;
     }

@@ -67,7 +67,7 @@ export default function ContextMenuHost() {
   }
 
   return (
-    <Portal>
+    <Portal mount={activeContextMenu()?.origin.closest('dialog') ?? undefined}>
       <div
         id={CONTEXT_MENU_ID}
         ref={menuRef}
