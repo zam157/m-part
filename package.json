@@ -5,7 +5,6 @@
   "scripts": {
     "build": "vite build",
     "build:ext": "wxt build",
-    "dev": "vite --port 3333",
     "dev:ext": "wxt",
     "lint": "eslint .",
     "preview": "vite preview",

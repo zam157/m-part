@@ -54,6 +54,10 @@
 - **播放列表 / 播放队列 = `playQueue` 系**：`playQueue` / `setPlayQueue` / `addToPlayQueue` / `removeFromPlayQueue` / `clearPlayQueue` / `randomPlayQueue` / `showPlayQueue` / `setShowPlayQueue`，组件在 `client/components/PlayQueue/`
 - 例外：`i-solar-playlist-bold` 是 Iconify 图标 id，不是「歌单」语义，勿改
 
+## 样式约定
+
+- 尽量用 UnoCSS 的原子类，避免写自定义 CSS；必要时在组件目录下建 `.css` 文件
+
 ## 错误态约定
 
 - 组件：`client/components/ErrorMessage/ErrorMessage.tsx`（props `message` / `onRetry?` / `class?`，根节点沿用 `empty` 快捷方式）
