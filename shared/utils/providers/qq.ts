@@ -122,9 +122,12 @@ function song(item: QQSong): MusicInfo {
 }
 const songs = (items: QQSong[]) => items.map(song).filter(item => item.id)
 function playlist(item: QQPlaylist, owned?: boolean): PlaylistInfo {
+  // 「我喜欢」可能只返回 ?n=1，无有效图片地址时沿用界面的空封面占位。
+  const coverUrl = [item.imgurl, item.logo, item.diss_cover, item.cover]
+    .map(url => toHttpsUrl(url?.trim())).find(url => /^https:\/\/[^/?#\s]+/i.test(url)) ?? ''
   return {
     provider: 'qq', id: String(item.disstid || item.tid || item.dissid || ''), title: item.dissname || item.diss_name || item.title || '歌单',
-    coverUrl: toHttpsUrl(item.imgurl || item.logo || item.diss_cover || item.cover), totalTracks: item.song_count ?? item.songnum ?? item.song_cnt ?? 0,
+    coverUrl, totalTracks: item.song_count ?? item.songnum ?? item.song_cnt ?? 0,
     creator: item.creator?.name || item.nick, description: item.introduction || item.desc, ...(owned === undefined ? {} : { owned }),
   }
 }

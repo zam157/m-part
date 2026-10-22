@@ -90,6 +90,18 @@ describe('QQ 音乐 Provider', () => {
     expect(await provider.getPlaylists!('123', 1)).toEqual({ items: [expect.objectContaining({ id: '42', title: '我创建的', owned: true }), expect.objectContaining({ id: '43', owned: false })], hasMore: true })
     expect(request.mock.calls[1]![1].searchParams).toMatchObject({ ct: 20, cid: 205360956, reqtype: 3, sin: 0, ein: 19 })
   })
+  it('我喜欢的封面只有查询串时使用空占位，其他歌单保留有效封面', async () => {
+    session.mockResolvedValue({ uin: '123', key: 'key', token: 77 })
+    request.mockResolvedValueOnce(json({ data: { disslist: [
+      { tid: 1, diss_name: '我喜欢', diss_cover: '?n=1', song_cnt: 21 },
+      { tid: 2, diss_name: '有封面', diss_cover: '//y.gtimg.cn/cover.jpg?n=1' },
+      { tid: 3, diss_name: '备用封面', imgurl: '?n=1', logo: 'http://y.gtimg.cn/fallback.jpg' },
+      { tid: 4, diss_name: '无封面' },
+    ], totoal: 4 } })).mockResolvedValueOnce(json({ data: { cdlist: [], totaldiss: 0, has_more: 0 } }))
+    const result = await provider.getPlaylists!('123', 1)
+    expect(result.items.map(item => item.coverUrl)).toEqual(['', 'https://y.gtimg.cn/cover.jpg?n=1', 'https://y.gtimg.cn/fallback.jpg', ''])
+    expect(result.items[0]).toMatchObject({ title: '我喜欢', totalTracks: 21, owned: true })
+  })
   it('使用收藏接口真实的 totaldiss / has_more 和创建接口的 totoal 计算分页', async () => {
     session.mockResolvedValue({ uin: '123', key: 'key', token: 77 })
     const created = json({ data: { disslist: [{ tid: 0, dirid: 205 }], totoal: 21 } })
