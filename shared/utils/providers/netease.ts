@@ -323,6 +323,7 @@ const NeteaseProvider: Provider = {
     const url = toHttpsUrl(source.url)
     return {
       url,
+      availability: source.freeTrialInfo ? 'preview' : 'full',
       qualities: [{ name: source.freeTrialInfo ? '试听' : source.br ? `${Math.round(source.br / 1000)}K` : '标准', url }],
     }
   },

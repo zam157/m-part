@@ -2,64 +2,10 @@ import type { ClientMessage, MemberStatus, RoomSnapshot, ServerMessage } from '.
 import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, HEARTBEAT_MS, LISTEN_PROTOCOL } from '../../../shared/types/listen-room'
 import { ListenClock, roomPosition, shouldSeek } from '../../../shared/utils/listen-clock'
 
+import { prepareMedia, startMedia } from '../../../client/utils/listen-media'
+export { prepareMedia, startMedia } from '../../../client/utils/listen-media'
+
 const STORAGE_KEY = 'm-part:listen-lab:v1'
-
-export async function prepareMedia(audio: HTMLAudioElement, target: number, signal: AbortSignal, timeoutMs = 8_000): Promise<'ready' | 'stale'> {
-  if (signal.aborted) return 'stale'
-  return new Promise((resolve, reject) => {
-    let positioned = false
-    const events = ['loadedmetadata', 'loadeddata', 'canplay', 'seeked', 'progress', 'error']
-    const cleanup = () => {
-      clearTimeout(timeout)
-      for (const event of events) audio.removeEventListener(event, check)
-      signal.removeEventListener('abort', abort)
-    }
-    const abort = () => { cleanup(); resolve('stale') }
-    const check = () => {
-      if (audio.error) { cleanup(); reject(new Error(audio.error.message || '测试音频加载失败')); return }
-      if (audio.readyState < 1 || !Number.isFinite(audio.duration)) return
-      if (!positioned) {
-        positioned = true
-        if (Math.abs(audio.currentTime - target) > 0.08) {
-          audio.currentTime = Math.max(0, Math.min(audio.duration, target))
-          return
-        }
-      }
-      if (audio.readyState >= 2 && !audio.seeking && Math.abs(audio.currentTime - target) <= 0.12) {
-        cleanup(); resolve('ready')
-      }
-    }
-    const timeout = setTimeout(() => { cleanup(); reject(new Error('媒体准备超时')); }, timeoutMs)
-    for (const event of events) audio.addEventListener(event, check)
-    signal.addEventListener('abort', abort, { once: true })
-    check()
-  })
-}
-
-export function startMedia(audio: HTMLAudioElement, signal: AbortSignal, timeoutMs = 8_000): Promise<'playing' | 'stale'> {
-  if (signal.aborted) return Promise.resolve('stale')
-  return new Promise((resolve, reject) => {
-    let finished = false
-    const finish = (result: 'playing' | 'stale' | { error: unknown }) => {
-      if (finished) return
-      finished = true
-      clearTimeout(timer)
-      signal.removeEventListener('abort', abort)
-      if (typeof result === 'string') resolve(result)
-      else reject(result.error)
-    }
-    const abort = () => finish('stale')
-    const timer = setTimeout(() => { audio.pause(); finish({ error: new Error('播放启动超时') }) }, timeoutMs)
-    signal.addEventListener('abort', abort, { once: true })
-    try {
-      audio.play().then(() => {
-        if (finished && !signal.aborted) audio.pause()
-        else finish(signal.aborted ? 'stale' : 'playing')
-      }, error => finish({ error }))
-    }
-    catch (error) { finish({ error }) }
-  })
-}
 
 export interface Telemetry {
   localTime: number
@@ -167,6 +113,7 @@ export class ListenLabSession {
       catch { this.error = '无效服务器消息'; socket.close(); return }
       this.lastResponse = performance.now()
       if (message.type === 'welcome') {
+        if (message.snapshot.kind !== 'lab') { this.error = '实验页只能加入静态音频实验房间'; this.leave(); return }
         if (this.storedRoomId && this.storedRoomId !== message.snapshot.roomId) { this.error = '房间实例发生变化'; this.leave(); return }
         this.token = message.token; this.memberId = message.memberId
         this.connection = '已连接'; this.attempt = 0; this.pending = undefined

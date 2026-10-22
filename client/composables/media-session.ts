@@ -2,6 +2,7 @@ import type { MusicInfo } from '#shared/types/music-info'
 import { toHttpsUrl } from '#shared/utils/url'
 import { createEffect, createRoot } from 'solid-js'
 import { audio, currentSong, prevNext, setCurrentTime, setPlaying } from './player'
+import { isRoomPlayer } from './player-context'
 
 function artwork(music: MusicInfo): MediaImage[] {
   try {
@@ -66,7 +67,7 @@ export function startMediaSession() {
     ['pause', () => { void setPlaying(false) }],
     ['previoustrack', () => { void prevNext(0) }],
     ['nexttrack', () => { void prevNext(1) }],
-    ['stop', () => { void setPlaying(false); setCurrentTime(0); onPosition() }],
+    ['stop', () => { void setPlaying(false); if (!isRoomPlayer()) setCurrentTime(0); onPosition() }],
     ['seekto', details => { if (details.seekTime !== undefined) seek(details.seekTime) }],
     ['seekbackward', details => seek(audio.currentTime - (details.seekOffset ?? 10))],
     ['seekforward', details => seek(audio.currentTime + (details.seekOffset ?? 10))],

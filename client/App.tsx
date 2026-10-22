@@ -4,6 +4,7 @@ import MusicPlayer from './components/MusicPlayer/MusicPlayer'
 import PlayQueue from './components/PlayQueue/PlayQueue'
 import Sidebar from './components/Sidebar/Sidebar'
 import ContextMenuHost from './components/ContextMenu/ContextMenuHost'
+import ListenRoomBar from './components/ListenRoomBar/ListenRoomBar'
 
 export interface AppProps {
   children?: JSX.Element
@@ -45,6 +46,7 @@ export default function App(props: AppProps) {
         <Loading fallback={<PageLoading />}>{props.children}</Loading>
         <PlayQueue />
       </main>
+      <ListenRoomBar />
       <MusicPlayer />
       <ContextMenuHost />
     </div>

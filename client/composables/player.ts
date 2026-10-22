@@ -6,6 +6,7 @@ import { errorMessage } from '#shared/utils'
 import { providers } from '#shared/utils/providers'
 import { createMemo, createRoot, createSignal } from 'solid-js'
 import type { PlayerCache } from '~/utils/player-storage'
+import { dispatchRoomPlayer } from './player-context'
 
 // #region types
 export type PlayMode = 'order' | 'loop' | 'random' | 'single-loop'
@@ -131,6 +132,7 @@ audio.addEventListener('volumechange', () => {
   setVolumeState(audio.volume)
 })
 audio.addEventListener('ended', () => {
+  if (dispatchRoomPlayer({ type: 'ended' })) return
   if (playMode() === 'single-loop') {
     // 单曲循环：重新播放当前歌曲
     setCurrentTime(0)
@@ -183,7 +185,7 @@ export function resetPlayer() {
   playIntent++
   restoredPlayback = null
   restoredSeek = null
-  setSrc(null)
+  void playSource(undefined, null)
   setCurrentIndexState(null)
   setCurrentTimeState(0)
   setDuration(0)
@@ -201,6 +203,7 @@ export function resetPlayer() {
  * 表现为「点了歌、接口也正常返回，但没有声音」。UI 侧的入口见 `changeQuality`。
  */
 async function loadQuality(sourceInfo: SourceInfo, quality?: MusicQuality) {
+  const revision = sourceRevision
   const { qualities, headers, url } = sourceInfo
   setPlaybackError(null)
 
@@ -233,6 +236,7 @@ async function loadQuality(sourceInfo: SourceInfo, quality?: MusicQuality) {
     throw new Error(`Failed to fetch source URL: ${res[2]}`)
 
   const blob = await res[1].blob()
+  if (revision !== sourceRevision) return
   if (objectUrl)
     URL.revokeObjectURL(objectUrl)
   objectUrl = URL.createObjectURL(blob)
@@ -247,6 +251,7 @@ async function loadQuality(sourceInfo: SourceInfo, quality?: MusicQuality) {
  * 此前 `setCurrentSourceInfo` 的写入早已提交。
  */
 export async function changeQuality(quality?: MusicQuality) {
+  if (quality && dispatchRoomPlayer({ type: 'quality', quality })) return
   const sourceInfo = currentSourceInfo()
   if (!sourceInfo)
     return
@@ -329,12 +334,14 @@ async function playSource(music: MusicInfo | undefined, src: string | null, prov
  * 设置播放地址（以当前播放的歌曲为准）
  */
 export async function setSrc(src: string | null, provider?: ProviderName) {
+  if (dispatchRoomPlayer({ type: 'retry' })) return
   await playSource(currentSong() ?? undefined, src, provider)
 }
 /**
  * 设置播放状态
  */
 export async function setPlaying(isPlaying: boolean) {
+  if (dispatchRoomPlayer({ type: 'play', playing: isPlaying })) return
   const intent = ++playIntent
   if (isPlaying) {
     if (restoredPlayback && !audio.getAttribute('src')) {
@@ -389,6 +396,7 @@ async function startPlaying(music: MusicInfo | undefined, index: number) {
  * 设置当前播放的歌曲
  */
 export async function setCurrentIndex(index: number) {
+  if (dispatchRoomPlayer({ type: 'select', index })) return
   await startPlaying(playQueue()[index], index)
 }
 
@@ -398,6 +406,7 @@ export async function setCurrentIndex(index: number) {
  * @param autoPlay 是否自动播放下一首，默认为 true
  */
 export async function prevNext(type: 0 | 1, autoPlay = true) {
+  if (dispatchRoomPlayer({ type: 'next', direction: type })) return
   const list = playQueue()
   if (!list.length)
     return
@@ -452,6 +461,7 @@ export async function prevNext(type: 0 | 1, autoPlay = true) {
  * 设置当前时间
  */
 export function setCurrentTime(time: number) {
+  if (dispatchRoomPlayer({ type: 'seek', position: time })) return
   setCurrentTimeState(time)
   if (restoredPlayback) {
     restoredPlayback.time = time
@@ -520,6 +530,7 @@ function applyRestoredSeek() {
  * 覆盖播放列表
  */
 export async function setPlayQueue(newPlayQueue: MusicInfo[]) {
+  if (dispatchRoomPlayer({ type: 'queue', tracks: newPlayQueue })) return
   resetPlayer()
   setPlayQueueState(newPlayQueue)
   if (playMode() === 'random') {
@@ -535,6 +546,7 @@ export async function setPlayQueue(newPlayQueue: MusicInfo[]) {
  * 添加到播放列表
  */
 export async function addToPlayQueue(item: MusicInfo) {
+  if (dispatchRoomPlayer({ type: 'append', track: item })) return
   // 避免重复添加同一首歌
   const list = playQueue()
   const existingIndex = list.findIndex(m => m.provider === item.provider && m.id === item.id)
@@ -561,6 +573,7 @@ export async function addToPlayQueue(item: MusicInfo) {
 
 /** 将歌曲放到当前曲目之后，保留当前播放；空队列直接播放。 */
 export async function addNextToPlayQueue(item: MusicInfo) {
+  if (dispatchRoomPlayer({ type: 'add-next', track: item })) return
   const list = playQueue()
   const current = currentIndex()
   if (current === null || !list[current]) {
@@ -594,6 +607,7 @@ export async function addNextToPlayQueue(item: MusicInfo) {
  * 从播放列表中移除
  */
 export async function removeFromPlayQueue(index: number) {
+  if (dispatchRoomPlayer({ type: 'remove', index })) return
   const list = playQueue().filter((_, i) => i !== index)
   setPlayQueueState(list)
   const random = randomPlayQueue()
@@ -627,6 +641,7 @@ export async function removeFromPlayQueue(index: number) {
 }
 
 export function setPlayMode(mode: PlayMode) {
+  if (dispatchRoomPlayer({ type: 'mode', mode })) return
   setPlayModeState(mode)
   if (mode === 'random') {
     setRandomPlayQueueState(createRandomOrder(playQueue().length))
@@ -661,5 +676,43 @@ export function togglePlayMode() {
  */
 export function clearPlayQueue() {
   setPlayQueue([])
+}
+
+/** Apply room metadata without triggering autoplay, user intents or personal restoration. */
+export function applyRoomQueue(items: MusicInfo[], index: number | null, mode: PlayMode) {
+  setPlayQueueState(items)
+  setCurrentIndexState(index)
+  setDuration(index === null ? 0 : items[index]?.duration ?? 0)
+  setPlayModeState(mode)
+  setRandomPlayQueueState(null)
+}
+
+/** Cancel in-flight source work too, so an old provider cannot replace a new room track. */
+export function cancelRoomSource() {
+  sourceRevision++
+  playIntent++
+  abortController?.abort()
+  abortController = null
+  audio.pause()
+}
+
+export async function loadRoomSource(music: MusicInfo, index: number, signal: AbortSignal, qualityName?: string) {
+  const pendingRevision = sourceRevision + 1
+  const abort = () => { if (sourceRevision === pendingRevision) cancelRoomSource() }
+  signal.addEventListener('abort', abort, { once: true })
+  try {
+    if (signal.aborted) return 'stale' as const
+    await startPlaying(music, index)
+    if (signal.aborted || sourceRevision !== pendingRevision) return 'stale' as const
+    const info = currentSourceInfo()
+    if (!audio.getAttribute('src') || !info) throw new Error(playbackError() || '无法获取音源')
+    if (info.availability === 'preview') throw new Error('当前账号只能试听，无法使用完整歌曲时间轴一起听')
+    if (info.availability !== 'full') throw new Error('该音源尚未确认完整播放权限，无法一起听')
+    const quality = qualityName && info.qualities?.find(q => q.name === qualityName)
+    if (quality) await loadQuality(info, quality)
+    if (signal.aborted || sourceRevision !== pendingRevision) return 'stale' as const
+    return 'loaded' as const
+  }
+  finally { signal.removeEventListener('abort', abort) }
 }
 // #endregion

@@ -211,7 +211,7 @@ const QQProvider: Provider = {
       return [{ name: file.name, url }]
     })
     if (!qualities.length) throw new Error('QQ 音乐暂未提供可播放音源，请登录网页版并确认会员或版权权限')
-    return { url: qualities[0]!.url, qualities }
+    return { url: qualities[0]!.url, qualities, availability: 'full' }
   },
   async getCurrentUser() {
     const session = await getQQSession()

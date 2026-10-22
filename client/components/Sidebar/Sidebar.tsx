@@ -9,6 +9,7 @@ const menuItems = [
   { icon: 'i-lucide:house', label: '首页', route: '/' },
   { icon: 'i-lucide:search', label: '搜索', route: '/search' },
   { icon: 'i-lucide:library', label: '我的歌单', route: '/playlists' },
+  { icon: 'i-lucide:headphones', label: '一起听', route: '/listen' },
 ]
 
 export default function Sidebar() {

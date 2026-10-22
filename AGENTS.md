@@ -19,6 +19,7 @@
 | 组件 | `client/components/<Name>/<Name>.tsx`（一个目录一个组件，样式放同目录 `.css`） |
 | 页面 | `client/pages/`（文件即路由） |
 | 跨路由保留的状态 | `client/composables/*.ts` 的**模块级信号** |
+| 一起听 / 播放控制 | `client/composables/player-context.ts`（所有用户操作入口）、`listen-room.ts`、`client/utils/listen-client.ts`；协议与服务见 [一起听说明](./docs/listen-together-usage.md) |
 | 取数实现（Provider） | `shared/utils/providers/` |
 | 请求出口（含扩展策略） | `shared/utils/fetch.ts` |
 | 扩展入口 / manifest / DNR 规则 | `entrypoints/`、`wxt.config.ts`、`public/rules/` |

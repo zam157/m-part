@@ -1,6 +1,6 @@
 import * as v from 'valibot'
 
-/** Phase-one protocol: one generated calibration track, no third-party credentials. */
+/** Only public track metadata crosses the wire; source URLs and cookies never do. */
 export const LISTEN_PROTOCOL = 1
 export const LAB_TRACK = { id: 'calibration-v1', duration: 90 } as const
 export const HEARTBEAT_MS = 5_000
@@ -10,20 +10,32 @@ export const START_LEAD_MS = 800
 
 const shortText = v.pipe(v.string(), v.minLength(1), v.maxLength(80))
 const revision = v.pipe(v.number(), v.integer(), v.minValue(0))
-const position = v.pipe(v.number(), v.finite(), v.minValue(0), v.maxValue(LAB_TRACK.duration))
+const position = v.pipe(v.number(), v.finite(), v.minValue(0), v.maxValue(86_400))
+const text = v.pipe(v.string(), v.maxLength(300), v.transform(s => s.replace(/<[^>]*>/g, '').replace(/[<>]/g, '')))
+const track = v.strictObject({
+  provider: v.picklist(['netease', 'qq', 'bili']), id: v.pipe(v.string(), v.minLength(1), v.maxLength(128)),
+  title: text, artist: v.optional(text), album: v.optional(text), duration: position,
+  coverUrl: v.pipe(v.string(), v.maxLength(2048), v.check(s => !s || /^https:\/\//i.test(s))),
+})
+export type SharedRoomTrack = v.InferOutput<typeof track> & { queueItemId: string }
+const tracks = v.pipe(v.array(track), v.maxLength(1_000))
+const mode = v.picklist(['order', 'loop', 'random', 'single-loop'])
 export const memberStatus = v.picklist(['loading', 'ready', 'following', 'buffering', 'away', 'blocked', 'failed'])
 export type MemberStatus = v.InferOutput<typeof memberStatus>
 
 export const clientMessage = v.variant('type', [
-  v.strictObject({ type: v.literal('create'), protocol: v.literal(LISTEN_PROTOCOL), name: shortText }),
-  v.strictObject({ type: v.literal('join'), protocol: v.literal(LISTEN_PROTOCOL), name: shortText, code: shortText }),
+  v.strictObject({ type: v.literal('create'), protocol: v.literal(LISTEN_PROTOCOL), name: shortText,
+    kind: v.optional(v.literal('music')), tracks: v.optional(tracks), index: v.optional(revision), position: v.optional(position), autoplay: v.optional(v.boolean()),
+  }),
+  v.strictObject({ type: v.literal('join'), protocol: v.literal(LISTEN_PROTOCOL), name: shortText, code: shortText, kind: v.optional(v.literal('music')) }),
   v.strictObject({ type: v.literal('resume'), protocol: v.literal(LISTEN_PROTOCOL), token: v.pipe(v.string(), v.maxLength(128)) }),
   v.strictObject({ type: v.literal('ping'), sentAt: v.pipe(v.number(), v.finite(), v.minValue(0)) }),
   v.strictObject({
     type: v.literal('command'), commandId: shortText, expectedRevision: revision,
-    action: v.picklist(['play', 'pause', 'seek', 'restart']), position: v.optional(position),
+    action: v.picklist(['play', 'pause', 'seek', 'restart', 'queue', 'select', 'append', 'add-next', 'remove', 'mode', 'next', 'previous', 'ended']),
+    position: v.optional(position), tracks: v.optional(tracks), track: v.optional(track), queueItemId: v.optional(shortText), mode: v.optional(mode),
   }),
-  v.strictObject({ type: v.literal('report'), revision, playbackId: shortText, status: memberStatus }),
+  v.strictObject({ type: v.literal('report'), revision, playbackId: shortText, status: memberStatus, message: v.optional(v.pipe(v.string(), v.maxLength(300))), duration: v.optional(position) }),
   v.strictObject({ type: v.literal('leave') }),
 ])
 export type ClientMessage = v.InferOutput<typeof clientMessage>
@@ -34,7 +46,11 @@ export interface RoomSnapshot {
   code: string
   revision: number
   playbackId: string
-  track: typeof LAB_TRACK
+  kind: 'lab' | 'music'
+  queue: SharedRoomTrack[]
+  currentIndex: number | null
+  playMode: v.InferOutput<typeof mode>
+  track: { id: string, duration: number }
   status: 'preparing' | 'scheduled' | 'playing' | 'paused' | 'ended'
   wantsToPlay: boolean
   pauseReason: 'user' | 'host-buffering' | 'blocked' | 'failed' | 'host-disconnected' | null
@@ -42,7 +58,7 @@ export interface RoomSnapshot {
   anchorServerTime: number
   rate: 1
   hostId: string
-  members: { id: string, name: string, generation: number, online: boolean, status: MemberStatus }[]
+  members: { id: string, name: string, generation: number, online: boolean, status: MemberStatus, message?: string }[]
 }
 
 export type ServerMessage =
@@ -52,3 +68,23 @@ export type ServerMessage =
   | { type: 'ack', commandId: string, revision: number }
   | { type: 'error', code: string, message: string, commandId?: string }
   | { type: 'replaced' }
+
+const clockTime = v.pipe(v.number(), v.finite(), v.minValue(0))
+const snapshot = v.strictObject({
+  protocol: v.literal(LISTEN_PROTOCOL), roomId: shortText, code: shortText, revision, playbackId: shortText,
+  kind: v.picklist(['lab', 'music']), queue: v.pipe(v.array(v.strictObject({ ...track.entries, queueItemId: shortText })), v.maxLength(1_000)),
+  currentIndex: v.nullable(revision), playMode: mode,
+  track: v.strictObject({ id: v.pipe(v.string(), v.maxLength(80)), duration: position }),
+  status: v.picklist(['preparing', 'scheduled', 'playing', 'paused', 'ended']), wantsToPlay: v.boolean(),
+  pauseReason: v.nullable(v.picklist(['user', 'host-buffering', 'blocked', 'failed', 'host-disconnected'])),
+  positionAtAnchor: position, anchorServerTime: clockTime, rate: v.literal(1), hostId: shortText,
+  members: v.pipe(v.array(v.strictObject({ id: shortText, name: shortText, generation: revision, online: v.boolean(), status: memberStatus, message: v.optional(text) })), v.maxLength(5)),
+})
+export const serverMessage = v.variant('type', [
+  v.strictObject({ type: v.literal('welcome'), token: v.pipe(v.string(), v.minLength(1), v.maxLength(128)), memberId: shortText, generation: revision, snapshot }),
+  v.strictObject({ type: v.literal('snapshot'), snapshot }),
+  v.strictObject({ type: v.literal('pong'), sentAt: clockTime, serverTime: clockTime }),
+  v.strictObject({ type: v.literal('ack'), commandId: shortText, revision }),
+  v.strictObject({ type: v.literal('error'), code: shortText, message: text, commandId: v.optional(shortText) }),
+  v.strictObject({ type: v.literal('replaced') }),
+])

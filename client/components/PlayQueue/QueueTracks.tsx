@@ -2,6 +2,7 @@ import { clsx } from 'cn/lite'
 import { createEffect, For, Show, untrack } from 'solid-js'
 import ContextMenu from '~/components/ContextMenu/ContextMenu'
 import { currentIndex, playing, playQueue, removeFromPlayQueue, setCurrentIndex, setPlaying } from '~/composables/player'
+import { canControlRoom } from '~/composables/player-context'
 import { formatTime } from '~/components/MusicPlayer/components/player-controls'
 
 export interface QueueTracksApi {
@@ -42,10 +43,11 @@ export default function QueueTracks(props: { open: boolean, ref?: (api: QueueTra
             label: '从队列中移除',
             icon: 'i-lucide:trash-2',
             destructive: true,
+            disabled: !canControlRoom(),
             onSelect: () => removeFromPlayQueue(index()),
           }]}>{trigger => (
             <div {...trigger} class={clsx('group flex min-w-0 h-12.5 content-visibility-auto items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent/60', currentIndex() === index() && 'bg-accent')} aria-current={currentIndex() === index() ? 'true' : undefined}>
-              <button class="flex flex-1 min-w-0 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`播放 ${song.title}`} onClick={() => play(index())}>
+              <button class="flex flex-1 min-w-0 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring" disabled={!canControlRoom() && currentIndex() !== index()} aria-label={`播放 ${song.title}`} onClick={() => play(index())}>
                 <span class="relative size-9 shrink-0 overflow-hidden rounded-md bg-muted grid place-items-center">
                   <Show when={song.coverUrl} fallback={<span class="i-lucide:music-2 text-5 text-muted-foreground" />}>
                     <img src={song.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="size-full object-cover" />
@@ -55,7 +57,7 @@ export default function QueueTracks(props: { open: boolean, ref?: (api: QueueTra
                 <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium" innerHTML={song.title} /><span class="block truncate text-xs mt-0.5 text-muted-foreground">{song.artist || '未知创作者'}</span></span>
               </button>
               <span class="text-[11px] tabular-nums text-muted-foreground max-[400px]:hidden">{formatTime(song.duration)}</span>
-              <button class="ghost-btn size-8 shrink-0 text-muted-foreground hover:text-destructive" aria-label={`移除 ${song.title}`} onClick={() => removeFromPlayQueue(index())}><span class="i-lucide:x text-3.5" /></button>
+              <button class="ghost-btn size-8 shrink-0 text-muted-foreground hover:text-destructive" disabled={!canControlRoom()} aria-label={`移除 ${song.title}`} onClick={() => removeFromPlayQueue(index())}><span class="i-lucide:x text-3.5" /></button>
             </div>
           )}</ContextMenu>
         )}</For></div>

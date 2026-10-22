@@ -49,6 +49,8 @@ export interface AlbumInfo {
 }
 
 export interface SourceInfo {
+  /** Explicit playback rights; room sync must never treat a preview as a full track. */
+  availability?: 'full' | 'preview' | 'unknown'
   url?: string
   headers?: Record<string, any>
   qualities?: MusicQuality[]

@@ -30,6 +30,7 @@ const state = (patch: Partial<RoomSnapshot> = {}): RoomSnapshot => ({
   protocol: 1, roomId: 'room', code: '12345678', revision: 0, playbackId: 'playback', track: LAB_TRACK,
   status: 'paused', wantsToPlay: false, pauseReason: 'user', positionAtAnchor: 0, anchorServerTime: 0, rate: 1,
   hostId: 'host', members: [], ...patch,
+  kind: 'lab', queue: [], currentIndex: null, playMode: 'order',
 })
 let session: ListenLabSession
 let socket: Socket

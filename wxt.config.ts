@@ -40,6 +40,8 @@ export default defineConfig({
     // 已知还有 Akamai 镜像（*.akamaized.net，主要给海外用户），暂不申请这么宽的
     // 权限；等日志里真出现该域名的 CORS 报错再按需加
     host_permissions: [
+      'http://127.0.0.1/*',
+      'http://localhost/*',
       'https://api.bilibili.com/*',
       'https://*.bilivideo.com/*',
       'https://*.bilivideo.cn/*',
@@ -52,6 +54,7 @@ export default defineConfig({
       'https://aqqmusic.tc.qq.com/*',
       'https://y.gtimg.cn/*',
     ],
+    optional_host_permissions: ['https://*/*'],
     declarative_net_request: {
       rule_resources: [
         { id: 'bilibili', enabled: true, path: 'rules/bilibili.json' },

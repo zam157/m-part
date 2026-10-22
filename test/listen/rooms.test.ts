@@ -176,7 +176,7 @@ describe('room authority and recovery', () => {
 it('rejects untrusted fields, missing versions and non-finite or out-of-range seeks', () => {
   const command = { type: 'command', commandId: 'one', expectedRevision: 0, action: 'seek', position: 10 }
   expect(v.safeParse(clientMessage, command).success).toBe(true)
-  for (const position of [NaN, Infinity, -1, 91]) expect(v.safeParse(clientMessage, { ...command, position }).success).toBe(false)
+  for (const position of [NaN, Infinity, -1, 86_401]) expect(v.safeParse(clientMessage, { ...command, position }).success).toBe(false)
   expect(v.safeParse(clientMessage, { ...command, src: 'https://arbitrary.example' }).success).toBe(false)
   expect(v.safeParse(clientMessage, { type: 'create', protocol: 1, name: 'x', role: 'host' }).success).toBe(false)
 })

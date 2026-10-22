@@ -7,6 +7,7 @@ import {
   setPlaying, setVolume, volume,
 } from '~/composables/player'
 import Lyrics from '~/components/Lyrics/Lyrics'
+import { roomPlayerActive } from '~/composables/player-context'
 import PlayQueue from '~/components/PlayQueue/PlayQueue'
 import PlaybackControls from './PlaybackControls'
 import PlaybackProgress from './PlaybackProgress'
@@ -77,7 +78,7 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
         </div>
         <header class="relative z-1 shrink-0 h-18 px-8 flex items-center justify-between gap-2 border-b border-border/60 max-[900px]:h-15 max-[900px]:px-4">
           <div class={clsx('shrink-0', hasTranslation() ? 'w-21 max-[900px]:w-26' : 'w-10 max-[900px]:w-17')}><button class="ghost-btn size-10" autofocus aria-label="收起播放器" onClick={close}><span class="i-lucide:chevron-down text-5" /></button></div>
-          <div class="text-center shrink-0"><p class="text-xs tracking-[0.15em] text-muted-foreground">正在播放</p><p class="text-xs font-medium mt-1">{currentSong()?.provider === 'netease' ? '网易云音乐' : currentSong()?.provider === 'qq' ? 'QQ音乐' : 'BiliBili'}</p></div>
+          <div class="text-center shrink-0"><p class="text-xs tracking-[0.15em] text-muted-foreground">{roomPlayerActive() ? '一起听' : '正在播放'}</p><p class="text-xs font-medium mt-1">{currentSong()?.provider === 'netease' ? '网易云音乐' : currentSong()?.provider === 'qq' ? 'QQ音乐' : 'BiliBili'}</p></div>
           <div class="flex shrink-0 items-center gap-1">
             <button class={clsx('ghost-btn size-10 max-[900px]:size-8 min-[901px]:hidden', showLyrics() && 'bg-accent')} aria-label="显示歌词" aria-controls="expanded-lyrics" aria-expanded={showLyrics() ? 'true' : 'false'} onClick={() => setShowLyrics(value => !value)}><span class="i-lucide:captions text-5" /></button>
             <Show when={hasTranslation()}><button class={clsx('ghost-btn size-10 max-[900px]:size-8 text-sm', showTranslation() && 'bg-accent')} aria-label="显示翻译" aria-controls="expanded-lyrics" aria-pressed={showTranslation() ? 'true' : 'false'} onClick={() => setShowTranslation(value => !value)}>译</button></Show>

@@ -1,7 +1,8 @@
 import { flush } from 'solid-js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PlayerCache, PlayerStorage } from '~/utils/player-storage'
-import { startPlayerPersistence } from '~/composables/player-persistence'
+import { savePersonalPlayerSession, startPlayerPersistence } from '~/composables/player-persistence'
+import { setRoomPlayerHandler } from '~/composables/player-context'
 
 vi.mock('#shared/utils/providers', () => ({ providers: {} }))
 const player = await import('~/composables/player')
@@ -24,6 +25,8 @@ beforeEach(async () => {
   storage = { read: vi.fn().mockResolvedValue(cache), write: vi.fn().mockResolvedValue(undefined), close: vi.fn() }
 })
 afterEach(() => {
+  setRoomPlayerHandler(undefined)
+  flush()
   persistence?.dispose()
   persistence = undefined
   vi.restoreAllMocks()
@@ -31,6 +34,40 @@ afterEach(() => {
 })
 
 describe('播放器缓存启动及观察', () => {
+  it('房间队列及进度不写入个人缓存，音量仍作为个人偏好保存', async () => {
+    persistence = startPlayerPersistence(storage)
+    await persistence.ready
+    const backup = await savePersonalPlayerSession()
+    expect(backup.position?.time).toBe(40)
+    vi.mocked(storage.write).mockClear()
+    setRoomPlayerHandler(() => {})
+    player.applyRoomQueue([{ ...song, id: 'room-track' }], 0, 'loop')
+    flush()
+    player.audio.currentTime = 80
+    player.audio.dispatchEvent(new Event('timeupdate'))
+    player.setVolume(0.7)
+    flush()
+    player.audio.dispatchEvent(new Event('pause'))
+    await vi.advanceTimersByTimeAsync(6_000)
+    await persistence.flush()
+    expect(storage.write).toHaveBeenCalledWith({ volume: 0.7 })
+    expect(vi.mocked(storage.write).mock.calls.every(([patch]) => !patch.queue && !patch.position)).toBe(true)
+    setRoomPlayerHandler(undefined)
+    player.restorePlayerSession(backup)
+    flush()
+    expect(player.currentSong()?.id).toBe('old')
+    expect(player.currentTime()).toBe(40)
+    expect(player.volume()).toBe(0.7)
+    expect(player.playing()).toBe(false)
+  })
+
+  it('保护性保存等待缓存恢复，数据库写入失败会阻止入房', async () => {
+    persistence = startPlayerPersistence(storage)
+    await persistence.ready
+    vi.mocked(storage.write).mockRejectedValueOnce(new Error('disk unavailable'))
+    await expect(savePersonalPlayerSession()).rejects.toThrow('disk unavailable')
+    expect(player.currentSong()?.id).toBe('old')
+  })
   it('启动只读取一次，恢复不回写，连续进度变化只写小记录', async () => {
     persistence = startPlayerPersistence(storage)
     await persistence.ready

@@ -4,9 +4,16 @@ import {
 } from './player'
 import type { PlayerCache, PlayerStorage, StoredPosition } from '~/utils/player-storage'
 import { createPlayerCacheWriter, createPlayerStorage, queueForStorage } from '~/utils/player-storage'
+import { roomPlayerActive } from './player-context'
+
+let capturePersonal: (() => Promise<PlayerCache>) | undefined
+export async function savePersonalPlayerSession() {
+  if (!capturePersonal) throw new Error('播放器缓存尚未初始化，请稍后再试')
+  return capturePersonal()
+}
 
 function state() {
-  return { items: playQueue(), index: currentIndex(), time: currentTime(), volume: volume(), mode: playMode(), order: randomPlayQueue() }
+  return { items: playQueue(), index: currentIndex(), time: currentTime(), volume: volume(), mode: playMode(), order: randomPlayQueue(), room: roomPlayerActive() }
 }
 function position(snapshot: ReturnType<typeof state>): StoredPosition {
   const song = snapshot.index === null ? undefined : snapshot.items[snapshot.index]
@@ -40,7 +47,7 @@ export function startPlayerPersistence(storage: PlayerStorage = createPlayerStor
         queueTouched ||= changedQueue || changedPosition
         volumeTouched ||= changedVolume
       }
-      else {
+      else if (!next.room) {
         if (changedQueue || previous.index !== next.index) {
           // 同一事务中保存队列与当前曲目，索引重排不能配上旧进度。
           writer.schedule({
@@ -51,9 +58,8 @@ export function startPlayerPersistence(storage: PlayerStorage = createPlayerStor
         else if (changedPosition) {
           writer.schedule({ position: position(next) }, 5000)
         }
-        if (changedVolume)
-          writer.schedule({ volume: next.volume }, 500)
       }
+      if (ready && changedVolume) writer.schedule({ volume: next.volume }, 500)
       previous = next
     })
     return dispose
@@ -112,10 +118,23 @@ export function startPlayerPersistence(storage: PlayerStorage = createPlayerStor
       writer.schedule(patch, 200)
   })()
 
+  const capture = async () => {
+    await initialized
+    await flush()
+    const snapshot = state()
+    if (snapshot.room) throw new Error('当前已经在房间中')
+    const cache = { queue: queueForStorage(snapshot.items, snapshot.mode, snapshot.order), position: position(snapshot) }
+    // Explicit write: unlike background persistence, a failed protective save blocks joining.
+    await storage.write(cache)
+    return cache
+  }
+  capturePersonal = capture
+
   return {
     ready: initialized,
     flush,
     dispose() {
+      if (capturePersonal === capture) capturePersonal = undefined
       disposed = true
       disposeEffect()
       writer.dispose()

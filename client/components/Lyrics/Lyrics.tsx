@@ -3,6 +3,7 @@ import { createEffect, createMemo, createSignal, For, Match, Show, Switch, untra
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
 import { createLyrics } from '~/composables/lyrics'
 import { audio, currentSong, currentTime, duration, playing, setCurrentTime, waiting } from '~/composables/player'
+import { canControlRoom } from '~/composables/player-context'
 import { activeLyricIndex, lyricWordProgress } from '~/utils/lyrics'
 import './lyrics.css'
 
@@ -16,7 +17,7 @@ export default function Lyrics(props: { visible: boolean, class?: string, showTr
   const active = createMemo(() => activeLyricIndex(lyrics.lines(), lyricTime()))
   const hasTranslation = () => lyrics.lines().some(line => line.translation)
   const instrumental = () => lyrics.data()?.instrumental || lyrics.lines().some(line => /^纯音乐[，,]?\s*请欣赏/.test(line.text))
-  const canSeek = (time: number | null) => time !== null && !waiting() && Number.isFinite(duration()) && duration() > 0 && time <= duration()
+  const canSeek = (time: number | null) => canControlRoom() && time !== null && !waiting() && Number.isFinite(duration()) && duration() > 0 && time <= duration()
 
   createEffect(() => [hasTranslation(), props.onTranslationAvailableChange] as const, ([available, onChange]) => { onChange?.(available) })
 

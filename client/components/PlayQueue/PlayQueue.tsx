@@ -1,6 +1,7 @@
 import { clsx } from 'cn/lite'
 import { createEffect, untrack } from 'solid-js'
 import { clearPlayQueue, currentIndex, playQueue, setShowPlayQueue, showPlayQueue } from '~/composables/player'
+import { canControlRoom } from '~/composables/player-context'
 import type { QueueTracksApi } from './QueueTracks'
 import QueueTracks from './QueueTracks'
 import './play-queue.css'
@@ -69,7 +70,7 @@ export default function PlayQueue(props: { floating?: boolean, open?: boolean, o
 
         {/* footer */}
         <div class="shrink-0 p-2 flex items-center border-t border-border">
-          <button aria-label="清空播放队列" class="ghost-btn px-3 text-muted-foreground" disabled={!playQueue().length} onClick={handleClear}>
+          <button aria-label="清空播放队列" class="ghost-btn px-3 text-muted-foreground" disabled={!playQueue().length || !canControlRoom()} onClick={handleClear}>
             <span class="i-lucide:trash-2 text-4" />清空队列
           </button>
         </div>

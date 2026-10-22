@@ -1001,6 +1001,7 @@ const biliProvider = {
         'user-agent': USER_AGENT,
       },
       qualities,
+      availability: 'full',
     }
   },
   async getArtistInfo(id) {

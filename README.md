@@ -10,6 +10,8 @@
 
 搜索页选择「网易云 → 歌单」可搜索公开歌单，无需先登录或收藏；打开歌单后可加载曲目并播放。
 
+侧栏「一起听」支持创建 / 加入小房间，房主同步播放、进度和队列，成员各自获取音源，退出时恢复个人播放记录。先启动 `pnpm dev:rooms`，两端使用同一个房间服务；异地使用需部署公共 HTTPS / WSS 服务。完整步骤见[一起听使用与部署](./docs/listen-together-usage.md)。
+
 ## 两种运行形态
 
 | | 扩展形态（推荐） | web 调试形态 |
@@ -121,6 +123,7 @@ m-part/
 | [docs/expanded-player.md](./docs/expanded-player.md) | 展开播放器、CSS 动画、共享控制及模态浮层 |
 | [docs/listen-together.md](./docs/listen-together.md) | 一起听可行性研究：房间同步、音源权限、后台限制与分阶段验证方案 |
 | [docs/listen-together-lab.md](./docs/listen-together-lab.md) | 一起听第一阶段实验：`pnpm dev:listen`、独立房间服务、本机双端测量与恢复验证 |
+| [docs/listen-together-usage.md](./docs/listen-together-usage.md) | 正式一起听：房间入口、独立取源、缓存隔离、重连、多窗口与服务部署 |
 
 ## 已知限制
 

@@ -1,5 +1,5 @@
 import type { ClientMessage, MemberStatus, RoomSnapshot, ServerMessage } from '../../shared/types/listen-room'
-import { randomBytes, randomUUID } from 'node:crypto'
+import { randomBytes, randomInt, randomUUID } from 'node:crypto'
 import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, LAB_TRACK, LISTEN_PROTOCOL, START_LEAD_MS } from '../../shared/types/listen-room'
 import { roomPosition } from '../../shared/utils/listen-clock'
 
@@ -14,12 +14,13 @@ interface Member {
   token: string
   generation: number
   status: MemberStatus
+  message?: string
   connection?: RoomConnection
   lastSeen: number
   disconnectedAt?: number
   replies: Map<string, { at: number, reply: ServerMessage }>
 }
-interface Room { state: RoomSnapshot, members: Member[], createdAt: number }
+interface Room { state: RoomSnapshot, members: Member[], retired: Member[], createdAt: number, order: string[] }
 
 /** Owns ordering; injectable time makes disconnect and recovery races testable. */
 export class ListenRooms {
@@ -32,8 +33,8 @@ export class ListenRooms {
   private snapshot(room: Room): RoomSnapshot {
     return {
       ...room.state,
-      track: { ...LAB_TRACK },
-      members: room.members.map(m => ({ id: m.id, name: m.name, generation: m.generation, online: !!m.connection, status: m.status })),
+      track: { ...room.state.track }, queue: room.state.queue.map(t => ({ ...t })),
+      members: room.members.map(m => ({ id: m.id, name: m.name, generation: m.generation, online: !!m.connection, status: m.status, message: m.message })),
     }
   }
 
@@ -59,6 +60,90 @@ export class ListenRooms {
     const reply: ServerMessage = { type: 'error', code, message, ...(commandId ? { commandId } : {}) }
     connection.send(reply)
     return reply
+  }
+
+  private remember(member: Member, commandId: string, reply: ServerMessage) {
+    member.replies.set(commandId, { at: this.now(), reply })
+    if (member.replies.size > 100) member.replies.delete(member.replies.keys().next().value!)
+  }
+
+  private select(room: Room, index: number | null, wantsToPlay = true) {
+    const track = index === null ? undefined : room.state.queue[index]
+    this.change(room, {
+      currentIndex: track ? index : null, track: { id: track?.queueItemId ?? '', duration: track?.duration ?? 0 },
+      positionAtAnchor: 0, anchorServerTime: this.now(), playbackId: randomUUID(),
+      wantsToPlay: !!track && wantsToPlay, status: track && wantsToPlay ? 'preparing' : 'paused', pauseReason: track && wantsToPlay ? null : 'user',
+    })
+  }
+
+  private musicCommand(room: Room, message: Extract<ClientMessage, { type: 'command' }>): string | undefined {
+    if (room.state.kind !== 'music') return '实验房间不支持音乐队列操作'
+    const state = room.state
+    const current = state.currentIndex === null ? undefined : state.queue[state.currentIndex]
+    const makeTrack = (t: NonNullable<typeof message.track>) => ({ ...t, queueItemId: randomUUID() })
+    if (message.action === 'queue') {
+      if (!message.tracks) return '缺少播放队列'
+      const seen = new Set<string>()
+      state.queue = message.tracks.filter(t => { const key = `${t.provider}:${t.id}`; if (seen.has(key)) return false; seen.add(key); return true }).map(makeTrack)
+      room.order = []
+      this.select(room, state.queue.length ? 0 : null)
+    }
+    else if (message.action === 'select' || message.action === 'remove') {
+      const index = state.queue.findIndex(t => t.queueItemId === message.queueItemId)
+      if (index < 0) return '曲目已经不在房间队列中'
+      if (message.action === 'select') this.select(room, index)
+      else {
+        state.queue = state.queue.filter((_, i) => i !== index)
+        if (current?.queueItemId === message.queueItemId) this.select(room, state.queue.length ? Math.min(index, state.queue.length - 1) : null, state.wantsToPlay)
+        else this.change(room, { currentIndex: current ? state.queue.findIndex(t => t.queueItemId === current.queueItemId) : null })
+      }
+    }
+    else if (message.action === 'append' || message.action === 'add-next') {
+      if (!message.track) return '缺少曲目资料'
+      const existing = state.queue.find(t => t.provider === message.track!.provider && t.id === message.track!.id)
+      if (!existing && state.queue.length >= 1_000) return '房间队列最多 1000 首'
+      const target = existing ?? makeTrack(message.track)
+      if (message.action === 'append' || !current) {
+        if (!existing) state.queue = [...state.queue, target]
+        this.select(room, state.queue.findIndex(t => t.queueItemId === target.queueItemId))
+      }
+      else if (target.queueItemId !== current.queueItemId) {
+        const list = state.queue.filter(t => t.queueItemId !== target.queueItemId)
+        const index = list.findIndex(t => t.queueItemId === current.queueItemId)
+        list.splice(index + 1, 0, target)
+        this.change(room, { queue: list, currentIndex: index })
+        room.order = []
+      }
+    }
+    else if (message.action === 'mode') {
+      if (!message.mode) return '缺少播放模式'
+      room.order = []
+      this.change(room, { playMode: message.mode })
+    }
+    else if (['next', 'previous', 'ended'].includes(message.action)) {
+      if (!current) return '房间队列为空'
+      if (message.action === 'ended' && (!state.wantsToPlay || state.status === 'paused')) return
+      if (message.action === 'ended' && state.playMode === 'order' && state.currentIndex === state.queue.length - 1) {
+        this.freeze(room, 'user', false)
+        return
+      }
+      let index = state.currentIndex!
+      if (!(message.action === 'ended' && state.playMode === 'single-loop')) {
+        const delta = message.action === 'previous' ? -1 : 1
+        if (state.playMode === 'random') {
+          const ids = new Set(state.queue.map(t => t.queueItemId))
+          room.order = room.order.filter(id => ids.has(id))
+          const added = state.queue.map(t => t.queueItemId).filter(id => !room.order.includes(id))
+          for (let i = added.length - 1; i > 0; i--) { const j = randomInt(i + 1); [added[i], added[j]] = [added[j]!, added[i]!] }
+          room.order.push(...added)
+          const nextId = room.order[(room.order.indexOf(current.queueItemId) + delta + room.order.length) % room.order.length]
+          index = state.queue.findIndex(t => t.queueItemId === nextId)
+        }
+        else index = (index + delta + state.queue.length) % state.queue.length
+      }
+      this.select(room, index)
+    }
+    return undefined
   }
 
   receive(connection: RoomConnection, message: ClientMessage) {
@@ -102,17 +187,31 @@ export class ListenRooms {
       }
       else if (message.action === 'seek' && message.position === undefined) reply = this.error(connection, 'invalid', '缺少目标位置', message.commandId)
       else {
-        if (message.action === 'pause') this.freeze(room, 'user', false)
+        const musicActions = ['queue', 'select', 'append', 'add-next', 'remove', 'mode', 'next', 'previous', 'ended']
+        if (musicActions.includes(message.action)) {
+          const failure = this.musicCommand(room, message)
+          if (failure) {
+            reply = this.error(connection, 'invalid', failure, message.commandId)
+            this.remember(member, message.commandId, reply)
+            return
+          }
+        }
+        else if (message.action === 'play' && room.state.kind === 'music' && !room.state.queue.length) {
+          reply = this.error(connection, 'empty', '先选择歌曲加入房间队列', message.commandId)
+          this.remember(member, message.commandId, reply)
+          return
+        }
+        else if (message.action === 'pause') this.freeze(room, 'user', false)
         else if (message.action === 'play') {
           const position = roomPosition(room.state, this.now())
-          const restart = position >= LAB_TRACK.duration
+          const restart = position >= room.state.track.duration
           this.change(room, {
             status: 'preparing', wantsToPlay: true, pauseReason: null, positionAtAnchor: restart ? 0 : position, anchorServerTime: this.now(),
             ...(restart ? { playbackId: randomUUID() } : {}),
           })
         }
         else {
-          const position = message.action === 'restart' ? 0 : message.position!
+          const position = message.action === 'restart' ? 0 : Math.min(message.position!, room.state.track.duration)
           this.change(room, {
             status: room.state.wantsToPlay ? 'preparing' : 'paused', positionAtAnchor: position, anchorServerTime: this.now(),
             ...(message.action === 'restart' ? { playbackId: randomUUID() } : {}),
@@ -122,14 +221,20 @@ export class ListenRooms {
         connection.send(reply)
         this.broadcast(room)
       }
-      member.replies.set(message.commandId, { at: this.now(), reply })
-      if (member.replies.size > 100) member.replies.delete(member.replies.keys().next().value!)
+      this.remember(member, message.commandId, reply)
       return
     }
     if (message.revision !== room.state.revision || message.playbackId !== room.state.playbackId) return
     member.status = message.status
+    member.message = message.message
     if (member.id === room.state.hostId) {
-      if (message.status === 'ready' && room.state.wantsToPlay && (room.state.status === 'preparing' || room.state.pauseReason === 'host-buffering')) this.schedule(room)
+      if (message.status === 'ready' && room.state.wantsToPlay && (room.state.status === 'preparing' || room.state.pauseReason === 'host-buffering')) {
+        if (message.duration && room.state.kind === 'music') {
+          const item = room.state.currentIndex === null ? undefined : room.state.queue[room.state.currentIndex]
+          if (item) { item.duration = message.duration; room.state.track.duration = message.duration }
+        }
+        this.schedule(room)
+      }
       else if (message.status === 'buffering' && (room.state.status === 'playing' || room.state.status === 'scheduled')) this.freeze(room, 'host-buffering', true)
       else if ((message.status === 'blocked' || message.status === 'failed') && room.state.wantsToPlay) this.freeze(room, message.status, false)
     }
@@ -143,6 +248,11 @@ export class ListenRooms {
       const saved = this.tokens.get(message.token)
       if (!saved || saved.room.state.status === 'ended') return this.error(connection, 'expired', '恢复凭据已失效，请重新加入')
       ;({ room, member } = saved)
+      if (!room.members.includes(member)) {
+        if (room.members.length >= 5) return this.error(connection, 'capacity', '房间已满，暂时无法恢复，请稍后重新加入')
+        room.retired = room.retired.filter(m => m !== member)
+        room.members.push(member)
+      }
       const previous = member.connection
       if (previous) {
         this.bindings.delete(previous.id)
@@ -158,16 +268,23 @@ export class ListenRooms {
         room = {
           state: {
             protocol: LISTEN_PROTOCOL, roomId: randomUUID(), code, revision: 0, playbackId: randomUUID(), track: { ...LAB_TRACK },
+            kind: message.kind ?? 'lab', queue: [], currentIndex: null, playMode: 'order',
             status: 'paused', wantsToPlay: false, pauseReason: 'user', positionAtAnchor: 0, anchorServerTime: this.now(), rate: 1, hostId: '', members: [],
-          }, members: [], createdAt: this.now(),
+          }, members: [], retired: [], createdAt: this.now(), order: [],
+        }
+        if (message.kind === 'music') {
+          room.state.queue = (message.tracks ?? []).map(t => ({ ...t, queueItemId: randomUUID() }))
+          this.select(room, room.state.queue.length ? Math.min(message.index ?? 0, room.state.queue.length - 1) : null, message.autoplay ?? false)
+          room.state.positionAtAnchor = Math.min(message.position ?? 0, room.state.track.duration)
         }
         this.rooms.set(code, room)
       }
       else {
         const found = this.rooms.get(message.code.toUpperCase())
         if (!found || found.state.status === 'ended') return this.error(connection, 'not-found', '房间不存在或已结束')
+        if (message.kind && message.kind !== found.state.kind) return this.error(connection, 'not-found', '该房间不是音乐房间')
         room = found
-        if (room.members.length >= 5) return this.error(connection, 'capacity', '实验房间最多 5 人')
+        if (room.members.length >= 5) return this.error(connection, 'capacity', '房间最多 5 人')
         if (!room.members.find(m => m.id === room.state.hostId)?.connection) return this.error(connection, 'host-offline', '房主暂时离线，请稍后加入')
       }
       member = { id: randomUUID(), name: message.name.trim() || '听众', token: randomBytes(32).toString('hex'), generation: 0, status: 'loading', lastSeen: this.now(), replies: new Map() }
@@ -206,12 +323,18 @@ export class ListenRooms {
         member.connection.close()
       }
     }
+    for (const member of room.retired) this.tokens.delete(member.token)
     this.rooms.delete(room.state.code)
   }
 
   sweep() {
     const now = this.now()
     for (const room of this.rooms.values()) {
+      room.retired = room.retired.filter(member => {
+        if (now - (member.disconnectedAt ?? now) < 10 * 60_000) return true
+        this.tokens.delete(member.token)
+        return false
+      })
       for (const member of room.members) {
         if (member.connection && now - member.lastSeen > CONNECTION_TIMEOUT_MS) {
           const connection = member.connection
@@ -223,13 +346,15 @@ export class ListenRooms {
         for (const [key, value] of member.replies) if (now - value.at > 60_000) member.replies.delete(key)
       }
       const host = room.members.find(m => m.id === room.state.hostId)!
-      if ((!host.connection && now - (host.disconnectedAt ?? now) >= DISCONNECT_GRACE_MS) || now - room.createdAt > 30 * 60_000) {
+      const lifetime = room.state.kind === 'music' ? 12 * 60 * 60_000 : 30 * 60_000
+      if ((!host.connection && now - (host.disconnectedAt ?? now) >= DISCONNECT_GRACE_MS) || now - room.createdAt > lifetime) {
         this.end(room)
         continue
       }
       for (const member of room.members) {
         if (member !== host && !member.connection && now - (member.disconnectedAt ?? now) >= DISCONNECT_GRACE_MS) {
-          this.tokens.delete(member.token)
+          room.retired.push(member)
+          if (room.retired.length > 50) this.tokens.delete(room.retired.shift()!.token)
           room.members = room.members.filter(m => m !== member)
           this.broadcast(room)
         }
@@ -239,7 +364,7 @@ export class ListenRooms {
         room.state.status = 'playing'
         this.broadcast(room)
       }
-      if (room.state.status === 'playing' && roomPosition(room.state, now) >= LAB_TRACK.duration) {
+      if (room.state.kind === 'lab' && room.state.status === 'playing' && roomPosition(room.state, now) >= room.state.track.duration) {
         this.freeze(room, 'user', false)
         this.broadcast(room)
       }

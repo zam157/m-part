@@ -1,6 +1,7 @@
 import { clsx } from 'cn/lite'
 import { createMemo, createSignal } from 'solid-js'
 import { currentSong, currentTime, duration, progress, setCurrentTime, waiting } from '~/composables/player'
+import { canControlRoom } from '~/composables/player-context'
 import { formatTime } from './player-controls'
 
 export default function PlaybackProgress(props: { expanded?: boolean }) {
@@ -11,7 +12,7 @@ export default function PlaybackProgress(props: { expanded?: boolean }) {
   let drag: { left: number, width: number, progress: number } | null = null
   const hasSong = () => !!currentSong()
   const trackDuration = () => Number.isFinite(duration()) ? Math.max(0, duration()) : 0
-  const canSeek = () => hasSong() && trackDuration() > 0 && !waiting()
+  const canSeek = () => canControlRoom() && hasSong() && trackDuration() > 0 && !waiting()
   const displayProgress = createMemo(() => Math.max(0, Math.min(1, tempProgress() ?? progress())) || 0)
   const displaySeconds = () => tempProgress() === null ? currentTime() : displayProgress() * trackDuration()
   function updateTempProgress(clientX: number) {
