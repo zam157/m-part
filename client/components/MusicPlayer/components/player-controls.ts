@@ -1,5 +1,5 @@
 import type { MusicQuality } from '#shared/types/music-info'
-import { changeQuality, currentSong, currentTime, playing, playMode, setCurrentTime, setPlaying, setSrc, setWaiting } from '~/composables/player'
+import { audio, changeQuality, currentSong, currentTime, playing, playMode, setCurrentTime, setPlaying, setSrc, setWaiting } from '~/composables/player'
 
 export function formatTime(seconds: number): string {
   const total = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0))
@@ -24,4 +24,13 @@ export async function selectQuality(quality: MusicQuality) {
 export async function retryPlayback() {
   await setSrc(null, currentSong()?.provider)
   await setPlaying(true)
+}
+
+/** 通知自动关闭后，播放按钮仍能重新获取失败的音源。 */
+export async function togglePlayback() {
+  if (!playing() && (!audio.getAttribute('src') || audio.error)) {
+    await retryPlayback()
+    return
+  }
+  await setPlaying(!playing())
 }

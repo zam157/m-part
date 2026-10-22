@@ -1,10 +1,9 @@
 import { Portal } from '@solidjs/web'
 import { clsx } from 'cn/lite'
 import { createEffect, createSignal, onCleanup, Show, untrack } from 'solid-js'
-import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
 import { closeContextMenu } from '~/components/ContextMenu/state'
 import {
-  currentSong, currentSourceInfo, playbackError, playing, playQueue,
+  currentSong, currentSourceInfo, playing, playQueue,
   setPlaying, setVolume, volume,
 } from '~/composables/player'
 import Lyrics from '~/components/Lyrics/Lyrics'
@@ -13,12 +12,13 @@ import PlaybackControls from './PlaybackControls'
 import PlaybackProgress from './PlaybackProgress'
 import QualityBtn from './QualityBtn'
 import VolumeSlider from './VolumeSlider'
-import { retryPlayback, selectQuality } from './player-controls'
+import { selectQuality } from './player-controls'
 import '../expanded-player.css'
 
 export interface ExpandedPlayerProps {
   show: boolean
   onShowChange: (show: boolean) => void
+  ref?: (element: HTMLDialogElement) => void
 }
 
 export default function ExpandedPlayer(props: ExpandedPlayerProps) {
@@ -60,7 +60,7 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
     <Portal>
       <dialog
         id="expanded-player"
-        ref={dialogRef}
+        ref={element => { dialogRef = element; props.ref?.(element) }}
         aria-label="展开播放器"
         aria-modal="true"
         inert={!props.show}
@@ -88,7 +88,6 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
               </div>
               <div class="expanded-controls mt-7 max-[900px]:mt-5">
                 <div class="mb-4 min-w-0"><h1 class="text-7 leading-tight font-semibold tracking-tight line-clamp-2 max-[900px]:text-6" innerHTML={currentSong()?.title || '尚未播放'} /><p class="text-base text-muted-foreground truncate mt-2">{currentSong()?.artist || '未知创作者'}</p><Show when={currentSong()?.album}><p class="text-xs text-muted-foreground/75 truncate mt-1">{currentSong()?.album}</p></Show></div>
-                <Show when={playbackError()}><ErrorMessage message={playbackError() ?? ''} onRetry={retryPlayback} class="p-3 gap-2 mb-3 border border-border" /></Show>
                 <PlaybackProgress expanded />
                 <div class="mt-4 mb-5"><PlaybackControls expanded portalMount={dialogRef} /></div>
                 <div class="flex items-center gap-4"><VolumeSlider expanded value={volume()} onValueChange={setVolume} /><Show when={currentSourceInfo()?.qualities?.length}><QualityBtn portalMount={dialogRef} qualities={currentSourceInfo()!.qualities!} onSelect={selectQuality} /></Show></div>

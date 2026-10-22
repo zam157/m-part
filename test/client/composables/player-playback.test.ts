@@ -32,7 +32,8 @@ vi.mock('#shared/utils/providers', () => ({
 
 vi.mock('#shared/utils/fetch', () => ({ tRequest: tRequestMock }))
 
-const { audio, changeQuality, currentSourceInfo, playbackError, resetPlayer, setPlayQueue, setPlaying, setSrc, waiting } = await import('~/composables/player')
+const { audio, changeQuality, currentIndex, currentSourceInfo, dismissPlaybackError, playbackError, playQueue, playing, resetPlayer, setPlayQueue, setPlaying, setSrc, waiting } = await import('~/composables/player')
+const { togglePlayback } = await import('~/components/MusicPlayer/components/player-controls')
 
 const song = {
   provider: 'bili' as const,
@@ -114,6 +115,36 @@ describe('播放链路', () => {
     expect(audio.hasAttribute('src')).toBe(false)
     expect(audio.pause).toHaveBeenCalled()
     expect(audio.load).toHaveBeenCalled()
+  })
+
+  it('关闭播放失败通知不清空当前歌曲或播放队列，下次失败仍能显示', async () => {
+    sourceInfoMock.mockRejectedValue(new Error('无播放权限'))
+    await setPlayQueue([song])
+    flush()
+    dismissPlaybackError()
+    flush()
+    expect(playbackError()).toBeNull()
+    expect(playQueue()).toEqual([song])
+    expect(currentIndex()).toBe(0)
+    expect(playing()).toBe(false)
+    await setSrc(null, 'bili')
+    flush()
+    expect(playbackError()).toBe('无播放权限')
+  })
+
+  it('通知关闭后，点击播放可重新获取失败的音源并播放', async () => {
+    sourceInfoMock.mockRejectedValueOnce(new Error('网络暂不可用'))
+    await setPlayQueue([song])
+    flush()
+    dismissPlaybackError()
+    flush()
+    await togglePlayback()
+    flush()
+    expect(sourceInfoMock).toHaveBeenCalledTimes(2)
+    expect(audio.src).toBe('https://cdn.example/a.m4s')
+    expect(audio.play).toHaveBeenCalledOnce()
+    expect(playbackError()).toBeNull()
+    expect(currentIndex()).toBe(0)
   })
 
   it('旧歌曲的迟到响应不能覆盖新歌曲的流地址', async () => {

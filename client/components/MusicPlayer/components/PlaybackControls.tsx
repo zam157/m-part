@@ -1,8 +1,8 @@
 import { clsx } from 'cn/lite'
 import { Show } from 'solid-js'
 import Tooltip from '~/components/Tooltip/Tooltip'
-import { currentSong, playing, playMode, prevNext, seeking, setPlaying, togglePlayMode, waiting } from '~/composables/player'
-import { playModeLabel } from './player-controls'
+import { currentSong, playing, playMode, prevNext, seeking, togglePlayMode, waiting } from '~/composables/player'
+import { playModeLabel, togglePlayback } from './player-controls'
 
 export default function PlaybackControls(props: { expanded?: boolean, portalMount?: HTMLElement }) {
   const hasSong = () => !!currentSong()
@@ -19,7 +19,7 @@ export default function PlaybackControls(props: { expanded?: boolean, portalMoun
         )}
       </Tooltip>
       <button class={clsx('ghost-btn', props.expanded ? 'size-12' : 'size-9')} disabled={!hasSong()} aria-label="上一首" onClick={() => prevNext(0)}><span class="i-solar:skip-previous-bold text-5" /></button>
-      <button class={props.expanded ? 'btn size-16 rounded-full shadow-sm' : 'ghost-btn size-11'} disabled={!hasSong()} aria-label={playing() ? '暂停' : '播放'} onClick={() => setPlaying(!playing())}>
+      <button class={props.expanded ? 'btn size-16 rounded-full shadow-sm' : 'ghost-btn size-11'} disabled={!hasSong()} aria-label={playing() ? '暂停' : '播放'} onClick={togglePlayback}>
         <span class={clsx(props.expanded ? 'text-8' : 'text-7', showSpinner() ? 'i-lucide:loader-circle animate-spin motion-reduce:animate-none' : playing() ? 'i-solar:pause-bold' : 'i-solar:play-bold')} />
       </button>
       <button class={clsx('ghost-btn', props.expanded ? 'size-12' : 'size-9')} disabled={!hasSong()} aria-label="下一首" onClick={() => prevNext(1)}><span class="i-solar:skip-next-bold text-5" /></button>

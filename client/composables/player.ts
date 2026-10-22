@@ -157,6 +157,11 @@ audio.addEventListener('error', (e) => {
 // #endregion
 
 // #region actions
+/** 关闭通知仅清除文案，不改变当前歌曲、播放状态或队列。 */
+export function dismissPlaybackError() {
+  setPlaybackError(null)
+}
+
 /**
  * 生成随机播放顺序（Fisher-Yates 洗牌算法）。
  *

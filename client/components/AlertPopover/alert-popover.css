@@ -1,0 +1,25 @@
+@layer components {
+  .alert-popover {
+    opacity: 0;
+    translate: -50% -0.5rem;
+    transition: opacity 180ms ease, translate 180ms ease, display 180ms allow-discrete, overlay 180ms allow-discrete;
+  }
+
+  .alert-popover:popover-open {
+    opacity: 1;
+    translate: -50% 0;
+  }
+
+  @starting-style {
+    .alert-popover:popover-open {
+      opacity: 0;
+      translate: -50% -0.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .alert-popover {
+      transition: none;
+    }
+  }
+}

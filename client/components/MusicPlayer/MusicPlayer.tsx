@@ -1,9 +1,9 @@
 import { clsx } from 'cn/lite'
 import { createSignal, Show } from 'solid-js'
-import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
+import AlertPopover from '~/components/AlertPopover/AlertPopover'
 import Tooltip from '~/components/Tooltip/Tooltip'
 import {
-  currentSong, currentSourceInfo, playbackError, setShowPlayQueue, setVolume, showPlayQueue, volume,
+  currentSong, currentSourceInfo, dismissPlaybackError, playbackError, setShowPlayQueue, setVolume, showPlayQueue, volume,
 } from '~/composables/player'
 import ExpandedPlayer from './components/ExpandedPlayer'
 import PlaybackControls from './components/PlaybackControls'
@@ -16,17 +16,11 @@ import './music-player.css'
 
 export default function MusicPlayer() {
   const [showExpanded, setShowExpanded] = createSignal(false)
+  let expandedDialog: HTMLDialogElement | undefined
   const hasSong = () => !!currentSong()
 
   return (
     <footer aria-label="音乐播放器" class="relative shrink-0 bg-background select-none">
-      <Show when={playbackError()}>
-        <ErrorMessage
-          message={playbackError() ?? ''}
-          onRetry={retryPlayback}
-          class="flex-none flex-row gap-3 p-3 border-b border-border"
-        />
-      </Show>
       <div class="grid grid-cols-[minmax(180px,1fr)_minmax(0,460px)_minmax(180px,1fr)] items-center gap-x-5 h-[--player-height] px-6 border-t border-border max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:gap-x-2 max-[760px]:gap-y-1 max-[760px]:px-4 max-[760px]:py-2 max-[400px]:px-3">
         <PlaybackControls />
 
@@ -62,7 +56,15 @@ export default function MusicPlayer() {
           </Tooltip>
         </div>
       </div>
-      <ExpandedPlayer show={showExpanded()} onShowChange={setShowExpanded} />
+      <ExpandedPlayer show={showExpanded()} onShowChange={setShowExpanded} ref={element => { expandedDialog = element }} />
+      <AlertPopover
+        title="播放失败"
+        message={playbackError()}
+        variant="destructive"
+        onDismiss={dismissPlaybackError}
+        action={{ label: '重试', onClick: retryPlayback }}
+        portalMount={showExpanded() ? expandedDialog : undefined}
+      />
     </footer>
   )
 }
