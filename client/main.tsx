@@ -6,9 +6,14 @@ import 'uno.css'
 import App from './App'
 import { Router } from './router'
 import { startPlayerPersistence } from './composables/player-persistence'
+import { startMediaSession } from './composables/media-session'
 
 const playerPersistence = startPlayerPersistence()
-import.meta.hot?.dispose(() => playerPersistence.dispose())
+const disposeMediaSession = startMediaSession()
+import.meta.hot?.dispose(() => {
+  playerPersistence.dispose()
+  disposeMediaSession()
+})
 
 render(
   () => (
