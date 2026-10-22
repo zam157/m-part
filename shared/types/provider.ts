@@ -33,6 +33,8 @@ export interface LyricsInfo {
   original: string
   translated?: string
   romanized?: string
+  /** 可选的逐字原文（YRC / 增强 LRC）及对应时间轴的译文；缺失时使用普通 LRC。 */
+  wordByWord?: { original: string, translated?: string, romanized?: string }
   instrumental?: boolean
 }
 

@@ -40,10 +40,11 @@
 
 ## 歌词
 
-- Provider 可选 `getLyrics(id, { signal })`，返回 `LyricsInfo` 的原文、翻译、音译 LRC 和纯音乐标识。网易云使用官方 `/api/song/lyric` 对应 WEAPI 请求，参数参考 [api-enhanced 的歌词实现](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/main/module/lyric.js)，没有引入其 Node.js 依赖。BiliBili 暂无实现，显示「此音源暂不提供歌词」；曲目自带 `lrc` 时仍可展示。
+- Provider 可选 `getLyrics(id, { signal })`，返回 `LyricsInfo` 的原文、翻译、音译 LRC 和纯音乐标识；`wordByWord` 可提供逐字原文及对应时间轴的翻译、音译。网易云使用官方 `/api/song/lyric/v1` 对应 WEAPI 请求，同时获取 YRC 与普通 LRC，参数参考 [api-enhanced 的新版歌词实现](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/main/module/lyric_new.js)，没有引入其 Node.js 依赖。QQ 音乐现有接口返回普通 LRC 时沿用逐行高亮；BiliBili 暂无实现，显示「此音源暂不提供歌词」；曲目自带 `lrc` 时仍可展示。
 - `createLyrics` 仅在展开或切歌时读取，最多缓存 100 首歌词到内存；不随时间更新请求或读写 IndexedDB。切歌、关闭或卸载会取消请求并忽略迟到结果；失败显示错误和重试，不能冒充无歌词。
-- `client/utils/lyrics.ts` 解析多时间标签、毫秒、小数、offset（正值提前）、相同时刻多行和纯文本；翻译 / 音译按时间戳对齐。无时间轴的歌词只展示文本。
+- `client/utils/lyrics.ts` 解析多时间标签、毫秒、小数、offset（正值提前）、相同时刻多行和纯文本，并支持 YRC 与角括号时间标记的增强 LRC。YRC 行、字的起点均为绝对毫秒，忽略 JSON 元数据；offset 同时调整行与字。没有有效逐字数据时回退原始 LRC，混合时间轴中无有效字时间的行保留逐行高亮。翻译 / 音译使用相应时间轴按时间戳对齐。无时间轴的歌词只展示文本。
+- 当前行的逐字高亮按字起点与持续时间，以文字渐变填充推进。只有逐字歌词正在播放且展开页可见时启动 `requestAnimationFrame`，每帧读取真实 `audio.currentTime`，不按墙钟累加时间；暂停、后台、收起或卸载会取消动画。暂停后跳转直接使用共享进度，快进、回退及倍速不会让动画继续漂移。普通 LRC 不启动逐帧更新；缺少末字结束标记的增强 LRC 在该字起点点亮，不估算不存在的字内时间。
 - `Lyrics` 对播放时间二分定位，只有行号或布局变化时滚动内部容器，不滚动整个页面；手动滚动暂停跟随，「回到当前歌词」恢复。点击有效时间轴行只跳转进度，保留原播放 / 暂停状态，音源加载中禁止跳转。减少动态效果时直接定位。
 - 移动端切换及跨断点尺寸变化通过 ResizeObserver 重新定位，返回清理函数释放观察器。只有实际布局需要的滚动定位使用 JS，歌词颜色和播放器动画仍由 CSS 完成。
 
-歌词验证：真实网易云歌曲、纯音乐、无时间轴文本、快速切歌的迟到响应、失败重试、点击跳转、手动浏览恢复跟随、翻译开关，以及桌面 / 390px / 320px 布局。
+歌词验证：真实网易云 YRC、无逐字数据的逐行回退、纯音乐、无时间轴文本、快速切歌的迟到响应、失败重试、暂停 / 跳转 / 倒退时的字内进度、点击跳转、手动浏览恢复跟随、翻译开关，以及桌面 / 390px / 320px 布局。

@@ -5,6 +5,12 @@
     transition: color 250ms ease, opacity 250ms ease;
   }
   .lyric-line[aria-current='true'] { color: oklch(var(--foreground)); }
+  .lyric-line[aria-current='true'] .lyric-word {
+    background-image: linear-gradient(to right, oklch(var(--foreground)) var(--word-progress), color-mix(in oklab, oklch(var(--foreground)) 35%, transparent) var(--word-progress));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
   .lyric-line:not([aria-current]):not(:disabled):hover { color: color-mix(in oklab, oklch(var(--foreground)) 75%, transparent); }
   .lyric-line:disabled { cursor: default; }
   @media (prefers-reduced-motion: reduce) { .lyric-line { transition: none; } }

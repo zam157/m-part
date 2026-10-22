@@ -2,8 +2,8 @@ import { clsx } from 'cn/lite'
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch, untrack } from 'solid-js'
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
 import { createLyrics } from '~/composables/lyrics'
-import { currentSong, currentTime, duration, setCurrentTime, waiting } from '~/composables/player'
-import { activeLyricIndex } from '~/utils/lyrics'
+import { audio, currentSong, currentTime, duration, playing, setCurrentTime, waiting } from '~/composables/player'
+import { activeLyricIndex, lyricWordProgress } from '~/utils/lyrics'
 import './lyrics.css'
 
 export default function Lyrics(props: { visible: boolean, class?: string }) {
@@ -11,10 +11,33 @@ export default function Lyrics(props: { visible: boolean, class?: string }) {
   const lyrics = createLyrics(currentSong, () => props.visible)
   const [following, setFollowing] = createSignal(true)
   const [translation, setTranslation] = createSignal(true)
-  const active = createMemo(() => activeLyricIndex(lyrics.lines(), currentTime()))
+  const [frameTime, setFrameTime] = createSignal(0)
+  const hasWords = createMemo(() => lyrics.lines().some(line => line.words?.length))
+  const lyricTime = () => props.visible && hasWords() && playing() ? frameTime() : currentTime()
+  const active = createMemo(() => activeLyricIndex(lyrics.lines(), lyricTime()))
   const hasTranslation = () => lyrics.lines().some(line => line.translation)
   const instrumental = () => lyrics.data()?.instrumental || lyrics.lines().some(line => /^纯音乐[，,]?\s*请欣赏/.test(line.text))
   const canSeek = (time: number | null) => time !== null && !waiting() && Number.isFinite(duration()) && duration() > 0 && time <= duration()
+
+  // 只在可见且播放逐字歌词时逐帧读取真实媒体时间；暂停、收起和后台均停止。
+  createEffect(() => props.visible && hasWords() && playing(), (enabled) => {
+    if (!enabled) return
+    let frame = 0
+    function tick() {
+      setFrameTime(audio.currentTime)
+      frame = requestAnimationFrame(tick)
+    }
+    function syncVisibility() {
+      cancelAnimationFrame(frame)
+      if (document.visibilityState === 'visible') tick()
+    }
+    syncVisibility()
+    document.addEventListener('visibilitychange', syncVisibility)
+    return () => {
+      cancelAnimationFrame(frame)
+      document.removeEventListener('visibilitychange', syncVisibility)
+    }
+  })
 
   createEffect(() => [props.visible, lyrics.lines()] as const, () => { setFollowing(true) })
   function followLine() {
@@ -64,7 +87,13 @@ export default function Lyrics(props: { visible: boolean, class?: string }) {
                       disabled={!canSeek(line.time)}
                       onClick={() => { if (canSeek(line.time)) { setCurrentTime(line.time!); setFollowing(true) } }}
                     >
-                      <span class="block">{line.text || '· · ·'}</span>
+                      <span class="block whitespace-pre-wrap">
+                        <Show when={line.words?.length} fallback={line.text || '· · ·'}>
+                          <For each={line.words}>{word => (
+                            <span class="lyric-word" style={{ '--word-progress': `${active() === index() ? lyricWordProgress(word, lyricTime()) * 100 : 0}%` }}>{word.text}</span>
+                          )}</For>
+                        </Show>
+                      </span>
                       <Show when={translation() && line.translation}><span class="block mt-2 text-base font-normal leading-relaxed opacity-75">{line.translation}</span></Show>
                       <Show when={line.romanization}><span class="block mt-1 text-sm font-normal leading-relaxed opacity-60">{line.romanization}</span></Show>
                     </button>

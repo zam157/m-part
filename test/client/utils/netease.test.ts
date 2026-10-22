@@ -20,8 +20,14 @@ describe('网易云 Provider', () => {
     requestMock.mockResolvedValueOnce([true, { code: 200, lrc: { lyric: '[00:01]Hello' }, tlyric: { lyric: '[00:01]你好' }, romalrc: { lyric: '[00:01]he-llo' } }])
     const controller = new AbortController()
     expect(await provider.getLyrics!('1', { signal: controller.signal })).toEqual({ original: '[00:01]Hello', translated: '[00:01]你好', romanized: '[00:01]he-llo', instrumental: false })
-    expect(encryptMock).toHaveBeenCalledWith({ id: '1', tv: -1, lv: -1, rv: -1, kv: -1, _nmclfl: 1, csrf_token: '' })
-    expect(requestMock).toHaveBeenCalledWith('https://music.163.com/weapi/song/lyric', expect.objectContaining({ signal: controller.signal }))
+    expect(encryptMock).toHaveBeenCalledWith({ id: '1', cp: false, tv: 0, lv: 0, rv: 0, kv: 0, yv: 0, ytv: 0, yrv: 0, csrf_token: '' })
+    expect(requestMock).toHaveBeenCalledWith('https://music.163.com/weapi/song/lyric/v1', expect.objectContaining({ signal: controller.signal }))
+  })
+
+  it('新版歌词保留普通 LRC 回退和逐字时间轴对应的翻译、音译', async () => {
+    const wordByWord = { original: '[1000,1000](1000,500,0)你(1500,500,0)好', translated: '[00:01]Hello', romanized: '[00:01]ni hao' }
+    requestMock.mockResolvedValueOnce([true, { code: 200, lrc: { lyric: '[00:02]你好' }, yrc: { lyric: wordByWord.original }, ytlrc: { lyric: wordByWord.translated }, yromalrc: { lyric: wordByWord.romanized } }])
+    expect(await provider.getLyrics!('1')).toMatchObject({ original: '[00:02]你好', wordByWord })
   })
 
   it('歌词区分纯音乐、无歌词和失败，不请求已取消的任务', async () => {

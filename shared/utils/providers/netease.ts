@@ -114,6 +114,9 @@ interface LyricsResponse extends NeteaseResponse {
   lrc?: { lyric?: string }
   tlyric?: { lyric?: string }
   romalrc?: { lyric?: string }
+  yrc?: { lyric?: string }
+  ytlrc?: { lyric?: string }
+  yromalrc?: { lyric?: string }
   nolyric?: boolean
   pureMusic?: boolean
 }
@@ -210,11 +213,16 @@ async function search(keyword: string, page: number, type: 1 | 10 | 100 | 1000) 
 const NeteaseProvider: Provider = {
   name: 'netease',
   async getLyrics(id, options) {
-    const result = await request<LyricsResponse>('/api/song/lyric', { id, tv: -1, lv: -1, rv: -1, kv: -1, _nmclfl: 1 }, options?.signal)
+    const result = await request<LyricsResponse>('/api/song/lyric/v1', { id, cp: false, tv: 0, lv: 0, rv: 0, kv: 0, yv: 0, ytv: 0, yrv: 0 }, options?.signal)
     return {
       original: result.lrc?.lyric ?? '',
       translated: result.tlyric?.lyric,
       romanized: result.romalrc?.lyric,
+      ...(result.yrc?.lyric ? { wordByWord: {
+        original: result.yrc.lyric,
+        translated: result.ytlrc?.lyric,
+        romanized: result.yromalrc?.lyric,
+      } } : {}),
       instrumental: !!(result.nolyric || result.pureMusic),
     }
   },
