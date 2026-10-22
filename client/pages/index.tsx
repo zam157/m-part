@@ -6,7 +6,7 @@ export default function IndexPage() {
   return (
     <div class="flex-1 min-w-0 overflow-auto">
       <header class="h-16 px-9 max-[760px]:px-4.5 border-b border-border flex items-center justify-between"><span class="text-sm text-muted-foreground">Music Party</span></header>
-      <div class="max-w-[1240px] mx-auto px-10 pt-9 pb-6 max-[1100px]:p-7 max-[760px]:px-4.5 max-[760px]:py-6">
+      <div class="px-10 pt-9 pb-6 max-[1100px]:p-7 max-[760px]:px-4.5 max-[760px]:py-6">
         <div class="flex items-center justify-between gap-4 mb-6"><div><h1 class="page-title">首页</h1></div><span class="text-xs text-muted-foreground max-[760px]:hidden">MUSIC PARTY / 01</span></div>
         <section class="flex items-center justify-between min-h-[330px] px-11 py-9 bg-muted overflow-hidden border border-border rounded-xl max-[1100px]:p-7 max-[760px]:min-h-75">
           <div class="z-1 shrink-0">

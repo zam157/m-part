@@ -12,6 +12,8 @@ interface RecommendationsProps {
   description: string
 }
 
+const gridClass = 'grid grid-cols-[repeat(auto-fill,minmax(min(100%,clamp(320px,20vw,420px)),1fr))] gap-4 max-[760px]:grid-cols-1'
+
 export default function Recommendations(props: RecommendationsProps) {
   const state = () => recommendations()[props.source]
   createEffect(() => props.source, source => { void loadRecommendations(source) })
@@ -32,12 +34,12 @@ export default function Recommendations(props: RecommendationsProps) {
           <ErrorMessage message={state().error ?? ''} onRetry={() => loadRecommendations(props.source, true)} />
         </Match>
         <Match when={!state().loaded}>
-          <div class="grid grid-cols-4 gap-4 max-[1100px]:grid-cols-3 max-[760px]:grid-cols-2" role="status" aria-label={`正在加载${props.title}`}>
+          <div class={gridClass} role="status" aria-label={`正在加载${props.title}`}>
             <For each={[0, 1, 2, 3]}>{() => <div class="skeleton h-42" />}</For>
           </div>
         </Match>
         <Match when={state().items.length}>
-          <div class="grid grid-cols-4 gap-4 max-[1100px]:grid-cols-3 max-[760px]:grid-cols-2">
+          <div class={gridClass}>
             <For each={state().items}>{music => (
               <MusicContextMenu music={music}>{trigger => (
                 <button {...trigger} class="card p-2 gap-2 text-left hover:bg-muted transition-colors focus-visible:outline-ring" onClick={() => addToPlayQueue(music)} aria-label={`播放 ${music.title}`}>
