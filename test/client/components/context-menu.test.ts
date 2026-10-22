@@ -12,13 +12,14 @@ const select = vi.fn()
 
 beforeEach(() => {
   select.mockReset()
-  // jsdom 不实现 Popover；只补原生显示与关闭，定位 / 焦点 / 事件仍运行真实组件。
+  // jsdom 30.1 会按 Popover 的默认隐藏样式阻止聚焦；模拟显示时同步覆盖 display。
+  // 定位 / 焦点 / 事件仍运行真实组件，不替换业务逻辑。
   const matches = HTMLElement.prototype.matches
   vi.spyOn(HTMLElement.prototype, 'matches').mockImplementation(function (this: HTMLElement, selector) {
     return selector === ':popover-open' ? this.hasAttribute('data-test-open') : matches.call(this, selector)
   })
-  Object.defineProperty(HTMLElement.prototype, 'showPopover', { configurable: true, value() { this.setAttribute('data-test-open', '') } })
-  Object.defineProperty(HTMLElement.prototype, 'hidePopover', { configurable: true, value() { this.removeAttribute('data-test-open') } })
+  Object.defineProperty(HTMLElement.prototype, 'showPopover', { configurable: true, value() { this.setAttribute('data-test-open', ''); this.style.display = 'block' } })
+  Object.defineProperty(HTMLElement.prototype, 'hidePopover', { configurable: true, value() { this.removeAttribute('data-test-open'); this.style.display = 'none' } })
   container = document.createElement('div')
   document.body.append(container)
   dispose = render(() => [
@@ -147,6 +148,7 @@ describe('通用右键菜单', () => {
 
   it('来源位于模态对话框内时，菜单也挂在对话框内，关闭后返回默认容器', () => {
     const dialog = document.createElement('dialog')
+    dialog.open = true
     container.append(dialog)
     dialog.append(trigger)
     open()

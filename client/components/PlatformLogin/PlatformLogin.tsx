@@ -3,6 +3,7 @@ import type { ProviderName } from '#shared/types/provider'
 export const platformOptions = [
   { value: 'bili', label: 'BiliBili', url: 'https://www.bilibili.com/' },
   { value: 'netease', label: '网易云', url: 'https://music.163.com/' },
+  { value: 'qq', label: 'QQ音乐', url: 'https://y.qq.com/' },
 ] as const
 
 export default function PlatformLogin(props: { source: ProviderName, onRefresh: () => void }) {

@@ -1,0 +1,31 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "referer", "operation": "set", "value": "https://y.qq.com/" },
+        { "header": "origin", "operation": "set", "value": "https://y.qq.com" }
+      ]
+    },
+    "condition": {
+      "requestDomains": ["y.qq.com"],
+      "resourceTypes": ["xmlhttprequest"]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "referer", "operation": "set", "value": "https://y.qq.com/" }
+      ]
+    },
+    "condition": {
+      "requestDomains": ["qqmusic.qq.com", "aqqmusic.tc.qq.com"],
+      "resourceTypes": ["xmlhttprequest", "media"]
+    }
+  }
+]

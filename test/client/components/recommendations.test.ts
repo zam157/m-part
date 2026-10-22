@@ -1,5 +1,3 @@
-import { createComponent, render } from '@solidjs/web'
-import { flush } from 'solid-js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { getRecommendations, addToPlayQueue } = vi.hoisted(() => ({ getRecommendations: vi.fn(), addToPlayQueue: vi.fn() }))
@@ -9,11 +7,17 @@ vi.mock('~/composables/player', () => ({ addToPlayQueue, addNextToPlayQueue: vi.
 const song = { provider: 'bili' as const, id: '1', title: '原来的歌曲', duration: 60, coverUrl: '' }
 let home: typeof import('~/composables/recommendations')
 let component: typeof import('~/components/Recommendations/Recommendations')
+let render: typeof import('@solidjs/web')['render']
+let createComponent: typeof import('@solidjs/web')['createComponent']
+let flush: typeof import('solid-js')['flush']
 let container: HTMLDivElement
 let dispose: (() => void) | undefined
 
 beforeEach(async () => {
   vi.resetModules()
+  // RC.16 的事件委托按 render root 注册，组件与 render 必须来自同一模块实例。
+  ;({ render, createComponent } = await import('@solidjs/web'))
+  ;({ flush } = await import('solid-js'))
   getRecommendations.mockReset().mockResolvedValue([song])
   addToPlayQueue.mockReset()
   home = await import('~/composables/recommendations')

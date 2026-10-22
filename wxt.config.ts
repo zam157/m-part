@@ -47,11 +47,16 @@ export default defineConfig({
       'https://music.163.com/*',
       'https://*.music.163.com/*',
       'https://*.music.126.net/*',
+      'https://*.y.qq.com/*',
+      'https://*.qqmusic.qq.com/*',
+      'https://aqqmusic.tc.qq.com/*',
+      'https://y.gtimg.cn/*',
     ],
     declarative_net_request: {
       rule_resources: [
         { id: 'bilibili', enabled: true, path: 'rules/bilibili.json' },
         { id: 'netease', enabled: true, path: 'rules/netease.json' },
+        { id: 'qq', enabled: true, path: 'rules/qq.json' },
       ],
     },
   },

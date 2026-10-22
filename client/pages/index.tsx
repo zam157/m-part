@@ -24,6 +24,7 @@ export default function IndexPage() {
         </section>
         <Recommendations source="bili" title="BiliBili · 音乐精选" description="从音乐分区榜单，发现值得一听的声音。" />
         <Recommendations source="netease" title="网易云 · 推荐新歌" description="听听新近发布的旋律，遇见下一首喜欢。" />
+        <Recommendations source="qq" title="QQ音乐 · 推荐新歌" description="从新歌首发，发现新的旋律。" />
       </div>
     </div>
   )

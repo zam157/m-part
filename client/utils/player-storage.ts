@@ -38,7 +38,7 @@ function record(value: unknown): Record<string, unknown> | undefined {
 }
 function identity(value: unknown): StoredPosition['song'] {
   const row = record(value)
-  return row && (row.provider === 'bili' || row.provider === 'netease') && typeof row.id === 'string' && row.id
+  return row && (row.provider === 'bili' || row.provider === 'netease' || row.provider === 'qq') && typeof row.id === 'string' && row.id
     ? { provider: row.provider, id: row.id }
     : null
 }

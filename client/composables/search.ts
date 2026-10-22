@@ -15,7 +15,7 @@ import { createMemo, createSignal } from 'solid-js'
 export const sourceOptions = [
   { label: 'BiliBili', value: 'bili' },
   { label: '网易云', value: 'netease' },
-  // { label: 'QQ音乐', value: 'qq' },
+  { label: 'QQ音乐', value: 'qq' },
 ] as const satisfies Option<ProviderName>[]
 
 export const typeOptions = [

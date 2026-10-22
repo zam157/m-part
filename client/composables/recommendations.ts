@@ -15,10 +15,11 @@ function emptyState(): RecommendationState {
   return { items: [], loading: false, loaded: false, error: null }
 }
 
-// 离开首页再返回时复用结果；两个音源独立加载和重试。
+// 离开首页再返回时复用结果；各音源独立加载和重试。
 const [recommendations, setRecommendations] = createSignal<Record<ProviderName, RecommendationState>>({
   bili: emptyState(),
   netease: emptyState(),
+  qq: emptyState(),
 })
 
 export { recommendations }

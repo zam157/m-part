@@ -75,7 +75,7 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
         </div>
         <header class="relative z-1 shrink-0 h-18 px-8 flex items-center justify-between gap-3 border-b border-border/60 max-[900px]:h-15 max-[900px]:px-4">
           <div class="w-10 max-[900px]:w-21 shrink-0"><button class="ghost-btn size-10" autofocus aria-label="收起播放器" onClick={close}><span class="i-lucide:chevron-down text-5" /></button></div>
-          <div class="text-center"><p class="text-xs tracking-[0.15em] text-muted-foreground">正在播放</p><p class="text-xs font-medium mt-1">{currentSong()?.provider === 'netease' ? '网易云音乐' : 'BiliBili'}</p></div>
+          <div class="text-center"><p class="text-xs tracking-[0.15em] text-muted-foreground">正在播放</p><p class="text-xs font-medium mt-1">{currentSong()?.provider === 'netease' ? '网易云音乐' : currentSong()?.provider === 'qq' ? 'QQ音乐' : 'BiliBili'}</p></div>
           <div class="flex items-center gap-1"><button class={clsx('ghost-btn size-10 min-[901px]:hidden', showLyrics() && 'bg-accent')} aria-label="显示歌词" aria-controls="expanded-lyrics" aria-expanded={showLyrics() ? 'true' : 'false'} onClick={() => setShowLyrics(value => !value)}><span class="i-lucide:captions text-5" /></button><button class={clsx('ghost-btn size-10', showQueue() && 'bg-accent')} aria-label="展开播放队列" aria-controls="expanded-play-queue" aria-expanded={showQueue() ? 'true' : 'false'} onClick={() => setShowQueue(value => !value)}><span class="i-lucide:list-music text-5" /></button></div>
         </header>
         <div class="relative z-1 min-h-0 flex-1 overflow-y-auto overscroll-contain">

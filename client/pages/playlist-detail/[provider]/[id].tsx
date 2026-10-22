@@ -9,7 +9,7 @@ import { addToPlayQueue, setPlayQueue } from '~/composables/player'
 
 export default function PlaylistDetailPage() {
   const params = useParams<{ provider: string, id: string }>()
-  const route = () => params.id && (params.provider === 'bili' || params.provider === 'netease') ? { source: params.provider as ProviderName, id: params.id } : null
+  const route = () => params.id && (params.provider === 'bili' || params.provider === 'netease' || params.provider === 'qq') ? { source: params.provider as ProviderName, id: params.id } : null
   return (
     <Show when={route()} keyed fallback={<div class="empty">找不到这个音源的歌单</div>}>
       {value => <PlaylistDetailView source={value.source} id={value.id} />}

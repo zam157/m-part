@@ -74,6 +74,15 @@ describe('播放器缓存合并写入', () => {
 })
 
 describe('播放器缓存资料校验', () => {
+  it('QQ 曲目与当前位置可恢复，临时音频地址仍不保存', () => {
+    const item = { ...song, provider: 'qq' as const, id: 'qq-mid' }
+    const queue = queueForStorage([item], 'random', [0])
+    expect(decodePlayerCache({ queue, position: { song: item, time: 42 } })).toMatchObject({
+      queue: { items: [expect.objectContaining({ provider: 'qq', id: 'qq-mid' })], randomOrder: [0] },
+      position: { song: { provider: 'qq', id: 'qq-mid' }, time: 42 },
+    })
+    expect(queue.items[0]).not.toHaveProperty('src')
+  })
   it('只保存曲目资料，剔除临时音频及歌词 URL', () => {
     const queue = queueForStorage([song], 'random', [0])
     expect(queue.items[0]).not.toHaveProperty('src')
