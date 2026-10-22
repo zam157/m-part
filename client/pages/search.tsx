@@ -48,7 +48,7 @@ export default function SearchPage() {
 
   return (
     <div class="flex-1 min-w-0 flex flex-col gap-2 px-9 pt-8 pb-5 max-[760px]:px-4.5 max-[760px]:py-6">
-      <header class="pb-6"><h1 class="page-title">搜索</h1><p class="page-description">搜索歌曲、创作者、专辑和公开歌单。</p></header>
+      <header class="pb-6"><h1 class="page-title">搜索</h1><p class="page-description">搜索歌曲、创作者、专辑和公开歌单</p></header>
       {/*
         搜索栏与结果网格左缘对齐，最大宽度 800px。
         窄屏将筛选与输入框排为网格；! 覆盖 btn-group 的相邻按钮拼接规则。
@@ -103,7 +103,7 @@ export default function SearchPage() {
               <div class="empty">
                 <div class="grid place-items-center size-16 border border-border rounded-[16px] bg-muted"><span class={searching() ? 'i-lucide:loader-circle text-6 animate-spin' : 'i-lucide:search text-6'} /></div>
                 <span class="text-sm/relaxed font-medium">{searching() ? '正在搜索…' : hasSearched() ? '没有找到相关内容' : '输入关键词搜索'}</span>
-                <span class="text-xs text-muted-foreground">{searching() ? '请稍候。' : hasSearched() ? '请尝试其他关键词。' : '按 Enter 或点击搜索。'}</span>
+                <span class="text-xs text-muted-foreground">{searching() ? '请稍候。' : hasSearched() ? '请尝试其他关键词。' : '按 Enter 或点击搜索'}</span>
               </div>
             )}
           >
