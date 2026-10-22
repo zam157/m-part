@@ -18,7 +18,7 @@ export default function PlaylistsPage() {
 
   return (
     <div class="flex-1 min-w-0 overflow-auto px-9 py-8 max-[760px]:px-4.5 max-[760px]:py-6">
-      <header class="mb-6"><h1 class="page-title">我的歌单</h1><p class="page-description">从收藏里，找回那些喜欢的声音。</p></header>
+      <header class="mb-6"><h1 class="page-title">我的歌单</h1></header>
       <div class="flex items-center gap-3 mb-6">
         <Select value={playlistSource()} options={platformOptions} onValueChange={setPlaylistSource} triggerClass="w-30 !h-10" contentStyle="width:anchor-size(width);justify-self:auto;left:anchor(left);" />
         <button class="border-btn px-3 h-10" disabled={library().loading} onClick={() => loadPlaylists(playlistSource(), { refresh: true })}>刷新歌单</button>

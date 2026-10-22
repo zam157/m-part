@@ -40,7 +40,7 @@ export default function MusicPlayer() {
           <div class="flex-1 min-w-0">
             <div class="text-center min-w-0">
               <span class="block truncate text-[13px] leading-4 font-semibold" innerHTML={currentSong()?.title || '尚未播放'} />
-              <span class="block truncate text-[11px] leading-4 text-muted-foreground">{hasSong() ? currentSong()?.artist || '未知创作者' : '搜索或选择一首歌曲，开始聆听'}</span>
+              <span class="block truncate text-[11px] leading-4 text-muted-foreground">{hasSong() ? currentSong()?.artist || '未知创作者' : '搜索或选择歌曲开始播放'}</span>
             </div>
             <PlaybackProgress />
           </div>

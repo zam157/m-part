@@ -59,7 +59,7 @@ export default function PlayQueue(props: { floating?: boolean, open?: boolean, o
     >
       <div class={clsx('flex flex-col h-full overflow-hidden', props.floating ? 'w-full' : 'w-[--queue-width] bg-sidebar text-sidebar-foreground border-l border-sidebar-border')}>
         <header class="shrink-0 flex items-center justify-between px-3 py-3 border-b border-border">
-          <div><h2 class="text-sm font-semibold">播放队列</h2><p class="text-xs text-muted-foreground mt-1">{playQueue().length} 首待聆听的声音</p></div>
+          <div><h2 class="text-sm font-semibold">播放队列</h2><p class="text-xs text-muted-foreground mt-1">{playQueue().length} 首歌曲</p></div>
           <div class="flex items-center gap-1">
             <button type="button" class="ghost-btn size-8" aria-label="定位当前歌曲" title="定位当前歌曲" disabled={currentIndex() === null || !playQueue()[currentIndex()!]} onClick={() => tracks?.scrollToCurrent()}><span class="i-lucide:locate-fixed text-4" /></button>
             <button class="ghost-btn size-8" aria-label="关闭播放队列" onClick={() => setOpen(false)}><span class="i-lucide:x text-4" /></button>

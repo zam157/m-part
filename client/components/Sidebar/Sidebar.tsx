@@ -6,7 +6,7 @@ import { playQueue, setShowPlayQueue, showPlayQueue } from '~/composables/player
 import Tooltip from '~/components/Tooltip/Tooltip'
 
 const menuItems = [
-  { icon: 'i-lucide:house', label: '开始聆听', route: '/' },
+  { icon: 'i-lucide:house', label: '首页', route: '/' },
   { icon: 'i-lucide:search', label: '搜索', route: '/search' },
   { icon: 'i-lucide:library', label: '我的歌单', route: '/playlists' },
 ]
@@ -31,7 +31,7 @@ export default function Sidebar() {
     >
       <button class="h-9 shrink-0 flex items-center gap-2.5 text-left px-1.5" aria-label="Music Party 首页" onClick={() => navigate('/')}>
         <span class="grid place-items-center size-9 rounded-[10px] shrink-0 bg-primary text-primary-foreground"><span class="i-lucide:audio-lines text-5" /></span>
-        <span class="sidebar-label"><strong class="block text-[15px] leading-5 tracking-[-0.4px]">Music Party</strong><small class="block text-[10px] leading-3 text-muted-foreground mt-0.75">让喜欢的声音，留在耳边。</small></span>
+        <span class="sidebar-label"><strong class="block text-[15px] leading-5 tracking-[-0.4px]">Music Party</strong></span>
       </button>
       <nav id="sidebar-navigation" class="mt-6 flex flex-col gap-1" aria-label="主导航">
         <For each={menuItems}>{item => (
