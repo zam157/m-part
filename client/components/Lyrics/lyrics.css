@@ -1,5 +1,8 @@
 @layer components {
-  .lyrics-scroll { scrollbar-width: thin; }
+  .lyrics-scroll {
+    scrollbar-width: thin;
+    mask-image: linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+  }
   .lyric-line {
     color: color-mix(in oklab, oklch(var(--foreground)) 35%, transparent);
     transition: color 250ms ease, opacity 250ms ease;

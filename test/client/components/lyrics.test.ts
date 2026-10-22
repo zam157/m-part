@@ -79,7 +79,7 @@ describe('歌词交互', () => {
     expect(container.querySelector('[aria-current="true"]')).toBeNull()
     expect(getLyrics).toHaveBeenCalledTimes(1)
   })
-  it('手动滚动暂停跟随，恢复按钮和翻译开关可用，加载中不允许 seek', async () => {
+  it('手动滚动暂停跟随，恢复按钮可用，加载中不允许 seek', async () => {
     await mount()
     container.querySelector('[aria-label="歌词内容"]')!.dispatchEvent(new WheelEvent('wheel'))
     flush()
@@ -88,9 +88,6 @@ describe('歌词交互', () => {
     follow.click()
     flush()
     expect(container.textContent).not.toContain('回到当前歌词')
-    container.querySelector<HTMLButtonElement>('[aria-label="显示翻译"]')!.click()
-    flush()
-    expect(container.textContent).not.toContain('世界')
     player.setWaiting(true)
     flush()
     expect(container.querySelector<HTMLButtonElement>('.lyric-line')!.disabled).toBe(true)

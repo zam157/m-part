@@ -25,6 +25,8 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
   let dialogRef!: HTMLDialogElement
   const [showLyrics, setShowLyrics] = createSignal(false)
   const [showQueue, setShowQueue] = createSignal(false)
+  const [showTranslation, setShowTranslation] = createSignal(true)
+  const [hasTranslation, setHasTranslation] = createSignal(false)
   const close = () => props.onShowChange(false)
   function closeDialog() {
     for (const popover of dialogRef.querySelectorAll<HTMLElement>('[popover]'))
@@ -73,10 +75,14 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
           <Show when={currentSong()?.coverUrl}><img src={currentSong()!.coverUrl} alt="" referrerpolicy="no-referrer" class="size-full object-cover blur-3xl scale-125 opacity-10" /></Show>
           <div class="absolute inset-0 bg-background/80" />
         </div>
-        <header class="relative z-1 shrink-0 h-18 px-8 flex items-center justify-between gap-3 border-b border-border/60 max-[900px]:h-15 max-[900px]:px-4">
-          <div class="w-10 max-[900px]:w-21 shrink-0"><button class="ghost-btn size-10" autofocus aria-label="收起播放器" onClick={close}><span class="i-lucide:chevron-down text-5" /></button></div>
-          <div class="text-center"><p class="text-xs tracking-[0.15em] text-muted-foreground">正在播放</p><p class="text-xs font-medium mt-1">{currentSong()?.provider === 'netease' ? '网易云音乐' : currentSong()?.provider === 'qq' ? 'QQ音乐' : 'BiliBili'}</p></div>
-          <div class="flex items-center gap-1"><button class={clsx('ghost-btn size-10 min-[901px]:hidden', showLyrics() && 'bg-accent')} aria-label="显示歌词" aria-controls="expanded-lyrics" aria-expanded={showLyrics() ? 'true' : 'false'} onClick={() => setShowLyrics(value => !value)}><span class="i-lucide:captions text-5" /></button><button class={clsx('ghost-btn size-10', showQueue() && 'bg-accent')} aria-label="展开播放队列" aria-controls="expanded-play-queue" aria-expanded={showQueue() ? 'true' : 'false'} onClick={() => setShowQueue(value => !value)}><span class="i-lucide:list-music text-5" /></button></div>
+        <header class="relative z-1 shrink-0 h-18 px-8 flex items-center justify-between gap-2 border-b border-border/60 max-[900px]:h-15 max-[900px]:px-4">
+          <div class={clsx('shrink-0', hasTranslation() ? 'w-21 max-[900px]:w-26' : 'w-10 max-[900px]:w-17')}><button class="ghost-btn size-10" autofocus aria-label="收起播放器" onClick={close}><span class="i-lucide:chevron-down text-5" /></button></div>
+          <div class="text-center shrink-0"><p class="text-xs tracking-[0.15em] text-muted-foreground">正在播放</p><p class="text-xs font-medium mt-1">{currentSong()?.provider === 'netease' ? '网易云音乐' : currentSong()?.provider === 'qq' ? 'QQ音乐' : 'BiliBili'}</p></div>
+          <div class="flex shrink-0 items-center gap-1">
+            <button class={clsx('ghost-btn size-10 max-[900px]:size-8 min-[901px]:hidden', showLyrics() && 'bg-accent')} aria-label="显示歌词" aria-controls="expanded-lyrics" aria-expanded={showLyrics() ? 'true' : 'false'} onClick={() => setShowLyrics(value => !value)}><span class="i-lucide:captions text-5" /></button>
+            <Show when={hasTranslation()}><button class={clsx('ghost-btn size-10 max-[900px]:size-8 text-sm', showTranslation() && 'bg-accent')} aria-label="显示翻译" aria-controls="expanded-lyrics" aria-pressed={showTranslation() ? 'true' : 'false'} onClick={() => setShowTranslation(value => !value)}>译</button></Show>
+            <button class={clsx('ghost-btn size-10 max-[900px]:size-8', showQueue() && 'bg-accent')} aria-label="展开播放队列" aria-controls="expanded-play-queue" aria-expanded={showQueue() ? 'true' : 'false'} onClick={() => setShowQueue(value => !value)}><span class="i-lucide:list-music text-5" /></button>
+          </div>
         </header>
         <div class="relative z-1 min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div class="grid grid-cols-[minmax(0,1fr)_minmax(300px,0.9fr)] items-center gap-16 max-w-6xl min-h-full mx-auto px-12 py-8 max-[1100px]:gap-9 max-[900px]:grid-cols-1 max-[900px]:px-6 max-[900px]:py-5 max-[900px]:gap-5 max-[400px]:px-5">
@@ -94,7 +100,7 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
               </div>
             </section>
             <div id="expanded-lyrics" class={clsx('min-w-0', showLyrics() ? 'max-[900px]:order-1' : 'max-[900px]:hidden')}>
-              <Lyrics visible={props.show} class="h-[min(72dvh,720px)] max-[900px]:h-[38dvh]" />
+              <Lyrics visible={props.show} showTranslation={showTranslation()} onTranslationAvailableChange={setHasTranslation} class="h-[min(72dvh,720px)] max-[900px]:h-[38dvh]" />
             </div>
           </div>
         </div>

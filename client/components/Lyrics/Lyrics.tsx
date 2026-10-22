@@ -6,11 +6,10 @@ import { audio, currentSong, currentTime, duration, playing, setCurrentTime, wai
 import { activeLyricIndex, lyricWordProgress } from '~/utils/lyrics'
 import './lyrics.css'
 
-export default function Lyrics(props: { visible: boolean, class?: string }) {
+export default function Lyrics(props: { visible: boolean, class?: string, showTranslation?: boolean, onTranslationAvailableChange?: (available: boolean) => void }) {
   let scrollRef!: HTMLDivElement
   const lyrics = createLyrics(currentSong, () => props.visible)
   const [following, setFollowing] = createSignal(true)
-  const [translation, setTranslation] = createSignal(true)
   const [frameTime, setFrameTime] = createSignal(0)
   const hasWords = createMemo(() => lyrics.lines().some(line => line.words?.length))
   const lyricTime = () => props.visible && hasWords() && playing() ? frameTime() : currentTime()
@@ -18,6 +17,8 @@ export default function Lyrics(props: { visible: boolean, class?: string }) {
   const hasTranslation = () => lyrics.lines().some(line => line.translation)
   const instrumental = () => lyrics.data()?.instrumental || lyrics.lines().some(line => /^纯音乐[，,]?\s*请欣赏/.test(line.text))
   const canSeek = (time: number | null) => time !== null && !waiting() && Number.isFinite(duration()) && duration() > 0 && time <= duration()
+
+  createEffect(() => [hasTranslation(), props.onTranslationAvailableChange] as const, ([available, onChange]) => { onChange?.(available) })
 
   // 只在可见且播放逐字歌词时逐帧读取真实媒体时间；暂停、收起和后台均停止。
   createEffect(() => props.visible && hasWords() && playing(), (enabled) => {
@@ -46,7 +47,7 @@ export default function Lyrics(props: { visible: boolean, class?: string }) {
     const top = line ? scrollRef.scrollTop + line.getBoundingClientRect().top - scrollRef.getBoundingClientRect().top - scrollRef.clientHeight * 0.35 : 0
     scrollRef.scrollTo({ top: Math.max(0, top), behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
   }
-  createEffect(() => [props.visible, active(), following(), translation(), lyrics.lines()] as const, () => untrack(followLine))
+  createEffect(() => [props.visible, active(), following(), props.showTranslation, lyrics.lines()] as const, () => untrack(followLine))
   createEffect(() => props.visible, (visible) => {
     if (!visible || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => untrack(followLine))
@@ -56,10 +57,6 @@ export default function Lyrics(props: { visible: boolean, class?: string }) {
 
   return (
     <section aria-label="歌词" class={clsx('relative flex min-h-0 min-w-0 flex-col', props.class)}>
-      <header class="flex shrink-0 items-center justify-between gap-3 px-3 pb-4">
-        <h2 class="text-sm font-medium text-muted-foreground">歌词</h2>
-        <Show when={hasTranslation()}><button class="ghost-btn h-7 px-2 text-xs" aria-label="显示翻译" aria-pressed={translation() ? 'true' : 'false'} onClick={() => setTranslation(value => !value)}>译文</button></Show>
-      </header>
       <div
         ref={scrollRef}
         class="lyrics-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-3"
@@ -94,7 +91,7 @@ export default function Lyrics(props: { visible: boolean, class?: string }) {
                           )}</For>
                         </Show>
                       </span>
-                      <Show when={translation() && line.translation}><span class="block mt-2 text-base font-normal leading-relaxed opacity-75">{line.translation}</span></Show>
+                      <Show when={props.showTranslation !== false && line.translation}><span class="block mt-2 text-base font-normal leading-relaxed opacity-75">{line.translation}</span></Show>
                       <Show when={line.romanization}><span class="block mt-1 text-sm font-normal leading-relaxed opacity-60">{line.romanization}</span></Show>
                     </button>
                   </Show>
@@ -105,7 +102,9 @@ export default function Lyrics(props: { visible: boolean, class?: string }) {
           <Match when={true}><div class="empty h-full text-muted-foreground"><span class="i-lucide:captions-off text-9 opacity-40" /><p>{currentSong()?.provider === 'bili' ? '此音源暂不提供歌词' : '暂无歌词'}</p></div></Match>
         </Switch>
       </div>
-      <Show when={!following() && active() >= 0}><button class="border-btn absolute bottom-3 left-1/2 -translate-x-1/2 h-8 px-3 text-xs bg-background shadow-md" onClick={() => setFollowing(true)}><span class="i-lucide:locate-fixed text-3.5 mr-1.5" />回到当前歌词</button></Show>
+      <div aria-hidden="true" class="lyrics-edge pointer-events-none absolute inset-x-0 top-0 z-1 h-12 max-[900px]:h-8 backdrop-blur-[4px] [mask-image:linear-gradient(to_bottom,#000,transparent)]" />
+      <div aria-hidden="true" class="lyrics-edge pointer-events-none absolute inset-x-0 bottom-0 z-1 h-12 max-[900px]:h-8 backdrop-blur-[4px] [mask-image:linear-gradient(to_top,#000,transparent)]" />
+      <Show when={!following() && active() >= 0}><button class="border-btn absolute bottom-3 left-1/2 -translate-x-1/2 z-2 h-8 px-3 text-xs bg-background shadow-md" onClick={() => setFollowing(true)}><span class="i-lucide:locate-fixed text-3.5 mr-1.5" />回到当前歌词</button></Show>
     </section>
   )
 }

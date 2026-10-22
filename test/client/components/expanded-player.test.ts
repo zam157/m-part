@@ -5,9 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicPlayer from '~/components/MusicPlayer/MusicPlayer'
 import { selectQuality } from '~/components/MusicPlayer/components/player-controls'
 
+const { getLyrics } = vi.hoisted(() => ({ getLyrics: vi.fn() }))
 vi.mock('~/components/Tooltip/Tooltip', () => ({ default: (props: TooltipProps) => props.children({} as TooltipTriggerProps) }))
 vi.mock('#shared/utils/constants', () => ({ TARGET_EXTENSION: true }))
-vi.mock('#shared/utils/providers', () => ({ providers: { bili: { getSourceInfo: async () => ({ qualities: [{ name: '64K', url: 'https://cdn.example/low.mp3' }, { name: '192K', url: 'https://cdn.example/high.mp3' }] }) } } }))
+vi.mock('#shared/utils/providers', () => ({ providers: { netease: { getLyrics }, bili: { getSourceInfo: async () => ({ qualities: [{ name: '64K', url: 'https://cdn.example/low.mp3' }, { name: '192K', url: 'https://cdn.example/high.mp3' }] }) } } }))
 const player = await import('~/composables/player')
 const songs = ['a', 'b', 'c'].map(id => ({ provider: 'bili' as const, id, title: id, duration: 200, coverUrl: '', src: `https://cdn.example/${id}.mp3` }))
 let dispose: (() => void) | undefined
@@ -16,6 +17,7 @@ let dialog: HTMLDialogElement
 const descriptors = new Map<string, PropertyDescriptor | undefined>()
 
 beforeEach(async () => {
+  getLyrics.mockReset().mockResolvedValue({ original: '[00:05]Hello', translated: '[00:05]你好' })
   vi.spyOn(player.audio, 'pause').mockImplementation(() => {})
   vi.spyOn(player.audio, 'load').mockImplementation(() => {})
   vi.spyOn(player.audio, 'play').mockResolvedValue()
@@ -75,6 +77,29 @@ function open() {
 }
 
 describe('展开播放器', () => {
+  it('顶部翻译开关控制歌词正文，无翻译曲目隐藏开关，不重复请求或改变播放进度', async () => {
+    await player.setPlayQueue([{ ...songs[0]!, provider: 'netease', id: 'header-translation' }])
+    flush()
+    mount()
+    open()
+    await vi.waitFor(() => expect(dialog.querySelector(':scope > header [aria-label="显示翻译"]')).not.toBeNull())
+    const lyricSection = dialog.querySelector('section[aria-label="歌词"]')!
+    expect(lyricSection.querySelector('h2')).toBeNull()
+    expect(lyricSection.querySelector('header')).toBeNull()
+    expect(lyricSection.textContent).toContain('你好')
+    const time = player.currentTime()
+    const button = click('显示翻译')
+    expect(button.getAttribute('aria-pressed')).toBe('false')
+    expect(lyricSection.textContent).not.toContain('你好')
+    click('显示翻译')
+    expect(lyricSection.textContent).toContain('你好')
+    expect(player.currentTime()).toBe(time)
+    expect(getLyrics).toHaveBeenCalledOnce()
+    await player.setPlayQueue(songs)
+    flush()
+    expect(dialog.querySelector('[aria-label="显示翻译"]')).toBeNull()
+  })
+
   it('展开和收起保持同一播放会话，取消请求返回来源焦点', () => {
     mount()
     vi.mocked(player.audio.load).mockClear()
