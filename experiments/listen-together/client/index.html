@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><link rel="icon" href="data:," /><title>一起听同步实验</title></head>
+<body>
+  <main>
+    <h1>一起听 · 同步实验</h1>
+    <p>第一阶段：90 秒合成节拍音频，不读取音乐账号或个人播放队列。在两个窗口创建、加入同一个房间。</p>
+    <section>
+      <label>称呼 <input id="name" value="听众" maxlength="80" /></label>
+      <button id="create">创建房间</button>
+      <label>房间码 <input id="code" maxlength="8" autocomplete="off" /></label>
+      <button id="join">加入房间</button><button id="leave">离开</button>
+    </section>
+    <p id="connection" role="status"></p><p id="error" role="alert"></p>
+    <section>
+      <button id="play">房主播放</button><button id="pause">房主暂停</button><button id="restart">从头准备</button>
+      <label>房主跳转 <input id="seek" type="range" min="0" max="89" value="0" step="0.1" /></label>
+      <button id="away">本机暂离</button><button id="resume">恢复 / 允许播放</button>
+      <label>本机音量 <input id="volume" type="range" min="0" max="1" step="0.01" value="0.25" /></label>
+    </section>
+    <section>
+      <button id="buffer">模拟缓冲</button><button id="unbuffer">结束模拟缓冲</button>
+      <button id="blocked">下次启动模拟受阻</button><button id="disconnect">断开并重连</button>
+      <label>seek 阈值（秒）<input id="threshold" type="number" min="0.1" max="2" step="0.05" value="0.3" /></label>
+      <button id="export">导出测量 JSON</button>
+    </section>
+    <pre id="metrics" aria-live="off"></pre>
+    <h2>成员</h2><ul id="members"></ul>
+    <p>这里显示的是媒体进度和校时估计，不代表扬声器实际出声延迟。导出数据保留失败、缓冲、暂离与断线样本，不包含恢复令牌。</p>
+  </main>
+  <script type="module" src="/main.ts"></script>
+</body>
+</html>

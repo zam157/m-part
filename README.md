@@ -120,6 +120,7 @@ m-part/
 | [docs/media-session.md](./docs/media-session.md) | 锁屏与通知栏媒体控制、歌曲信息、进度同步与兼容处理 |
 | [docs/expanded-player.md](./docs/expanded-player.md) | 展开播放器、CSS 动画、共享控制及模态浮层 |
 | [docs/listen-together.md](./docs/listen-together.md) | 一起听可行性研究：房间同步、音源权限、后台限制与分阶段验证方案 |
+| [docs/listen-together-lab.md](./docs/listen-together-lab.md) | 一起听第一阶段实验：`pnpm dev:listen`、独立房间服务、本机双端测量与恢复验证 |
 
 ## 已知限制
 
