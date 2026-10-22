@@ -119,6 +119,7 @@ m-part/
 | [docs/player-cache.md](./docs/player-cache.md) | IndexedDB 播放器缓存、读写限频与恢复行为 |
 | [docs/media-session.md](./docs/media-session.md) | 锁屏与通知栏媒体控制、歌曲信息、进度同步与兼容处理 |
 | [docs/expanded-player.md](./docs/expanded-player.md) | 展开播放器、CSS 动画、共享控制及模态浮层 |
+| [docs/listen-together.md](./docs/listen-together.md) | 一起听可行性研究：房间同步、音源权限、后台限制与分阶段验证方案 |
 
 ## 已知限制
 
