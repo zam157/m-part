@@ -2,6 +2,7 @@ import * as v from 'valibot'
 import { defineWebSocketHandler } from 'nitro'
 import { clientMessage } from '../../../shared/types/listen-room'
 import { ListenRooms } from '../../utils/listen-rooms'
+import { isRoomOriginAllowed } from '../utils/origin'
 
 const rooms = new ListenRooms()
 const clients = new Map<string, { authenticated: boolean, openedAt: number, lastMessage: number, count: number, attempts: number, bytes: number, budgetAt: number, close: () => void }>()
@@ -12,11 +13,7 @@ let timer: ReturnType<typeof setInterval> | undefined
 export default defineWebSocketHandler({
   upgrade(request) {
     const origin = request.headers.get('origin')
-    const url = new URL(request.url)
-    const local = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)
-    const localOrigin = local ? [url.origin, ...(/^chrome-extension:\/\/[a-p]{32}$/.test(origin ?? '') ? [origin!] : [])] : []
-    const allowed = process.env.LISTEN_ALLOWED_ORIGINS?.split(',').map(s => s.trim()) ?? localOrigin
-    if (!origin || !allowed.includes(origin)) throw new Response('Origin rejected', { status: 403 })
+    if (!origin || !isRoomOriginAllowed(request.url, origin, process.env.LISTEN_ALLOWED_ORIGINS)) throw new Response('Origin rejected', { status: 403 })
     const now = performance.now()
     for (const [key, entry] of upgrades) if (now - entry.at >= 60_000) upgrades.delete(key)
     if (upgrades.size >= 200 && !upgrades.has(origin)) throw new Response('Too many origins', { status: 429 })

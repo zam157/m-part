@@ -21,12 +21,11 @@ pnpm dev:ext     # 按日志加载 .output/chrome-mv3-dev
 
 ## 局域网 HTTP 测试
 
-1. 两台电脑安装更新后的扩展（`pnpm build:ext` 产出的 `.output/chrome-mv3`），并从各自的 `chrome://extensions` 复制扩展 ID。开发构建也可使用，但修改 manifest 后需要重新加载扩展，才能申请 HTTP 主机的访问权限。
-2. 在服务器电脑启动一个房间服务，将两端的扩展 Origin 都加入白名单；相同 ID 只填一次：
+1. 两台电脑安装更新后的扩展（`pnpm build:ext` 产出的 `.output/chrome-mv3`）。开发构建也可使用，但修改 manifest 后需要重新加载扩展，才能申请 HTTP 主机的访问权限。
+2. 在服务器电脑启动一个房间服务，不需要收集扩展 ID 或配置来源白名单：
 
    ```bash
-   LISTEN_ALLOWED_ORIGINS='chrome-extension://HOST_EXTENSION_ID,chrome-extension://MEMBER_EXTENSION_ID' \
-     pnpm dev:rooms:lan
+   pnpm dev:rooms:lan
    ```
 
 3. 假设服务器局域网 IP 为 `192.168.1.10`，另一台电脑先打开 `http://192.168.1.10:3410/health`，应返回 JSON。系统防火墙需允许该端口；两台设备应处于可互相访问的网络，访客 Wi-Fi 的设备隔离可能阻止连接。
@@ -34,7 +33,9 @@ pnpm dev:ext     # 按日志加载 .output/chrome-mv3-dev
 
 HTTP 会明文传输房间状态和恢复令牌，适合可信局域网测试；公网建议 HTTPS。此步骤以扩展客户端为准，普通 HTTPS 网页连接 HTTP / WS 仍可能被浏览器的混合内容策略拦截。
 
-不需要热更新时，可先 `pnpm build:rooms`，再使用同一份 `LISTEN_ALLOWED_ORIGINS` 设置运行 `HOST=0.0.0.0 PORT=3410 node dist/rooms/server/index.mjs`。
+通过回环、IPv4 私有地址（`10.*`、`172.16.*`–`172.31.*`、`192.168.*`）、链路本地地址或 IPv6 ULA 地址连接服务时，默认允许任意合法的 Chrome 扩展 ID 和服务同源网页。其他网页来源仍会被拒绝。如果之前导出了 `LISTEN_ALLOWED_ORIGINS`，先运行 `unset LISTEN_ALLOWED_ORIGINS`；显式设置的白名单（包括空值）会优先执行。使用自定义局域网域名时仍可显式配置允许来源。
+
+不需要热更新时，可先 `pnpm build:rooms`，再运行 `HOST=0.0.0.0 PORT=3410 node dist/rooms/server/index.mjs`。
 
 ## 当前能力与边界
 
@@ -79,7 +80,7 @@ LISTEN_ALLOWED_ORIGINS='chrome-extension://EXTENSION_ID' \
 
 公网建议在 Node 前配置 HTTPS / WSS 反向代理，将 `/ws` 的 WebSocket Upgrade 转发至该端口，并设置适合长连接的超时。用户统一填写如 `https://rooms.example.com` 的根地址，也允许 HTTP；不附路径、账号、查询参数或恢复令牌。`GET /health` 返回服务名、协议版本和独立取源模式，可用于健康检查。
 
-默认本机开发只接受本机同源页面及 Chrome 扩展来源；公网环境显式设置 `LISTEN_ALLOWED_ORIGINS`。已有应用层连接、消息、队列、验证尝试和来源频率上限；反向代理还应限制连接 / 请求速率和报文大小，按服务器容量设置进程资源上限。当前为单实例内存房间，多实例部署需要房间归属和统一排序，不能直接启动多个不共享状态的实例做负载均衡。
+默认本机及局域网 IP 接受服务同源页面与任意合法 Chrome 扩展来源；公网 IP 或域名需要显式设置 `LISTEN_ALLOWED_ORIGINS`。显式白名单在所有地址上都优先执行；不会因转发头声称内网地址而放宽来源限制。已有应用层连接、消息、队列、验证尝试和来源频率上限；反向代理还应限制连接 / 请求速率和报文大小，按服务器容量设置进程资源上限。当前为单实例内存房间，多实例部署需要房间归属和统一排序，不能直接启动多个不共享状态的实例做负载均衡。
 
 扩展已声明本机服务器权限；用户连接自行填写的 HTTP / HTTPS 主机时，仅申请该协议和主机的可选权限。实际生成的扩展 CSP 未限制 `connect-src` / `media-src`，允许房间连接和现有音源。房间服务从不使用音乐平台的 DNR 请求头规则，也没有接收上游任意 URL 的媒体代理。
 
