@@ -26,7 +26,7 @@ export function compareRecordings(a: Recording, b: Recording) {
     used.add(best)
     const right = b.samples[best]!
     // Project onto left's calibrated instant, rather than subtracting arrival times.
-    differences.push(Math.abs(left.position - (right.position + (left.serverTime - right.serverTime) / 1000)) * 1000)
+    differences.push(Math.abs(left.position - (right.position + (left.serverTime - right.serverTime) / 1000 * (right.playbackRate ?? 1))) * 1000)
     uncertainties.push((left.uncertaintyMs ?? 0) + (right.uncertaintyMs ?? 0))
   }
   differences.sort((x, y) => x - y)
@@ -34,13 +34,18 @@ export function compareRecordings(a: Recording, b: Recording) {
   const summarize = (recording: Recording) => {
     const states: Record<string, number> = {}
     const durations: Record<string, number> = {}
+    let rateCorrectionMs = 0
     const recoveries: { trigger: string, durationMs: number | null }[] = []
     for (let i = 0; i < recording.samples.length; i++) {
       const sample = recording.samples[i]!
       const key = sample.connected ? sample.status : 'disconnected'
       states[key] = (states[key] ?? 0) + 1
       const next = recording.samples[i + 1]
-      if (next) durations[key] = (durations[key] ?? 0) + Math.max(0, next.localTime - sample.localTime)
+      if (next) {
+        const delta = Math.max(0, next.localTime - sample.localTime)
+        durations[key] = (durations[key] ?? 0) + delta
+        if (sample.connected && sample.status === 'following' && Math.abs((sample.playbackRate ?? 1) - 1) > 0.001) rateCorrectionMs += delta
+      }
     }
     for (const event of recording.events) {
       if (!['connected', 'resume', 'buffer-recovered', 'command:seek', 'command:play', 'command:restart'].includes(event.event)) continue
@@ -55,7 +60,7 @@ export function compareRecordings(a: Recording, b: Recording) {
       recoveries.push({ trigger: event.event, durationMs: recoveredAt === undefined ? null : recoveredAt - event.at })
     }
     const span = recording.samples.length > 1 ? recording.samples.at(-1)!.localTime - recording.samples[0]!.localTime : 0
-    return { sampleCount: recording.samples.length, spanMs: span, states, durationsMs: durations, hardSeeks: recording.samples.at(-1)?.seeks ?? 0, recoveries }
+    return { sampleCount: recording.samples.length, spanMs: span, states, durationsMs: durations, hardSeeks: recording.samples.at(-1)?.seeks ?? 0, hardSeeksPerMinute: span ? Math.max(0, (recording.samples.at(-1)?.seeks ?? 0) - (recording.samples[0]?.seeks ?? 0)) * 60_000 / span : null, rateCorrectionMs, recoveries }
   }
   return {
     pairedSteadySamples: differences.length,

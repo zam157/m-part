@@ -14,7 +14,7 @@ import { savePersonalPlayerSession } from './player-persistence'
 const IDENTITY_KEY = 'm-part:listen-room:v1'
 export const [roomServer, setRoomServer] = createSignal(localStorage.getItem('m-part:room-server') || import.meta.env.VITE_ROOM_SERVER_URL || 'http://127.0.0.1:3410')
 export const [roomView, setRoomView] = createSignal<{
-  snapshot?: RoomSnapshot, memberId?: string, connection: string, status: MemberStatus, error: string, away: boolean, inSync: boolean, isHost: boolean,
+  snapshot?: RoomSnapshot, memberId?: string, connection: string, status: MemberStatus, error: string, away: boolean, inSync: boolean, isHost: boolean, personalSource?: boolean, sourceBusy?: boolean,
 }>({ connection: 'idle', status: 'loading', error: '', away: false, inSync: false, isHost: false })
 export const [joiningRoom, setJoiningRoom] = createSignal(false)
 export { roomPlayerActive }
@@ -32,7 +32,7 @@ function update() {
   if (!client) return
   setRoomControlsWritable(client.connection === 'connected' && client.isHost)
   setRoomView({ snapshot: client.connection === 'idle' ? undefined : client.snapshot, memberId: client.memberId, connection: client.connection, status: client.status,
-    error: client.error, away: client.away, inSync: client.inSync, isHost: client.connection !== 'idle' && client.isHost })
+    error: client.error, away: client.away, personalSource: client.personalSource, sourceBusy: client.sourceBusy, inSync: client.inSync, isHost: client.connection !== 'idle' && client.isHost })
 }
 function exit() {
   const released = unregisterRoom?.() ?? !isRoomPlayer()
@@ -78,7 +78,7 @@ async function setup(server: string, resume = false, cancelled = () => false) {
         cache.clear(); for (const [key, value] of next) cache.set(key, value)
         applyRoomQueue(queue, state.currentIndex, state.playMode)
       },
-      load: (track, index, signal, quality) => loadRoomSource(track, index, signal, quality),
+      load: (track, index, signal, quality, hostedUrl) => loadRoomSource(track, index, signal, quality, hostedUrl),
       cancelLoad: cancelRoomSource,
       empty: resetPlayer,
     }, update, identity, exit)
@@ -113,6 +113,8 @@ export async function joinListenRoom(serverInput: string, name: string, code: st
   }
   catch (error) { setRoomView(v => ({ ...v, error: error instanceof Error ? error.message : String(error) })) }
 }
+export async function manageRoomSource(action: 'credential' | 'revoke' | 'source' | 'retry-source', value?: string) { await client?.manageSource(action, value) }
+export function usePersonalRoomSource(personal: boolean) { client?.usePersonalSource(personal) }
 export function leaveListenRoom() { client?.leave() }
 export function resumeRoomPlayback() { client?.follow() }
 export function pauseRoomLocally() { client?.pauseLocal() }

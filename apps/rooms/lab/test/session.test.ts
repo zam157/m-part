@@ -27,7 +27,7 @@ function media() {
   return element
 }
 const state = (patch: Partial<RoomSnapshot> = {}): RoomSnapshot => ({
-  protocol: 1, roomId: 'room', code: '12345678', revision: 0, playbackId: 'playback', track: LAB_TRACK,
+  protocol: 2, roomId: 'room', code: '12345678', revision: 0, playbackId: 'playback', track: LAB_TRACK,
   status: 'paused', wantsToPlay: false, pauseReason: 'user', positionAtAnchor: 0, anchorServerTime: 0, rate: 1,
   hostId: 'host', members: [], ...patch,
   kind: 'lab', queue: [], currentIndex: null, playMode: 'order',
@@ -49,7 +49,7 @@ beforeEach(() => {
   socket = Socket.all.at(-1)!
   socket.onopen?.()
 })
-afterEach(() => { session.dispose(); vi.useRealTimers(); vi.unstubAllGlobals() })
+afterEach(() => { session.dispose(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 describe('local intent, cancellation and reconnect', () => {
   it('never restarts an actively paused member on a room seek or reconnect', async () => {
@@ -109,6 +109,24 @@ describe('local intent, cancellation and reconnect', () => {
   it('pauses locally after a silent outage', async () => {
     connected()
     await vi.advanceTimersByTimeAsync(21_000)
+    expect(audio.paused).toBe(true)
+  })
+  it('restores baseline speed immediately on temporary leave and never restarts correction while away', async () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0)
+    connected()
+    await vi.advanceTimersByTimeAsync(0)
+    session.setStrategy('rate')
+    session.snapshot = state({ status: 'playing', anchorServerTime: performance.now() })
+    session.status = 'following'
+    await audio.play()
+    audio.currentTime = 0.55
+    now.mockReturnValue(250)
+    await vi.advanceTimersByTimeAsync(250)
+    expect(audio.playbackRate).toBe(0.98)
+    session.pauseLocal()
+    expect(audio.playbackRate).toBe(1)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(audio.playbackRate).toBe(1)
     expect(audio.paused).toBe(true)
   })
 })

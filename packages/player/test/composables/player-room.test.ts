@@ -72,4 +72,28 @@ describe('all product controls delegate to room intent', () => {
     expect(old).not.toHaveBeenCalled()
     expect(newer).toHaveBeenCalledOnce()
   })
+  it('streams a hosted ticket directly without invoking a Provider, and cancels its native request on exit', async () => {
+    const url = 'https://rooms.example/room-audio?ticket=private'
+    expect(await player.loadRoomSource(song, 0, new AbortController().signal, undefined, url)).toBe('loaded')
+    flush()
+    expect(source).not.toHaveBeenCalled()
+    expect(player.audio.src).toBe(url)
+    expect(player.audio.crossOrigin).toBe('anonymous')
+    expect(player.playQueue()[0]).not.toHaveProperty('src')
+    expect(player.audio.play).not.toHaveBeenCalled()
+    player.audio.dispatchEvent(new Event('playing'))
+    flush()
+    expect(player.playing()).toBe(true)
+    player.cancelRoomSource()
+    flush()
+    expect(player.audio.getAttribute('src')).toBeNull()
+    expect(player.playing()).toBe(false)
+  })
+  it('restores the normal media credential policy after switching back to personal sources', async () => {
+    await player.loadRoomSource(song, 0, new AbortController().signal, undefined, 'https://rooms.example/room-audio?ticket=private')
+    await player.loadRoomSource(song, 0, new AbortController().signal)
+    expect(player.audio.getAttribute('crossorigin')).toBeNull()
+    expect(player.audio.src).toBe('https://cdn.example/full')
+  })
+
 })

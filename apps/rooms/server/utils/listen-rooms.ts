@@ -1,4 +1,4 @@
-import type { ClientMessage, MemberStatus, RoomSnapshot, ServerMessage } from '@m-part/listen-core/protocol'
+import type { ClientMessage, MemberStatus, RoomSnapshot, RoomSource, ServerMessage } from '@m-part/listen-core/protocol'
 import { randomBytes, randomInt, randomUUID } from 'node:crypto'
 import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, LAB_TRACK, LISTEN_PROTOCOL, START_LEAD_MS } from '@m-part/listen-core/protocol'
 import { roomPosition } from '@m-part/listen-core/clock'
@@ -28,7 +28,9 @@ export class ListenRooms {
   private bindings = new Map<string, { room: Room, member: Member }>()
   private tokens = new Map<string, { room: Room, member: Member }>()
 
-  constructor(private now = () => performance.now()) {}
+  constructor(private now = () => performance.now(), private onSnapshot: (state: RoomSnapshot) => void = () => {}) {}
+
+  get hasRooms() { return this.rooms.size > 0 }
 
   private snapshot(room: Room): RoomSnapshot {
     return {
@@ -40,6 +42,7 @@ export class ListenRooms {
 
   private broadcast(room: Room) {
     const message: ServerMessage = { type: 'snapshot', snapshot: this.snapshot(room) }
+    this.onSnapshot(message.snapshot)
     for (const member of room.members) member.connection?.send(message)
   }
 
@@ -72,6 +75,7 @@ export class ListenRooms {
     this.change(room, {
       currentIndex: track ? index : null, track: { id: track?.queueItemId ?? '', duration: track?.duration ?? 0 },
       positionAtAnchor: 0, anchorServerTime: this.now(), playbackId: randomUUID(),
+      ...(room.state.source?.credential === 'ready' ? { source: { ...room.state.source, error: undefined } } : {}),
       wantsToPlay: !!track && wantsToPlay, status: track && wantsToPlay ? 'preparing' : 'paused', pauseReason: track && wantsToPlay ? null : 'user',
     })
   }
@@ -241,6 +245,38 @@ export class ListenRooms {
     this.broadcast(room)
   }
 
+  /** HTTP control is bound to a live member, never merely a room code. */
+  authorize(token: string, roomId: string) {
+    this.sweep()
+    const binding = this.tokens.get(token)
+    if (!binding || binding.room.state.roomId !== roomId || !binding.member.connection || binding.room.state.status === 'ended') throw new Error('房间成员身份已失效，请重新连接')
+    return { memberId: binding.member.id, generation: binding.member.generation, isHost: binding.member.id === binding.room.state.hostId, snapshot: this.snapshot(binding.room) }
+  }
+
+  updateSource(token: string, roomId: string, expectedRevision: number, patch: Partial<RoomSource>, commit: () => void = () => {}) {
+    const auth = this.authorize(token, roomId)
+    if (!auth.isHost) throw new Error('仅房主可管理房间音源')
+    if (auth.snapshot.kind !== 'music') throw new Error('实验房间不支持托管音源')
+    if (auth.snapshot.revision !== expectedRevision) throw new Error('房间状态已更新，请重新操作')
+    const { room } = this.tokens.get(token)!
+    const source = { mode: 'independent' as const, version: 0, credential: 'none' as const, ...room.state.source, ...patch }
+    commit()
+    source.version++
+    const failed = source.mode === 'hosted' && !!source.error
+    const wanted = room.state.wantsToPlay && !failed
+    this.change(room, { source, wantsToPlay: wanted, positionAtAnchor: roomPosition(room.state, this.now()), anchorServerTime: this.now(), status: wanted ? 'preparing' : 'paused', pauseReason: failed ? 'failed' : wanted ? null : 'user' })
+    this.broadcast(room)
+    return source
+  }
+
+  sourceFailed(roomId: string, version: number, message: string, invalidCredential = false) {
+    const room = [...this.rooms.values()].find(r => r.state.roomId === roomId)
+    if (!room || room.state.source?.version !== version || room.state.source.mode !== 'hosted' || room.state.source.error) return
+    this.freeze(room, 'failed', false)
+    room.state.source = { ...room.state.source, error: message, ...(invalidCredential ? { credential: 'invalid' as const } : {}) }
+    this.broadcast(room)
+  }
+
   private authenticate(connection: RoomConnection, message: Extract<ClientMessage, { type: 'create' | 'join' | 'resume' }>) {
     let room: Room
     let member: Member
@@ -269,6 +305,7 @@ export class ListenRooms {
           state: {
             protocol: LISTEN_PROTOCOL, roomId: randomUUID(), code, revision: 0, playbackId: randomUUID(), track: { ...LAB_TRACK },
             kind: message.kind ?? 'lab', queue: [], currentIndex: null, playMode: 'order',
+            source: { mode: 'independent', version: 0, credential: 'none' },
             status: 'paused', wantsToPlay: false, pauseReason: 'user', positionAtAnchor: 0, anchorServerTime: this.now(), rate: 1, hostId: '', members: [],
           }, members: [], retired: [], createdAt: this.now(), order: [],
         }

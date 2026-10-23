@@ -3,6 +3,9 @@ import type { ClientMessage, RoomSnapshot, ServerMessage } from '@m-part/listen-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ListenClient, publicTrack } from '~/utils/listen-client'
 
+const { roomRequest } = vi.hoisted(() => ({ roomRequest: vi.fn() }))
+vi.mock('~/utils/room-http', () => ({ sendRoomControl: roomRequest }))
+
 class Socket {
   static OPEN = 1
   static all: Socket[] = []
@@ -18,7 +21,7 @@ class Socket {
 }
 const track = { provider: 'netease' as const, id: 'one', title: 'Song', duration: 120, coverUrl: '', queueItemId: 'item-one' }
 const snapshot = (patch: Partial<RoomSnapshot> = {}): RoomSnapshot => ({
-  protocol: 1, roomId: 'room', code: '12345678', revision: 0, playbackId: 'playback', kind: 'music', queue: [track], currentIndex: 0, playMode: 'order',
+  protocol: 2, roomId: 'room', code: '12345678', revision: 0, playbackId: 'playback', kind: 'music', queue: [track], currentIndex: 0, playMode: 'order',
   track: { id: track.queueItemId, duration: 120 }, status: 'paused', wantsToPlay: false, pauseReason: 'user', positionAtAnchor: 0, anchorServerTime: 0, rate: 1,
   hostId: 'host', members: [], ...patch,
 })
@@ -30,7 +33,7 @@ let exited = vi.fn<() => void>()
 let lockAvailable: boolean
 
 async function connect(memberId = 'member') {
-  client.open('http://localhost:3410', { type: 'join', protocol: 1, kind: 'music', name: 'test', code: '12345678' })
+  client.open('http://localhost:3410', { type: 'join', protocol: 2, kind: 'music', name: 'test', code: '12345678' })
   socket = Socket.all.at(-1)!
   socket.onopen?.()
   await socket.receive({ type: 'welcome', token: 'secret', memberId, generation: 1, snapshot: snapshot() })
@@ -39,6 +42,7 @@ async function connect(memberId = 'member') {
 }
 beforeEach(() => {
   vi.useFakeTimers()
+  roomRequest.mockReset().mockResolvedValue({ ticket: 'a'.repeat(64), leaseMs: 120_000 })
   Socket.all = []; lockAvailable = true
   vi.stubGlobal('WebSocket', Socket)
   vi.stubGlobal('navigator', { locks: { request: (_: string, __: unknown, callback: (lock: object | null) => unknown) => Promise.resolve(callback(lockAvailable ? {} : null)) } })
@@ -157,4 +161,84 @@ it('only shares public metadata even if local MusicInfo contains audio and lyric
   expect(result).not.toHaveProperty('src')
   expect(result).not.toHaveProperty('lrc')
   expect(result).not.toHaveProperty('cookie')
+})
+
+
+describe('hosted client source control', () => {
+  const source = { mode: 'hosted' as const, version: 1, credential: 'ready' as const, label: '尾号 1234' }
+  async function hostSource(patch: Partial<RoomSnapshot> = {}) {
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ revision: 1, source, ...patch }) })
+    await vi.advanceTimersByTimeAsync(0)
+  }
+  it('loads a private ticket URL without persisting it or sending it on the WebSocket', async () => {
+    await connect()
+    await hostSource()
+    expect(playback.load).toHaveBeenLastCalledWith(track, 0, expect.any(AbortSignal), undefined, `http://localhost:3410/room-audio?ticket=${'a'.repeat(64)}`)
+    expect(JSON.stringify(socket.sent)).not.toContain('room-audio')
+    expect(JSON.stringify(persist.mock.calls)).not.toContain('room-audio')
+  })
+  it('preserves an explicit personal-source fallback across remote updates and stores only the preference', async () => {
+    await connect()
+    await hostSource()
+    client.usePersonalSource(true)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(playback.load).toHaveBeenLastCalledWith(track, 0, expect.any(AbortSignal), undefined, undefined)
+    expect(persist).toHaveBeenLastCalledWith(expect.objectContaining({ personalSource: true }))
+    roomRequest.mockClear()
+    await hostSource({ revision: 2, source: { ...source, version: 2 } })
+    expect(roomRequest).not.toHaveBeenCalled()
+  })
+  it('never silently falls back when the hosted source fails', async () => {
+    await connect()
+    vi.mocked(playback.load).mockClear()
+    roomRequest.mockRejectedValueOnce(new Error('房间账号只能试听'))
+    await hostSource()
+    expect(client.status).toBe('failed')
+    expect(client.personalSource).toBe(false)
+    expect(playback.load).not.toHaveBeenCalled()
+  })
+  it('fetches a fresh ticket when the same track starts a new playback instance', async () => {
+    await connect()
+    await hostSource()
+    roomRequest.mockClear()
+    await hostSource({ revision: 2, playbackId: 'repeat' })
+    expect(roomRequest).toHaveBeenCalledWith(expect.any(String), 'secret', expect.objectContaining({ action: 'ticket', playbackId: 'repeat' }), expect.any(AbortSignal))
+  })
+  it('renews a lease without changing the audio source or reloading media', async () => {
+    await connect()
+    await hostSource()
+    vi.mocked(playback.load).mockClear()
+    for (let elapsed = 0; elapsed < 60_000; elapsed += 5000) {
+      await socket.receive({ type: 'pong', sentAt: performance.now(), serverTime: performance.now() })
+      await vi.advanceTimersByTimeAsync(5000)
+    }
+    expect(roomRequest.mock.calls.some(call => call[2]?.action === 'renew')).toBe(true)
+    expect(playback.load).not.toHaveBeenCalled()
+  })
+  it('cancels a late ticket response when media loading times out', async () => {
+    await connect()
+    vi.mocked(playback.load).mockClear()
+    let finish!: (data: unknown) => void
+    roomRequest.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    await hostSource()
+    for (let elapsed = 0; elapsed < 21_000; elapsed += 5000) {
+      await socket.receive({ type: 'pong', sentAt: performance.now(), serverTime: performance.now() })
+      await vi.advanceTimersByTimeAsync(5000)
+    }
+    finish({ ticket: 'b'.repeat(64), leaseMs: 120_000 })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(playback.load).not.toHaveBeenCalled()
+    expect(client.status).toBe('failed')
+  })
+  it('source changes preserve active away intent instead of restarting audio', async () => {
+    await connect()
+    client.pauseLocal()
+    vi.mocked(playback.load).mockClear()
+    await hostSource()
+    client.usePersonalSource(true)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(client.away).toBe(true)
+    expect(playback.load).not.toHaveBeenCalled()
+    expect(playback.audio.paused).toBe(true)
+  })
 })

@@ -415,6 +415,9 @@ importers:
       '@m-part/listen-core':
         specifier: workspace:*
         version: link:../../packages/listen-core
+      '@m-part/music':
+        specifier: workspace:*
+        version: link:../../packages/music
       nitro:
         specifier: catalog:backend
         version: 3.0.260903-beta

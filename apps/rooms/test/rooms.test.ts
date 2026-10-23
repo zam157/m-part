@@ -30,8 +30,8 @@ describe('room authority and recovery', () => {
     now = 1_000
     rooms = new ListenRooms(() => now)
     host = peer('host'); member = peer('member')
-    send(host, { type: 'create', name: '房主', protocol: 1 })
-    send(member, { type: 'join', name: '成员', code: snapshot().code, protocol: 1 })
+    send(host, { type: 'create', name: '房主', protocol: 2 })
+    send(member, { type: 'join', name: '成员', code: snapshot().code, protocol: 2 })
   })
 
   it('keeps tokens private, membership separate from the control revision', () => {
@@ -118,7 +118,7 @@ describe('room authority and recovery', () => {
   })
   it('refresh resumes host identity and rejects late old socket messages/close', () => {
     const refreshed = peer('refreshed')
-    send(refreshed, { type: 'resume', token: welcome().token, protocol: 1 })
+    send(refreshed, { type: 'resume', token: welcome().token, protocol: 2 })
     expect(welcome(refreshed)).toMatchObject({ memberId: welcome().memberId, generation: 2 })
     expect(host.closed).toBe(true)
     rooms.disconnect(host.id)
@@ -133,7 +133,7 @@ describe('room authority and recovery', () => {
     send(member, { type: 'ping', sentAt: now })
     now += DISCONNECT_GRACE_MS / 2
     const refreshed = peer('late-refresh')
-    send(refreshed, { type: 'resume', token, protocol: 1 })
+    send(refreshed, { type: 'resume', token, protocol: 2 })
     expect(refreshed.messages.at(-1)).toMatchObject({ type: 'error', code: 'expired' })
     expect(snapshot(member).status).toBe('ended')
   })
@@ -143,17 +143,17 @@ describe('room authority and recovery', () => {
     expect(host.closed).toBe(true)
     now += 8_000
     const refreshed = peer('too-late')
-    send(refreshed, { type: 'resume', token: welcome().token, protocol: 1 })
+    send(refreshed, { type: 'resume', token: welcome().token, protocol: 2 })
     expect(refreshed.messages.at(-1)).toMatchObject({ type: 'error', code: 'expired' })
   })
   it('revokes membership on explicit leave and bounds room membership', () => {
-    for (let i = 0; i < 3; i++) send(peer(`extra-${i}`), { type: 'join', protocol: 1, name: 'extra', code: snapshot().code })
+    for (let i = 0; i < 3; i++) send(peer(`extra-${i}`), { type: 'join', protocol: 2, name: 'extra', code: snapshot().code })
     const sixth = peer('sixth')
-    send(sixth, { type: 'join', protocol: 1, name: 'extra', code: snapshot().code })
+    send(sixth, { type: 'join', protocol: 2, name: 'extra', code: snapshot().code })
     expect(sixth.messages.at(-1)).toMatchObject({ type: 'error', code: 'capacity' })
     send(member, { type: 'leave' })
     const resumed = peer('left')
-    send(resumed, { type: 'resume', token: welcome(member).token, protocol: 1 })
+    send(resumed, { type: 'resume', token: welcome(member).token, protocol: 2 })
     expect(resumed.messages.at(-1)).toMatchObject({ type: 'error', code: 'expired' })
   })
   it('new playback instance invalidates readiness from the previous play', () => {
@@ -178,5 +178,5 @@ it('rejects untrusted fields, missing versions and non-finite or out-of-range se
   expect(v.safeParse(clientMessage, command).success).toBe(true)
   for (const position of [NaN, Infinity, -1, 86_401]) expect(v.safeParse(clientMessage, { ...command, position }).success).toBe(false)
   expect(v.safeParse(clientMessage, { ...command, src: 'https://arbitrary.example' }).success).toBe(false)
-  expect(v.safeParse(clientMessage, { type: 'create', protocol: 1, name: 'x', role: 'host' }).success).toBe(false)
+  expect(v.safeParse(clientMessage, { type: 'create', protocol: 2, name: 'x', role: 'host' }).success).toBe(false)
 })

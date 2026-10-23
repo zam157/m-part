@@ -2,6 +2,7 @@ import { createSignal, For, Show } from 'solid-js'
 import { clsx } from 'cn/lite'
 import { createListenRoom, joiningRoom, joinListenRoom, leaveListenRoom, pauseRoomLocally, resumeRoomPlayback, roomPlayerActive, roomServer, roomView, setRoomServer } from '~/composables/listen-room'
 import { playing, playQueue, prevNext, setPlaying, setShowPlayQueue } from '~/composables/player'
+import ListenRoomSources from '~/components/ListenRoomSources/ListenRoomSources'
 import { roomStatusLabel } from '~/components/ListenRoomBar/ListenRoomBar'
 
 const statuses = { loading: '准备音源', ready: '已就绪', following: '跟随中', buffering: '缓冲中', away: '主动暂离', blocked: '播放受阻', failed: '音源不可用' }
@@ -23,7 +24,7 @@ export default function ListenPage() {
   return (
     <div class="flex-1 min-w-0 min-h-0 overflow-auto p-6 max-[760px]:p-4">
       <div class="max-w-220 mx-auto space-y-6">
-        <header><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm mt-2">在同一个房间听同一首歌。房主控制播放和队列，每个人使用自己的音乐账号与播放权限。</p></header>
+        <header><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm mt-2">在同一个房间听同一首歌。房主控制播放和队列，可各自取源，也可选用房主配置的网易云托管音源。</p></header>
         <Show when={roomPlayerActive()} fallback={(
           <section class="rounded-2xl border border-border p-5 space-y-5">
             <label class="block text-sm">房间服务器
@@ -65,6 +66,7 @@ export default function ListenPage() {
               </Show>
               <button class="ghost-btn px-3 h-8 text-sm" onClick={() => setShowPlayQueue(true)}>查看房间队列 · {snapshot()?.queue.length ?? 0} 首</button>
             </div>
+            <ListenRoomSources />
             <div><h3 class="font-semibold mb-3">房间成员 · {snapshot()?.members.length ?? 0}/5</h3>
               <ul class="space-y-2"><For each={snapshot()?.members ?? []}>{member => (
                 <li class="rounded-lg border border-border p-3 flex items-start justify-between gap-4 text-sm">
@@ -73,7 +75,7 @@ export default function ListenPage() {
                 </li>
               )}</For></ul>
             </div>
-            <p class="text-xs text-muted-foreground">不共享账号凭据。试听、无版权或时长不一致的音源会标记为不可同步。退出后恢复你原来的队列，保持暂停；关闭应用页会停止播放。</p>
+            <p class="text-xs text-muted-foreground">成员不接收他人的账号凭据。试听、无版权或时长不一致的音源会标记为不可同步。退出后恢复你原来的队列，保持暂停；关闭应用页会停止播放。</p>
           </section>
         </Show>
       </div>

@@ -10,6 +10,8 @@ type TRequestOptions = Omit<RequestInit, 'body'> & {
   searchParams?: Record<string, any> | undefined | null
   url?: null | undefined
   returnJson?: boolean
+  /** Read structured error payloads from controlled APIs without discarding their body. */
+  acceptHttpErrors?: boolean
 }
 
 export { CUSTOM_HEADER_PREFIX } from '../proxy-headers'
@@ -83,6 +85,7 @@ export async function tRequest(url: string, options?: TRequestOptions): Promise<
   const fetchOptions: any = { ...options }
   delete fetchOptions.searchParams
   delete fetchOptions.url
+  delete fetchOptions.acceptHttpErrors
 
   if (USE_GM_FETCH && globalWindow?.__tFetch) {
     fetchFn = globalWindow.__tFetch
@@ -112,7 +115,7 @@ export async function tRequest(url: string, options?: TRequestOptions): Promise<
 
   const res = await fetchFn(url, fetchOptions)
 
-  if (!res.ok)
+  if (!res.ok && !options?.acceptHttpErrors)
     return [false, res.status, res.statusText]
 
   if (options?.returnJson ?? true)

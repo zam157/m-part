@@ -19,3 +19,10 @@ it('excludes different playback/control instances while retaining failed and awa
   expect(result.participants[0]!.states).toEqual({ following: 1, blocked: 1, away: 1 })
   expect(result.participants[0]!.durationsMs.blocked).toBe(500)
 })
+it('accounts for local correction rates when projecting and reports correction time', () => {
+  const a = { samples: [sample(), sample({ localTime: 2000 })], events: [] }
+  const b = { samples: [sample({ serverTime: 1500, position: 1.51, playbackRate: 1.02 }), sample({ localTime: 2000, playbackRate: 1 })], events: [] }
+  const result = compareRecordings(a, b)
+  expect(result.p95Ms).toBeCloseTo(0)
+  expect(result.participants[1]!.rateCorrectionMs).toBe(1000)
+})

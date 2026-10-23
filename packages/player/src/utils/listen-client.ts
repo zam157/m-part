@@ -1,15 +1,16 @@
-import type { ClientMessage, MemberStatus, RoomSnapshot, SharedRoomTrack } from '@m-part/listen-core/protocol'
+import type { RoomControl, RoomTicket, ClientMessage, MemberStatus, RoomSnapshot, SharedRoomTrack } from '@m-part/listen-core/protocol'
 import type { RoomPlayerAction } from '~/composables/player-context'
 import * as v from 'valibot'
-import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, HEARTBEAT_MS, LISTEN_PROTOCOL, serverMessage } from '@m-part/listen-core/protocol'
+import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, HEARTBEAT_MS, LISTEN_PROTOCOL, roomSnapshot, roomTicket, serverMessage } from '@m-part/listen-core/protocol'
 import { ListenClock, roomPosition, shouldSeek } from '@m-part/listen-core/clock'
 import { prepareMedia, startMedia } from '@m-part/listen-core/browser/media'
+import { sendRoomControl } from './room-http'
 
-export interface RoomIdentity { server: string, token: string, roomId: string, away: boolean }
+export interface RoomIdentity { server: string, token: string, roomId: string, away: boolean, personalSource?: boolean }
 export interface RoomPlayback {
   audio: HTMLAudioElement
   queue: (state: RoomSnapshot) => void
-  load: (track: SharedRoomTrack, index: number, signal: AbortSignal, quality?: string) => Promise<'loaded' | 'stale'>
+  load: (track: SharedRoomTrack, index: number, signal: AbortSignal, quality?: string, hostedUrl?: string) => Promise<'loaded' | 'stale'>
   cancelLoad: () => void
   empty: () => void
 }
@@ -24,6 +25,8 @@ export class ListenClient {
   error = ''
   away = false
   inSync = false
+  personalSource = false
+  sourceBusy = false
   readonly clock = new ListenClock()
   private socket?: WebSocket
   private identity?: RoomIdentity
@@ -42,6 +45,9 @@ export class ListenClient {
   private loadedKey?: string
   private failedKey?: string
   private quality?: string
+  private mediaTicket?: RoomTicket & { renewAt: number, key: string }
+  private renewing = false
+  private management?: AbortController
   private confirmations = 0
   private commands: Command[] = []
   private pending?: { id: string, revision?: number, sentAt: number }
@@ -65,6 +71,7 @@ export class ListenClient {
   async resume(identity: RoomIdentity) {
     this.identity = identity
     this.away = identity.away
+    this.personalSource = !!identity.personalSource
     if (!await this.lock(identity.roomId, identity.server)) { this.fail('这个房间已在另一个窗口播放，请先退出或关闭原窗口'); return }
     this.connect(identity.server, { type: 'resume', protocol: LISTEN_PROTOCOL, token: identity.token })
   }
@@ -102,7 +109,7 @@ export class ListenClient {
           this.snapshot = message.snapshot
           if (!await this.lock(message.snapshot.roomId, server)) { this.send({ type: 'leave' }); this.fail('这个房间已在另一个窗口播放'); return }
           if (this.stopped || this.socket !== socket) return
-          this.identity = { server, token: message.token, roomId: message.snapshot.roomId, away: this.away }
+          this.identity = { server, token: message.token, roomId: message.snapshot.roomId, away: this.away, personalSource: this.personalSource }
           this.persist(this.identity)
           this.connection = 'connected'; this.attempts = 0; this.activeRevision = -1
           this.clock.reset(); this.ping()
@@ -181,6 +188,9 @@ export class ListenClient {
       else this.pauseLocal()
       return
     }
+    if (action.type === 'retry' && this.isHost && this.snapshot?.source?.mode === 'hosted' && this.snapshot.source.error && !this.personalSource) {
+      void this.manageSource('retry-source').then(ok => { if (ok) this.follow() }); return
+    }
     if (action.type === 'retry' || action.type === 'quality') {
       if (action.type === 'quality') this.quality = action.quality.name
       this.loadedKey = undefined; this.failedKey = undefined; this.error = ''; this.status = 'loading'
@@ -197,15 +207,75 @@ export class ListenClient {
     else if (action.type === 'seek') this.enqueue({ action: 'seek', position: Math.max(0, Math.min(this.snapshot?.track.duration ?? 0, action.position)) })
   }
 
+  async manageSource(action: 'credential' | 'revoke' | 'source' | 'retry-source', value?: string) {
+    if (!this.identity || !this.snapshot || this.connection !== 'connected' || !this.isHost) { this.error = '连接恢复后由房主管理房间音源'; this.changed(); return false }
+    if (this.sourceBusy || this.busy) { this.error = '请等待当前房间操作完成'; this.changed(); return false }
+    const controller = new AbortController()
+    this.management = controller; this.sourceBusy = true; this.error = ''; this.changed()
+    const base = { roomId: this.identity.roomId, expectedRevision: this.snapshot.revision }
+    const request: RoomControl = action === 'credential' ? { ...base, action, cookie: value ?? '' }
+      : action === 'source' ? { ...base, action, mode: value === 'hosted' ? 'hosted' : 'independent' }
+        : { ...base, action }
+    try {
+      const response = await sendRoomControl(this.identity.server, this.identity.token, request, controller.signal)
+      if (!response || typeof response !== 'object' || !('ok' in response) || response.ok !== true) throw new Error('房间服务器响应不兼容')
+      if ('snapshot' in response) {
+        const state = v.parse(roomSnapshot, response.snapshot)
+        if (state.roomId !== this.identity?.roomId) throw new Error('房间实例已更新')
+        if (!this.snapshot || state.revision >= this.snapshot.revision) {
+          this.snapshot = state
+          if (this.clock.estimate && state.revision !== this.activeRevision) void this.apply(state)
+        }
+      }
+      return true
+    }
+    catch (error) { if (!controller.signal.aborted) this.error = error instanceof Error ? error.message : '房间音源操作失败'; return false }
+    finally { if (this.management === controller) { this.management = undefined; this.sourceBusy = false; this.changed() } }
+  }
+
+  usePersonalSource(personal: boolean) {
+    this.personalSource = personal; this.mediaTicket = undefined; this.loadedKey = undefined; this.failedKey = undefined
+    this.cancel(); this.playback.cancelLoad(); this.error = ''; this.status = 'loading'; this.saveIdentity()
+    if (this.snapshot && this.clock.estimate && this.connection === 'connected') void this.apply(this.snapshot)
+    this.changed()
+  }
+
+  private async sourceUrl(state: RoomSnapshot, track: SharedRoomTrack, signal: AbortSignal, key: string) {
+    if (state.source?.mode !== 'hosted' || this.personalSource) { this.mediaTicket = undefined; return undefined }
+    if (!this.identity) throw new Error('房间连接尚未就绪')
+    if (state.source.error) throw new Error(state.source.error)
+    const reply = await sendRoomControl(this.identity.server, this.identity.token, {
+      action: 'ticket', roomId: state.roomId, queueItemId: track.queueItemId, sourceVersion: state.source.version, playbackId: state.playbackId,
+    }, signal)
+    signal.throwIfAborted()
+    const ticket = v.parse(roomTicket, reply)
+    this.mediaTicket = { ...ticket, key, renewAt: performance.now() + ticket.leaseMs / 2 }
+    const url = new URL('/room-audio', this.identity.server)
+    url.searchParams.set('ticket', ticket.ticket)
+    return url.href
+  }
+
+  private renewMediaTicket() {
+    const ticket = this.mediaTicket
+    if (!ticket || this.renewing || !this.identity || performance.now() < ticket.renewAt || this.status === 'failed') return
+    this.renewing = true
+    const signal = this.controller?.signal
+    void sendRoomControl(this.identity.server, this.identity.token, { action: 'renew', roomId: this.identity.roomId, ticket: ticket.ticket }, signal)
+      .then(reply => { if (this.mediaTicket === ticket) { const renewed = v.parse(roomTicket, reply); ticket.renewAt = performance.now() + renewed.leaseMs / 2 } })
+      .catch(() => { if (this.mediaTicket === ticket && this.snapshot && !this.stopped && !signal?.aborted) this.playFailed(new Error('房间音源续期失败，请点击恢复同步'), ticket.key, this.snapshot) })
+      .finally(() => { this.renewing = false })
+  }
+
   pauseLocal() {
     this.away = true; this.cancel(); this.playback.audio.pause(); this.report('away'); this.saveIdentity()
   }
   follow() {
+    if (this.mediaTicket && performance.now() >= this.mediaTicket.renewAt + this.mediaTicket.leaseMs / 2) { this.loadedKey = undefined; this.mediaTicket = undefined }
     this.away = false; this.failedKey = undefined; this.status = 'loading'; this.error = ''; this.saveIdentity()
     if (this.isHost && !this.snapshot?.wantsToPlay) this.enqueue({ action: 'play' })
     else if (this.snapshot && this.clock.estimate) void this.apply(this.snapshot)
   }
-  private saveIdentity() { if (this.identity) { this.identity.away = this.away; this.persist(this.identity) } }
+  private saveIdentity() { if (this.identity) { this.identity.away = this.away; this.identity.personalSource = this.personalSource; this.persist(this.identity) } }
 
   private cancel() {
     this.controller?.abort()
@@ -229,7 +299,8 @@ export class ListenClient {
     this.playback.queue(state)
     const track = state.currentIndex === null ? undefined : state.queue[state.currentIndex]
     if (!track) { this.loadedKey = undefined; this.failedKey = undefined; this.playback.empty(); this.report('ready'); return }
-    const key = `${track.provider}:${track.id}:${this.quality ?? ''}`
+    const source = state.source
+    const key = `${track.provider}:${track.id}:${this.quality ?? ''}:${this.personalSource ? 'personal' : source?.mode ?? 'independent'}:${this.personalSource ? 0 : source?.version ?? 0}:${source?.mode === 'hosted' && !this.personalSource ? state.playbackId : ''}`
     if (this.away || this.status === 'blocked' || this.failedKey === key) {
       audio.pause(); this.report(this.away ? 'away' : this.status === 'blocked' ? 'blocked' : 'failed', this.error, state); return
     }
@@ -246,7 +317,10 @@ export class ListenClient {
     try {
       if (this.loadedKey !== key || !audio.getAttribute('src') || audio.error) {
         const result = await Promise.race([
-          this.playback.load(track, state.currentIndex!, controller.signal, this.quality),
+          (async () => {
+            const url = await this.sourceUrl(state, track, controller.signal, key)
+            return this.playback.load(track, state.currentIndex!, controller.signal, this.quality, url)
+          })(),
           new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error('音源加载超时，请重试')), 20_000) }),
         ])
         clearTimeout(timeout)
@@ -270,7 +344,7 @@ export class ListenClient {
         catch (error) { if (active()) this.playFailed(error, key, state) }
       }, delay)
     }
-    catch (error) { if (active()) { this.playback.cancelLoad(); this.playFailed(error, key, state) } }
+    catch (error) { if (active()) { controller.abort(); this.playback.cancelLoad(); this.playFailed(error, key, state) } }
     finally { clearTimeout(timeout); this.changed() }
   }
 
@@ -307,6 +381,7 @@ export class ListenClient {
     if (Number.isFinite(this.lastResponse) && now - this.lastResponse >= DISCONNECT_GRACE_MS) { this.cancel(); this.playback.audio.pause(); this.status = this.away ? 'away' : 'loading' }
     if (this.pending && now - this.pending.sentAt > 8_000) { this.error = '房间操作确认超时，请稍后重新操作'; this.pending = undefined; this.commands = []; this.ping() }
     const state = this.snapshot
+    if (this.connection === 'connected' && state?.source?.mode === 'hosted' && !this.personalSource && !this.away) this.renewMediaTicket()
     if (this.connection === 'connected' && state && this.clock.estimate && this.status === 'following' && !this.away && !this.playback.audio.paused) {
       const error = this.playback.audio.currentTime - roomPosition(state, this.clock.now(now))
       this.confirmations = Math.abs(error) <= 0.3 ? this.confirmations + 1 : 0
@@ -325,6 +400,7 @@ export class ListenClient {
   leave() { this.send({ type: 'leave' }); this.dispose(false); this.persist(undefined); this.exited(); this.changed() }
   dispose(notify = false) {
     if (notify) this.send({ type: 'leave' })
+    this.management?.abort(); this.mediaTicket = undefined
     this.stopped = true; this.cancel(); this.playback.cancelLoad(); this.playback.audio.pause()
     clearInterval(this.interval); clearTimeout(this.retryTimer)
     this.socket?.close(); this.socket = undefined; this.releaseWindow?.(); this.releaseWindow = undefined

@@ -1,10 +1,9 @@
 import * as v from 'valibot'
 import { defineWebSocketHandler } from 'nitro'
-import { clientMessage } from '@m-part/listen-core/protocol'
-import { ListenRooms } from '../utils/listen-rooms'
+import { LISTEN_PROTOCOL, clientMessage } from '@m-part/listen-core/protocol'
+import { rooms } from '../utils/runtime'
 import { isRoomOriginAllowed } from '../utils/origin'
 
-const rooms = new ListenRooms()
 const clients = new Map<string, { authenticated: boolean, openedAt: number, lastMessage: number, count: number, attempts: number, bytes: number, budgetAt: number, close: () => void }>()
 const upgrades = new Map<string, { at: number, count: number }>()
 // Lazy maintenance avoids an import-time interval during Nitro's build scans.
@@ -27,6 +26,7 @@ export default defineWebSocketHandler({
     timer ??= setInterval(() => {
       rooms.sweep()
       for (const client of clients.values()) if (!client.authenticated && performance.now() - client.openedAt > 5_000) client.close()
+      if (!clients.size && !rooms.hasRooms && timer) { clearInterval(timer); timer = undefined }
     }, 1_000)
     timer.unref()
   },
@@ -39,9 +39,13 @@ export default defineWebSocketHandler({
     client.bytes += length
     if (++client.count > 30 || length > 1_000_000 || client.bytes > 1_500_000 || (!client.authenticated && ++client.attempts > 5)) { peer.close(1008, 'Message limit'); return }
     let parsed
-    try { parsed = v.safeParse(clientMessage, message.json()) }
+    let payload: unknown
+    try { payload = message.json(); parsed = v.safeParse(clientMessage, payload) }
     catch { peer.close(1008, 'Invalid JSON'); return }
-    if (!parsed.success) { peer.close(1008, 'Invalid message'); return }
+    if (!parsed.success) {
+      if (payload && typeof payload === 'object' && 'protocol' in payload && payload.protocol !== LISTEN_PROTOCOL) peer.send(JSON.stringify({ type: 'error', code: 'protocol', message: '一起听协议已升级，请同时更新客户端与房间服务' }))
+      peer.close(1008, 'Invalid message'); return
+    }
     rooms.receive({
       id: peer.id,
       send(reply) {
@@ -54,7 +58,8 @@ export default defineWebSocketHandler({
   close(peer) {
     clients.delete(peer.id)
     rooms.disconnect(peer.id)
-    if (!clients.size && timer) { clearInterval(timer); timer = undefined }
+    // Disconnected rooms still need expiry sweeps to clear private hosted sessions.
+    if (!clients.size && !rooms.hasRooms && timer) { clearInterval(timer); timer = undefined }
   },
   error(peer) { rooms.disconnect(peer.id) },
 })

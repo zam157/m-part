@@ -6,6 +6,7 @@ export const roomStatusLabel = () => {
   const view = roomView()
   if (view.connection === 'connecting') return '正在连接房间'
   if (view.connection === 'reconnecting') return '连接中断，正在重连'
+  if (view.snapshot?.source?.error && !view.personalSource && view.snapshot.source.mode === 'hosted') return '房间音源不可用'
   if (view.away) return '已暂离同步'
   if (view.inSync) return '已同步'
   if (view.status === 'ready' && view.snapshot?.status === 'paused') return view.isHost ? '房间已暂停' : '房主已暂停'

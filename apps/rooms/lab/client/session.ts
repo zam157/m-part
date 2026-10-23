@@ -1,6 +1,6 @@
 import type { ClientMessage, MemberStatus, RoomSnapshot, ServerMessage } from '@m-part/listen-core/protocol'
 import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, HEARTBEAT_MS, LISTEN_PROTOCOL } from '@m-part/listen-core/protocol'
-import { ListenClock, roomPosition, shouldSeek } from '@m-part/listen-core/clock'
+import { DriftCorrection, ListenClock, roomPosition } from '@m-part/listen-core/clock'
 
 import { prepareMedia, startMedia } from '@m-part/listen-core/browser/media'
 export { prepareMedia, startMedia } from '@m-part/listen-core/browser/media'
@@ -20,6 +20,8 @@ export interface Telemetry {
   playbackId: string
   seeks: number
   steady: boolean
+  playbackRate?: number
+  strategy?: 'seek' | 'rate'
 }
 
 /** Isolated lab controller. It never imports the product player or its persistence. */
@@ -33,6 +35,8 @@ export class ListenLabSession {
   error = ''
   away = false
   threshold = 0.3
+  strategy: 'seek' | 'rate' = 'seek'
+  private drift = new DriftCorrection()
   seeks = 0
   samples: Telemetry[] = []
   events: { at: number, event: string }[] = []
@@ -48,7 +52,6 @@ export class ListenLabSession {
   private lastPing = 0
   private lastResponse = 0
   private lastSample = 0
-  private lastSeek = -Infinity
   private attempt = 0
   private stopped = false
   private pending?: string
@@ -192,6 +195,7 @@ export class ListenLabSession {
     clearTimeout(this.scheduled); clearTimeout(this.bufferTimer)
     this.scheduled = undefined; this.bufferTimer = undefined
     this.audio.playbackRate = 1
+    this.drift.reset()
   }
 
   private report(status: MemberStatus, state = this.snapshot) {
@@ -261,6 +265,11 @@ export class ListenLabSession {
     else if (this.snapshot && this.clock.estimate) void this.apply(this.snapshot)
   }
 
+  setStrategy(strategy: 'seek' | 'rate') {
+    this.strategy = strategy; this.drift.reset(); this.audio.playbackRate = 1
+    this.log(`strategy:${strategy}`); this.changed()
+  }
+
   buffer(enabled: boolean) {
     this.simulateBuffer = enabled
     if (enabled) {
@@ -284,7 +293,7 @@ export class ListenLabSession {
   private onPageHide = () => { this.persist(); this.audio.pause(); this.socket?.close() }
   private onVisible = () => {
     if (document.visibilityState !== 'visible') return
-    this.clock.reset(); this.savedRevision = -1
+    this.clock.reset(); this.savedRevision = -1; this.drift.reset(); this.audio.playbackRate = 1
     if (this.connected) this.ping()
   }
 
@@ -299,14 +308,17 @@ export class ListenLabSession {
       const target = roomPosition(state, serverTime)
       const error = this.audio.currentTime - target
       if (this.connected && !this.away && this.status === 'following' && !this.audio.paused && (state.status === 'playing' || (state.status === 'scheduled' && serverTime >= state.anchorServerTime))) {
-        if (shouldSeek(error, now, this.lastSeek, { threshold: this.threshold, cooldownMs: 2_000 })) {
-          this.lastSeek = now; this.seeks++; this.log('drift-seek')
+        const correction = this.drift.update(error, now, { strategy: this.strategy, threshold: this.threshold, active: true })
+        this.audio.playbackRate = correction.rate
+        if (correction.seek) {
+          this.seeks++; this.log('drift-seek')
           void this.apply(state)
         }
       }
+      else { this.drift.reset(); this.audio.playbackRate = 1 }
       if (now - this.lastSample >= 500) {
         this.lastSample = now
-        this.samples.push({ localTime: now, serverTime, position: this.audio.currentTime, target, errorMs: error * 1000, uncertaintyMs: this.clock.uncertaintyMs, status: this.status, connected: this.connected, revision: state.revision, playbackId: state.playbackId, seeks: this.seeks, steady: this.status === 'following' && now - this.lastTransition >= 2_000 })
+        this.samples.push({ localTime: now, serverTime, position: this.audio.currentTime, target, errorMs: error * 1000, uncertaintyMs: this.clock.uncertaintyMs, status: this.status, connected: this.connected, revision: state.revision, playbackId: state.playbackId, seeks: this.seeks, playbackRate: this.audio.playbackRate, strategy: this.strategy, steady: this.status === 'following' && now - this.lastTransition >= 2_000 })
         if (this.samples.length > 7_200) this.samples.shift()
       }
     }

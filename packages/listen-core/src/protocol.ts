@@ -1,7 +1,7 @@
 import * as v from 'valibot'
 
 /** Only public track metadata crosses the wire; source URLs and cookies never do. */
-export const LISTEN_PROTOCOL = 1
+export const LISTEN_PROTOCOL = 2
 export const LAB_TRACK = { id: 'calibration-v1', duration: 90 } as const
 export const HEARTBEAT_MS = 5_000
 export const CONNECTION_TIMEOUT_MS = 12_000
@@ -40,6 +40,28 @@ export const clientMessage = v.variant('type', [
 ])
 export type ClientMessage = v.InferOutput<typeof clientMessage>
 
+export const roomSource = v.strictObject({
+  mode: v.picklist(['independent', 'hosted']), version: revision,
+  credential: v.picklist(['none', 'ready', 'invalid']),
+  ownerId: v.optional(shortText), label: v.optional(text), error: v.optional(text),
+})
+export type RoomSource = v.InferOutput<typeof roomSource>
+
+/** Credentials only travel in authenticated HTTP requests, never in room messages. */
+const roomRequest = { roomId: shortText }
+const roomMutation = { ...roomRequest, expectedRevision: revision }
+export const roomControl = v.variant('action', [
+  v.strictObject({ ...roomMutation, action: v.literal('credential'), cookie: v.pipe(v.string(), v.minLength(1), v.maxLength(4096)) }),
+  v.strictObject({ ...roomMutation, action: v.literal('source'), mode: v.picklist(['independent', 'hosted']) }),
+  v.strictObject({ ...roomMutation, action: v.literal('revoke') }),
+  v.strictObject({ ...roomMutation, action: v.literal('retry-source') }),
+  v.strictObject({ ...roomRequest, action: v.literal('ticket'), queueItemId: shortText, playbackId: shortText, sourceVersion: revision }),
+  v.strictObject({ ...roomRequest, action: v.literal('renew'), ticket: v.pipe(v.string(), v.minLength(32), v.maxLength(80)) }),
+])
+export type RoomControl = v.InferOutput<typeof roomControl>
+export const roomTicket = v.strictObject({ ticket: v.pipe(v.string(), v.minLength(32), v.maxLength(80)), leaseMs: v.pipe(v.number(), v.minValue(1000), v.maxValue(300_000)) })
+export type RoomTicket = v.InferOutput<typeof roomTicket>
+
 export interface RoomSnapshot {
   protocol: typeof LISTEN_PROTOCOL
   roomId: string
@@ -50,6 +72,7 @@ export interface RoomSnapshot {
   queue: SharedRoomTrack[]
   currentIndex: number | null
   playMode: v.InferOutput<typeof mode>
+  source?: RoomSource
   track: { id: string, duration: number }
   status: 'preparing' | 'scheduled' | 'playing' | 'paused' | 'ended'
   wantsToPlay: boolean
@@ -73,13 +96,14 @@ const clockTime = v.pipe(v.number(), v.finite(), v.minValue(0))
 const snapshot = v.strictObject({
   protocol: v.literal(LISTEN_PROTOCOL), roomId: shortText, code: shortText, revision, playbackId: shortText,
   kind: v.picklist(['lab', 'music']), queue: v.pipe(v.array(v.strictObject({ ...track.entries, queueItemId: shortText })), v.maxLength(1_000)),
-  currentIndex: v.nullable(revision), playMode: mode,
+  currentIndex: v.nullable(revision), playMode: mode, source: v.optional(roomSource),
   track: v.strictObject({ id: v.pipe(v.string(), v.maxLength(80)), duration: position }),
   status: v.picklist(['preparing', 'scheduled', 'playing', 'paused', 'ended']), wantsToPlay: v.boolean(),
   pauseReason: v.nullable(v.picklist(['user', 'host-buffering', 'blocked', 'failed', 'host-disconnected'])),
   positionAtAnchor: position, anchorServerTime: clockTime, rate: v.literal(1), hostId: shortText,
   members: v.pipe(v.array(v.strictObject({ id: shortText, name: shortText, generation: revision, online: v.boolean(), status: memberStatus, message: v.optional(text) })), v.maxLength(5)),
 })
+export { snapshot as roomSnapshot }
 export const serverMessage = v.variant('type', [
   v.strictObject({ type: v.literal('welcome'), token: v.pipe(v.string(), v.minLength(1), v.maxLength(128)), memberId: shortText, generation: revision, snapshot }),
   v.strictObject({ type: v.literal('snapshot'), snapshot }),

@@ -21,6 +21,7 @@
     <section>
       <button id="buffer">模拟缓冲</button><button id="unbuffer">结束模拟缓冲</button>
       <button id="blocked">下次启动模拟受阻</button><button id="disconnect">断开并重连</button>
+      <label>校正策略<select id="strategy"><option value="seek">阈值 seek（默认）</option><option value="rate">有限倍速微调（实验）</option></select></label>
       <label>seek 阈值（秒）<input id="threshold" type="number" min="0.1" max="2" step="0.05" value="0.3" /></label>
       <button id="export">导出测量 JSON</button>
     </section>

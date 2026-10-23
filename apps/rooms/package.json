@@ -17,7 +17,8 @@
   "dependencies": {
     "@m-part/listen-core": "workspace:*",
     "nitro": "catalog:backend",
-    "valibot": "catalog:shared"
+    "valibot": "catalog:shared",
+    "@m-part/music": "workspace:*"
   },
   "devDependencies": {
     "typescript": "catalog:dev",

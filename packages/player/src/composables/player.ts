@@ -16,6 +16,7 @@ let abortController: AbortController | null = null
 let sourceRevision = 0
 let objectUrl: string | null = null
 let playIntent = 0
+let roomMedia = false
 let restoredPlayback: { provider: ProviderName, id: string, time: number } | null = null
 let restoredSeek: { revision: number, time: number } | null = null
 
@@ -207,6 +208,8 @@ async function loadQuality(sourceInfo: SourceInfo, quality?: MusicQuality) {
   const { qualities, headers, url } = sourceInfo
   setPlaybackError(null)
 
+  roomMedia = false
+  audio.removeAttribute('crossorigin')
   const targetUrl = quality?.url || url
   if (quality && qualities) {
     // 用不可变更新替换就地改写 qualities[].active，保证 Solid 能感知变化
@@ -694,14 +697,28 @@ export function cancelRoomSource() {
   abortController?.abort()
   abortController = null
   audio.pause()
+  // load() can discard the queued native pause event while clearing a revoked stream.
+  setPlayingState(false); setWaiting(false); setSeekingState(false)
+  if (roomMedia) { roomMedia = false; audio.removeAttribute('src'); audio.load() }
 }
 
-export async function loadRoomSource(music: MusicInfo, index: number, signal: AbortSignal, qualityName?: string) {
+export async function loadRoomSource(music: MusicInfo, index: number, signal: AbortSignal, qualityName?: string, hostedUrl?: string) {
   const pendingRevision = sourceRevision + 1
   const abort = () => { if (sourceRevision === pendingRevision) cancelRoomSource() }
   signal.addEventListener('abort', abort, { once: true })
   try {
     if (signal.aborted) return 'stale' as const
+    if (hostedUrl) {
+      cancelRoomSource()
+      restoredPlayback = null; restoredSeek = null
+      if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null }
+      setCurrentIndexState(index); setCurrentTimeState(0); setDuration(music.duration)
+      setPlaybackError(null); setWaiting(true); setSeekingState(false)
+      setCurrentSourceInfo({ url: hostedUrl, availability: 'full', qualities: [{ name: '房间托管', url: hostedUrl, active: true }] })
+      // Stream directly, including in Web mode; never turn the room stream into a Blob.
+      roomMedia = true; audio.crossOrigin = 'anonymous'; audio.src = hostedUrl; audio.load()
+      return 'loaded' as const
+    }
     await startPlaying(music, index)
     if (signal.aborted || sourceRevision !== pendingRevision) return 'stale' as const
     const info = currentSourceInfo()
