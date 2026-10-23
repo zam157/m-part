@@ -4,7 +4,7 @@
 
 推荐使用扩展形态：复用浏览器登录态，由浏览器凭据机制和 DNR 规则处理跨域请求。音源接入说明见 [网易云](./docs/netease.md)、[QQ 音乐](./docs/qq.md)。
 
-支持首页推荐、搜索、收藏歌单、完整播放队列、展开播放器、逐字歌词及 Media Session。一起听默认独立取源，房主同步队列与播放进度，每个人使用自己的账号和音源权限；另提供显式启用的网易云房间托管实验，服务器内存保管房主提交的会话并转发音频，成员不接收账号凭据。
+支持首页推荐、搜索、收藏歌单、完整播放队列、展开播放器、逐字歌词及 Media Session。一起听默认独立取源，房主同步队列与播放进度，每个人使用自己的账号和音源权限；另提供显式启用的网易云 / QQ 音乐 / BiliBili 房间托管实验，服务器内存保管房主提交的会话并转发音频，成员不接收账号凭据。
 
 ## 开发与构建
 
@@ -72,7 +72,7 @@ NITRO_HOST=0.0.0.0 NITRO_PORT=3410 node apps/rooms/dist/server/index.mjs
 
 将 `apps/rooms/dist/` 整个目录复制到服务器即可运行，不需要同时部署播放器。公网配置 `LISTEN_ALLOWED_ORIGINS`，局域网默认允许不同合法 Chrome 扩展 ID。HTTP / HTTPS 地址均支持；公网建议 HTTPS / WSS。详见 [一起听使用与部署](./docs/listen-together-usage.md)。
 
-客户端与服务需要同时更新至协议 2。网易云托管需 `LISTEN_HOSTED_ENABLED=1`，远程绑定会话须 HTTPS；真实服务器会话与风控仍待使用者实测，详见使用说明。
+客户端与服务需要同时更新至协议 3。托管需 `LISTEN_HOSTED_ENABLED=1`，远程绑定会话须 HTTPS；真实服务器会话与风控仍待使用者实测，详见使用说明。
 
 实验工具可比较 seek 与倍速微调，通过 `pnpm dev:listen`、`pnpm build:listen` 运行，见 [同步实验](./docs/listen-together-lab.md)。
 

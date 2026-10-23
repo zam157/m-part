@@ -29,7 +29,7 @@
 | 页面 | `packages/player/src/pages/`（文件即路由） |
 | 跨路由保留的状态 | `packages/player/src/composables/*.ts` 的**模块级信号** |
 | 一起听 / 播放控制 | `packages/player/src/composables/player-context.ts`（所有用户操作入口）、`listen-room.ts`、`packages/player/src/utils/listen-client.ts`；协议与服务见 [一起听说明](./docs/listen-together-usage.md) |
-| 托管一起听 / 媒体票据 | `apps/rooms/server/utils/hosted-media.ts`、`providers/netease.ts`、`room-control` / `room-audio` 路由；客户端 `ListenRoomSources/` 与 `utils/room-http.ts` |
+| 托管一起听 / 媒体票据 | `apps/rooms/server/utils/hosted-media.ts`、`apps/rooms/server/providers/`、`room-control` / `room-audio` 路由；客户端 `ListenRoomSources/` 与 `utils/room-http.ts` |
 | 取数实现（Provider） | `packages/music/src/utils/providers/` |
 | 请求出口（含扩展策略） | `packages/music/src/utils/fetch.ts` |
 | 扩展入口 / manifest / DNR 规则 | `apps/extension/entrypoints/`、`apps/extension/wxt.config.ts`、`apps/extension/public/rules/` |
@@ -67,11 +67,11 @@
 
 ## 一起听托管约定
 
-- 当前协议版本 2，客户端、服务和实验工具同时更新。默认独立取源，托管需 `LISTEN_HOSTED_ENABLED=1`，目前仅网易云实验。
+- 当前协议版本 3，客户端、服务和实验工具同时更新。默认独立取源，托管需 `LISTEN_HOSTED_ENABLED=1`，支持网易云、QQ 音乐和 BiliBili 实验；每房间仅保留一个平台账号，更换平台会替换旧会话。
 - 不自动读取 / 上传真实 Cookie。仅房主显式提交，远程须 HTTPS（回环 HTTP 调试除外）；服务器只在内存保留受控会话。公开协议、队列、个人缓存与日志不得加入 Cookie、上游 URL 或媒体票据。
 - 音频走原生 Audio + 短期成员票据，Web 形态也不能先整首转 Blob。成员断线只取消本人的流，全局源失败才暂停房间；凭据 / 来源 / 播放实例变化必须中止旧请求，禁止悄悄改用个人账号。
 - `listen-core/clock` 的 `DriftCorrection` 仅供 lab 比较。正式播放器继续使用 300ms / 2 秒 seek 策略，未量化双设备和听感前不要直接替换。
-- 真实服务器网易云会话 / 风控尚未验收；模拟上游与合成音频通过不能写成真实平台已验收。详见 [使用说明](./docs/listen-together-usage.md)。
+- 真实服务器三平台会话 / 风控尚未验收；模拟上游与合成音频通过不能写成真实平台已验收。详见 [使用说明](./docs/listen-together-usage.md)。
 
 ## 命名约定（2026-09 改名后）
 

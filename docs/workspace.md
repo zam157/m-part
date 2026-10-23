@@ -19,10 +19,10 @@ extension / web ──→ player ──→ music
                          └──→ listen-core ←── rooms（包括 lab）
 extension / web / player 的构建与测试 ──→ build-config
 web 的代理 ──→ music/proxy-headers（仅常量，不引入浏览器取源模块）
-rooms 的托管适配 ──→ music/providers/netease-crypto（纯加密逻辑）
+rooms 的托管适配 ──→ music/providers/netease-crypto / qq-crypto / bilibili-wbi（纯签名逻辑）
 ```
 
-房间服务不依赖 Solid、播放器或浏览器音乐 Provider；可选网易云托管的服务端适配仅复用 music 包的纯加密模块。实验工具使用相同服务实现，直接依赖同步工具，不再引用播放器内部文件。`build-config` 中指向播放器目录的路径仅用于路由扫描和包内别名，不引入播放器运行时代码。
+房间服务不依赖 Solid、播放器或浏览器音乐 Provider；可选三平台托管的服务端适配仅复用 music 包的纯加密 / 签名模块。实验工具使用相同服务实现，直接依赖同步工具，不再引用播放器内部文件。`build-config` 中指向播放器目录的路径仅用于路由扫描和包内别名，不引入播放器运行时代码。
 
 ## 包的导出与依赖
 
@@ -41,7 +41,7 @@ import { ListenClock } from '@m-part/listen-core/clock'
 import { prepareMedia } from '@m-part/listen-core/browser/media'
 ```
 
-`listen-core/protocol` 和 `clock` 不依赖 DOM、Solid 或浏览器存储；`browser/media` 是显式的浏览器入口。`music/providers/netease-crypto` 不读浏览器登录态，`music/proxy-headers` 不读取 `import.meta.env`，可安全供 Nitro 服务端使用。不要建立会将 Node、浏览器或全部 Provider 混在一起的总入口。
+`listen-core/protocol` 和 `clock` 不依赖 DOM、Solid 或浏览器存储；`browser/media` 是显式的浏览器入口。`music/providers/netease-crypto`、`qq-crypto` 和 `bilibili-wbi` 是纯签名模块，不读浏览器登录态，`music/proxy-headers` 不读取 `import.meta.env`，可安全供 Nitro 服务端使用。不要建立会将 Node、浏览器或全部 Provider 混在一起的总入口。
 
 `~/` 仅映射到 `packages/player/src/`，用于播放器内部和其测试；跨包不要使用 `../../packages/...` 或恢复 `#shared/*` 别名。构建配置需定位工作区目录时使用相对于 `import.meta.dirname` 的绝对路径。
 
@@ -102,7 +102,7 @@ NITRO_HOST=0.0.0.0 NITRO_PORT=3410 node server/index.mjs
 
 产物已包含服务依赖，不需要安装或部署浏览器扩展、Web 应用或音乐 Provider。构建命令仍应在完整 workspace 源码中执行，不能只复制 `apps/rooms` 源码后省略 `listen-core`。
 
-服务环境变量、来源限制及局域网步骤见 [一起听使用与部署](./listen-together-usage.md)。monorepo 拆分本身没有改变房间协议和行为；后续托管实验已将协议升级为 2，需要同时更新客户端与服务。`LISTEN_HOSTED_ENABLED=1` 显式开启托管，默认仍是独立模式。
+服务环境变量、来源限制及局域网步骤见 [一起听使用与部署](./listen-together-usage.md)。monorepo 拆分本身没有改变房间协议和行为；后续托管实验已将协议升级为 3，需要同时更新客户端与服务。`LISTEN_HOSTED_ENABLED=1` 显式开启托管，默认仍是独立模式。
 
 ## 迁移验证记录（2026-10-23）
 

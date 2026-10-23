@@ -1,3 +1,4 @@
+import { LISTEN_PROTOCOL } from '@m-part/listen-core/protocol'
 import type { RoomIdentity, RoomPlayback } from '~/utils/listen-client'
 import type { ClientMessage, RoomSnapshot, ServerMessage } from '@m-part/listen-core/protocol'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -21,7 +22,7 @@ class Socket {
 }
 const track = { provider: 'netease' as const, id: 'one', title: 'Song', duration: 120, coverUrl: '', queueItemId: 'item-one' }
 const snapshot = (patch: Partial<RoomSnapshot> = {}): RoomSnapshot => ({
-  protocol: 2, roomId: 'room', code: '12345678', revision: 0, playbackId: 'playback', kind: 'music', queue: [track], currentIndex: 0, playMode: 'order',
+  protocol: LISTEN_PROTOCOL, roomId: 'room', code: '12345678', revision: 0, playbackId: 'playback', kind: 'music', queue: [track], currentIndex: 0, playMode: 'order',
   track: { id: track.queueItemId, duration: 120 }, status: 'paused', wantsToPlay: false, pauseReason: 'user', positionAtAnchor: 0, anchorServerTime: 0, rate: 1,
   hostId: 'host', members: [], ...patch,
 })
@@ -33,7 +34,7 @@ let exited = vi.fn<() => void>()
 let lockAvailable: boolean
 
 async function connect(memberId = 'member') {
-  client.open('http://localhost:3410', { type: 'join', protocol: 2, kind: 'music', name: 'test', code: '12345678' })
+  client.open('http://localhost:3410', { type: 'join', protocol: LISTEN_PROTOCOL, kind: 'music', name: 'test', code: '12345678' })
   socket = Socket.all.at(-1)!
   socket.onopen?.()
   await socket.receive({ type: 'welcome', token: 'secret', memberId, generation: 1, snapshot: snapshot() })
@@ -241,4 +242,14 @@ describe('hosted client source control', () => {
     expect(playback.load).not.toHaveBeenCalled()
     expect(playback.audio.paused).toBe(true)
   })
+})
+
+
+it.each(['netease', 'qq', 'bili'] as const)('sends explicit %s credential selection only through authenticated HTTP', async (provider) => {
+  await connect('host')
+  roomRequest.mockResolvedValueOnce({ ok: true })
+  expect(await client.manageSource('credential', 'private-session', provider)).toBe(true)
+  expect(roomRequest).toHaveBeenLastCalledWith('http://localhost:3410', 'secret', expect.objectContaining({ action: 'credential', provider, cookie: 'private-session' }), expect.any(AbortSignal))
+  expect(JSON.stringify(socket.sent)).not.toContain('private-session')
+  expect(JSON.stringify(persist.mock.calls)).not.toContain('private-session')
 })

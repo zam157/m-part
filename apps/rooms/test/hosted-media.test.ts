@@ -1,10 +1,13 @@
+import { HostedSourceError } from '../server/providers/shared'
+import { createQQHostedProvider } from '../server/providers/qq'
+import { createBiliHostedProvider } from '../server/providers/bilibili'
 import type { ServerMessage, RoomControl, RoomTicket } from '@m-part/listen-core/protocol'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LISTEN_PROTOCOL, roomTicket, serverMessage } from '@m-part/listen-core/protocol'
 import * as v from 'valibot'
 import { ListenRooms } from '../server/utils/listen-rooms'
 import { HostedMedia } from '../server/utils/hosted-media'
-import { HostedSourceError } from '../server/providers/netease'
+import { parseNeteaseCookie, validateNeteaseMediaUrl } from '../server/providers/netease'
 import { createRoomControlHandler, credentialTransportAllowed } from '../server/utils/room-http'
 
 const cookie = 'MUSIC_U=abcdefghijklmnop123456; __csrf=0123456789abcdef; irrelevant=must-not-forward'
@@ -16,7 +19,7 @@ let media: HostedMedia
 let host: ReturnType<typeof peer>
 let member: ReturnType<typeof peer>
 let now: number
-const provider = { validate: vi.fn(), resolve: vi.fn() }
+const provider = { parseCookie: parseNeteaseCookie, validateMediaUrl: validateNeteaseMediaUrl, validate: vi.fn(), resolve: vi.fn() }
 const fetcher = vi.fn<typeof fetch>()
 const state = (p = host) => (p.messages.findLast(m => m.type === 'snapshot' || m.type === 'welcome') as Extract<ServerMessage, { type: 'snapshot' | 'welcome' }>).snapshot
 const token = (p = host) => (p.messages.find(m => m.type === 'welcome') as Extract<ServerMessage, { type: 'welcome' }>).token
@@ -58,7 +61,7 @@ beforeEach(() => {
     return new Response(data, { status: range ? 206 : 200, headers })
   })
   rooms = new ListenRooms(() => now, s => media.sync(s))
-  media = new HostedMedia(rooms, provider, fetcher, () => now)
+  media = new HostedMedia(rooms, { netease: provider, qq: provider, bili: provider }, fetcher, () => now)
   host = peer('host'); member = peer('member')
   rooms.receive(host, { type: 'create', protocol: LISTEN_PROTOCOL, kind: 'music', name: 'Host', tracks: [track, { ...track, id: '456' }], autoplay: true })
   rooms.receive(member, { type: 'join', protocol: LISTEN_PROTOCOL, kind: 'music', name: 'Member', code: state().code })
@@ -319,5 +322,77 @@ describe('room HTTP authentication and credential transport', () => {
     const disabled = createRoomControlHandler(media, { enabled: () => false })
     expect((await disabled(request(mutation('revoke')))).status).toBe(503)
     expect(provider.validate).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('platform-specific room sessions', () => {
+  it.each(['qq', 'bili'] as const)('binds %s, isolates CDN policies and replaces the previous private session', async (platform) => {
+    await bind()
+    const old = await ticket(member)
+    const adapter = platform === 'qq' ? createQQHostedProvider() : createBiliHostedProvider()
+    const resolve = vi.fn().mockResolvedValue({ url: platform === 'qq' ? 'https://isure.stream.qqmusic.qq.com/audio.m4a' : 'https://upos.bilivideo.com/audio.m4s' })
+    const alternate = { ...adapter, validate: vi.fn().mockResolvedValue(`${platform} · 尾号 1234`), resolve }
+    // Same service/state, different injected adapter registry for this isolated case.
+    media = new HostedMedia(rooms, { netease: provider, qq: alternate, bili: alternate }, fetcher, () => now)
+    media.sync(state())
+    rooms.receive(host, { type: 'command', commandId: 'new-platform', expectedRevision: state().revision, action: 'queue', tracks: [{ ...track, provider: platform, id: platform === 'qq' ? '003rJSwm3TechU' : 'BV1234567890' }] })
+    const supplied = platform === 'qq' ? 'qqmusic_uin=12345678; qqmusic_key=abcdefghijklmnop; MUSIC_U=not-forwarded' : 'SESSDATA=abcdefghijklmnop; MUSIC_U=not-forwarded'
+    await media.control(token(), { action: 'credential', provider: platform, cookie: supplied, roomId: state().roomId, expectedRevision: state().revision }, signal())
+    expect(state().source).toMatchObject({ provider: platform, mode: 'hosted', credential: 'ready' })
+    expect(alternate.validate.mock.calls[0]?.[0]).not.toContain('MUSIC_U')
+    const lease = await ticket(member)
+    const response = await media.audio(new Request('https://rooms.example/room-audio', { headers: { range: 'bytes=2-5', cookie: 'browser-secret', authorization: 'browser-auth' } }), lease.ticket)
+    expect(await response.text()).toBe('cdef')
+    const headers = new Headers(fetcher.mock.calls.at(-1)?.[1]?.headers)
+    expect(headers.has('cookie')).toBe(false)
+    expect(headers.has('authorization')).toBe(false)
+    expect(headers.get('referer')).toBe(platform === 'qq' ? 'https://y.qq.com/' : 'https://www.bilibili.com/')
+    expect((await audio(old)).status).toBe(401)
+    expect(provider.resolve).toHaveBeenCalledTimes(1)
+    expect(resolve).toHaveBeenCalledTimes(1)
+    const snapshots = JSON.stringify(member.messages)
+    expect(snapshots).not.toContain('abcdefghijklmnop')
+    expect(snapshots).not.toContain(lease.ticket)
+    for (const message of member.messages) expect(v.safeParse(serverMessage, message).success).toBe(true)
+  })
+
+  it('never uses a different platform credential to resolve a mixed queue', async () => {
+    await bind()
+    rooms.receive(host, { type: 'command', commandId: 'mixed', expectedRevision: state().revision, action: 'queue', tracks: [{ ...track, provider: 'qq', id: '003rJSwm3TechU' }] })
+    await expect(ticket()).rejects.toThrow('平台不匹配')
+    expect(provider.resolve).not.toHaveBeenCalled()
+    expect(state().pauseReason).toBe('failed')
+    expect(state().source?.credential).toBe('ready')
+  })
+
+  it('revokes old tickets when switching from NetEase to a different platform in the same service', async () => {
+    const alternate = { ...createQQHostedProvider(), validate: vi.fn().mockResolvedValue('QQ 音乐 · 尾号 5678'), resolve: vi.fn() }
+    media = new HostedMedia(rooms, { netease: provider, qq: alternate, bili: provider }, fetcher, () => now)
+    media.sync(state())
+    await bind()
+    const lease = await ticket(member)
+    const stream = await audio(lease)
+    await media.control(token(), { action: 'credential', provider: 'qq', cookie: 'uin=12345678; skey=abcdefghijklmnop', roomId: state().roomId, expectedRevision: state().revision }, signal())
+    await expect(stream.text()).rejects.toThrow()
+    expect((await audio(lease)).status).toBe(401)
+    await expect(ticket()).rejects.toThrow('平台不匹配')
+    expect(alternate.resolve).not.toHaveBeenCalled()
+    expect(provider.resolve).toHaveBeenCalledOnce()
+  })
+
+  it('accepts MP4 only for a BiliBili audio resource, never for NetEase', async () => {
+    const alternate = { ...createBiliHostedProvider(), validate: vi.fn().mockResolvedValue('BiliBili · 尾号 5678'), resolve: vi.fn().mockResolvedValue({ url: 'https://upos.bilivideo.com/audio.m4s' }) }
+    media = new HostedMedia(rooms, { netease: provider, qq: provider, bili: alternate }, fetcher, () => now)
+    media.sync(state())
+    await bind()
+    fetcher.mockResolvedValue(new Response('audio', { headers: { 'content-type': 'video/mp4' } }))
+    expect((await audio(await ticket())).status).toBe(502)
+    rooms.receive(host, { type: 'command', commandId: 'bili', expectedRevision: state().revision, action: 'queue', tracks: [{ ...track, provider: 'bili', id: 'BV1234567890' }] })
+    await media.control(token(), { action: 'credential', provider: 'bili', cookie: 'SESSDATA=abcdefghijklmnop', roomId: state().roomId, expectedRevision: state().revision }, signal())
+    fetcher.mockResolvedValue(new Response('audio', { headers: { 'content-type': 'video/mp4' } }))
+    const response = await audio(await ticket())
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe('audio')
   })
 })

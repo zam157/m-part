@@ -1,7 +1,7 @@
 import type { PlayerCache } from '~/utils/player-storage'
 import type { MusicInfo } from '@m-part/music/types/music-info'
 import type { RoomIdentity } from '~/utils/listen-client'
-import type { MemberStatus, RoomSnapshot } from '@m-part/listen-core/protocol'
+import type { HostedPlatform, MemberStatus, RoomSnapshot } from '@m-part/listen-core/protocol'
 import { createSignal } from 'solid-js'
 import { TARGET_EXTENSION } from '@m-part/music/constants'
 import { LISTEN_PROTOCOL } from '@m-part/listen-core/protocol'
@@ -113,7 +113,7 @@ export async function joinListenRoom(serverInput: string, name: string, code: st
   }
   catch (error) { setRoomView(v => ({ ...v, error: error instanceof Error ? error.message : String(error) })) }
 }
-export async function manageRoomSource(action: 'credential' | 'revoke' | 'source' | 'retry-source', value?: string) { await client?.manageSource(action, value) }
+export async function manageRoomSource(action: 'credential' | 'revoke' | 'source' | 'retry-source', value?: string, provider?: HostedPlatform) { await client?.manageSource(action, value, provider) }
 export function usePersonalRoomSource(personal: boolean) { client?.usePersonalSource(personal) }
 export function leaveListenRoom() { client?.leave() }
 export function resumeRoomPlayback() { client?.follow() }

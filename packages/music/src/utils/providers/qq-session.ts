@@ -1,14 +1,10 @@
 import { TARGET_EXTENSION } from '../constants'
+import { qqToken } from './qq-crypto'
+
+export { qqToken } from './qq-crypto'
 
 interface ExtensionCookies {
   get: (details: { url: string, name: string }) => Promise<{ value: string } | null>
-}
-
-/** QQ 网页使用的 DJB2 CSRF token；不是登录凭据的替代品。 */
-export function qqToken(key: string): number {
-  let hash = 5381
-  for (let index = 0; index < key.length; index++) hash = (hash * 33 + key.charCodeAt(index)) | 0
-  return hash & 0x7FFFFFFF
 }
 
 /** 仅在请求时读取 QQ 音乐自身的 Cookie，不保存、不回写，也不手动设置 Cookie 头。 */

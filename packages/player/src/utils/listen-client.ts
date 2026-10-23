@@ -1,4 +1,4 @@
-import type { RoomControl, RoomTicket, ClientMessage, MemberStatus, RoomSnapshot, SharedRoomTrack } from '@m-part/listen-core/protocol'
+import type { HostedPlatform, RoomControl, RoomTicket, ClientMessage, MemberStatus, RoomSnapshot, SharedRoomTrack } from '@m-part/listen-core/protocol'
 import type { RoomPlayerAction } from '~/composables/player-context'
 import * as v from 'valibot'
 import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, HEARTBEAT_MS, LISTEN_PROTOCOL, roomSnapshot, roomTicket, serverMessage } from '@m-part/listen-core/protocol'
@@ -207,13 +207,13 @@ export class ListenClient {
     else if (action.type === 'seek') this.enqueue({ action: 'seek', position: Math.max(0, Math.min(this.snapshot?.track.duration ?? 0, action.position)) })
   }
 
-  async manageSource(action: 'credential' | 'revoke' | 'source' | 'retry-source', value?: string) {
+  async manageSource(action: 'credential' | 'revoke' | 'source' | 'retry-source', value?: string, provider?: HostedPlatform) {
     if (!this.identity || !this.snapshot || this.connection !== 'connected' || !this.isHost) { this.error = '连接恢复后由房主管理房间音源'; this.changed(); return false }
     if (this.sourceBusy || this.busy) { this.error = '请等待当前房间操作完成'; this.changed(); return false }
     const controller = new AbortController()
     this.management = controller; this.sourceBusy = true; this.error = ''; this.changed()
     const base = { roomId: this.identity.roomId, expectedRevision: this.snapshot.revision }
-    const request: RoomControl = action === 'credential' ? { ...base, action, cookie: value ?? '' }
+    const request: RoomControl = action === 'credential' ? { ...base, action, provider: provider ?? 'netease', cookie: value ?? '' }
       : action === 'source' ? { ...base, action, mode: value === 'hosted' ? 'hosted' : 'independent' }
         : { ...base, action }
     try {

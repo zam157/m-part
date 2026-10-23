@@ -1,13 +1,6 @@
 import { encryptWeapi } from '@m-part/music/providers/netease-crypto'
-
-export class HostedSourceError extends Error {
-  constructor(message: string, readonly invalidCredential = false) { super(message) }
-}
-export interface HostedResource { url: string, hash?: string, size?: number }
-export interface HostedProvider {
-  validate: (cookie: string, signal: AbortSignal) => Promise<string>
-  resolve: (cookie: string, id: string, signal: AbortSignal) => Promise<HostedResource>
-}
+import { HostedSourceError, limitedJson } from './shared'
+import type { HostedProvider } from './shared'
 
 /** Only these two cookies can reach the fixed NetEase API host. */
 export function parseNeteaseCookie(input: string) {
@@ -27,28 +20,6 @@ export function validateNeteaseMediaUrl(input: string) {
   return url.href
 }
 
-async function limitedJson(response: Response) {
-  const reader = response.body?.getReader()
-  if (!reader) throw new HostedSourceError('网易云返回了无效响应')
-  const chunks: Uint8Array[] = []
-  let length = 0
-  try {
-    while (true) {
-      const value = await reader.read()
-      if (value.done) break
-      length += value.value.byteLength
-      if (length > 128 * 1024) throw new HostedSourceError('网易云返回了过大的响应')
-      chunks.push(value.value)
-    }
-    return JSON.parse(Buffer.concat(chunks).toString())
-  }
-  catch (error) {
-    await reader.cancel().catch(() => {})
-    if (error instanceof HostedSourceError) throw error
-    throw new HostedSourceError('网易云返回了无效响应')
-  }
-}
-
 export function createNeteaseHostedProvider(fetcher: typeof fetch = fetch): HostedProvider {
   async function request(path: string, cookie: string, data: Record<string, unknown>, signal: AbortSignal) {
     const csrf = /(?:^|;)\s*__csrf=([^;]+)/.exec(cookie)?.[1] ?? ''
@@ -59,11 +30,12 @@ export function createNeteaseHostedProvider(fetcher: typeof fetch = fetch): Host
       body: new URLSearchParams(encryptWeapi({ ...data, csrf_token: csrf })),
     })
     if (!response.ok) { await response.body?.cancel(); throw new HostedSourceError('网易云托管请求失败，可能需要重新登录或稍后重试', [401, 403].includes(response.status)) }
-    const result = await limitedJson(response)
+    const result = await limitedJson(response, '网易云')
     if (result.code !== 200) throw new HostedSourceError('网易云会话不可用或需要验证，请重新绑定或稍后重试', [301, 401, 403].includes(result.code))
     return result
   }
   return {
+    parseCookie: parseNeteaseCookie, validateMediaUrl: validateNeteaseMediaUrl,
     async validate(cookie, signal) {
       const result = await request('w/nuser/account/get', cookie, {}, signal)
       const id = result.profile?.userId

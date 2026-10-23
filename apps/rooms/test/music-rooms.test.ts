@@ -1,3 +1,4 @@
+import { LISTEN_PROTOCOL } from '@m-part/listen-core/protocol'
 import type { ClientMessage, RoomSnapshot, ServerMessage } from '@m-part/listen-core/protocol'
 import { beforeEach, describe, expect, it } from 'vitest'
 import * as v from 'valibot'
@@ -25,8 +26,8 @@ describe('real music room queue authority', () => {
   }
   beforeEach(() => {
     now = 0; rooms = new ListenRooms(() => now); host = peer('host'); member = peer('member')
-    send(host, { type: 'create', protocol: 2, kind: 'music', name: 'Host', tracks: [song('1'), song('2'), song('3')], index: 1, position: 12, autoplay: true })
-    send(member, { type: 'join', protocol: 2, kind: 'music', name: 'Member', code: state().code })
+    send(host, { type: 'create', protocol: LISTEN_PROTOCOL, kind: 'music', name: 'Host', tracks: [song('1'), song('2'), song('3')], index: 1, position: 12, autoplay: true })
+    send(member, { type: 'join', protocol: LISTEN_PROTOCOL, kind: 'music', name: 'Member', code: state().code })
   })
   it('starts with the host selection and position, validates its outgoing protocol', () => {
     expect(state()).toMatchObject({ kind: 'music', currentIndex: 1, positionAtAnchor: 12, status: 'preparing' })
@@ -37,7 +38,7 @@ describe('real music room queue authority', () => {
   it('shares no source, credentials or HTML injected into public song titles', () => {
     command('append', { track: { ...song('new'), title: '<img src=x onerror=evil()>Hello' } })
     expect(state().queue.at(-1)?.title).toBe('Hello')
-    expect(v.safeParse(clientMessage, { type: 'create', kind: 'music', protocol: 2, name: 'x', tracks: [{ ...song('x'), src: 'https://private.example/signed' }] }).success).toBe(false)
+    expect(v.safeParse(clientMessage, { type: 'create', kind: 'music', protocol: LISTEN_PROTOCOL, name: 'x', tracks: [{ ...song('x'), src: 'https://private.example/signed' }] }).success).toBe(false)
   })
   it('only the host can change queue, seek, mode or advance on ended', () => {
     const before = state().revision
@@ -108,7 +109,7 @@ describe('real music room queue authority', () => {
     for (let i = 0; i < 3; i++) { now += 10_000; send(host, { type: 'ping', sentAt: now }) }
     expect(state().members).toHaveLength(1)
     const returning = peer('returning')
-    send(returning, { type: 'resume', protocol: 2, token: original.token })
+    send(returning, { type: 'resume', protocol: LISTEN_PROTOCOL, token: original.token })
     const welcome = returning.messages.find(m => m.type === 'welcome') as Extract<ServerMessage, { type: 'welcome' }>
     expect(welcome.memberId).toBe(original.memberId)
     expect(state().members).toHaveLength(2)

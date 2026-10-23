@@ -1,14 +1,14 @@
-import type { RoomControl, RoomSnapshot } from '@m-part/listen-core/protocol'
-import type { HostedProvider, HostedResource } from '../providers/netease'
+import type { HostedPlatform, RoomControl, RoomSnapshot } from '@m-part/listen-core/protocol'
+import type { HostedProvider, HostedProviders, HostedResource } from '../providers/shared'
 import { randomBytes } from 'node:crypto'
-import { HostedSourceError, parseNeteaseCookie, validateNeteaseMediaUrl } from '../providers/netease'
+import { HostedSourceError } from '../providers/shared'
 import type { ListenRooms } from './listen-rooms'
 
 const LEASE_MS = 120_000
 const MAX_RESPONSE_BYTES = 64 * 1024 * 1024
-interface Credential { cookie: string, ownerId: string, label: string }
+interface Credential { provider: HostedPlatform, cookie: string, ownerId: string, label: string }
 interface Resource {
-  source: HostedResource, roomId: string, version: number, playbackId: string, trackId: string,
+  provider: HostedProvider, platform: HostedPlatform, source: HostedResource, roomId: string, version: number, playbackId: string, trackId: string,
   controller: AbortController, refreshing?: Promise<void>, streams: Set<AbortController>,
 }
 interface Ticket {
@@ -28,7 +28,7 @@ export class HostedMedia {
   private budgets = new Map<string, { at: number, bytes: number }>()
   private active = 0
 
-  constructor(private rooms: ListenRooms, private provider: HostedProvider, private fetcher: typeof fetch = fetch, private now = () => performance.now()) {}
+  constructor(private rooms: ListenRooms, private providers: HostedProviders, private fetcher: typeof fetch = fetch, private now = () => performance.now()) {}
 
   /** Every authoritative broadcast invalidates old sources, connections and tickets. */
   sync(state: RoomSnapshot) {
@@ -81,18 +81,20 @@ export class HostedMedia {
     if (!auth.isHost) throw new HostedSourceError('仅房主可管理房间音源')
     if (auth.snapshot.revision !== request.expectedRevision) throw new HostedSourceError('房间状态已更新，请重新操作')
     if (request.action === 'credential') {
-      const cookie = parseNeteaseCookie(request.cookie)
+      const platform = request.provider ?? 'netease'
+      const provider = this.providers[platform]
+      const cookie = provider.parseCookie(request.cookie)
       this.pending.get(request.roomId)?.abort()
       const controller = new AbortController()
       this.pending.set(request.roomId, controller)
       try {
-        const label = await this.provider.validate(cookie, AbortSignal.any([signal, controller.signal]))
+        const label = await provider.validate(cookie, AbortSignal.any([signal, controller.signal]))
         signal.throwIfAborted(); controller.signal.throwIfAborted()
         // Recheck ownership and revision after an asynchronous upstream request.
         const latest = this.rooms.authorize(token, request.roomId)
         if (!latest.isHost || latest.generation !== auth.generation || latest.snapshot.revision !== request.expectedRevision) throw new HostedSourceError('房间状态已更新，请重新绑定')
-        this.rooms.updateSource(token, request.roomId, request.expectedRevision, { mode: 'hosted', credential: 'ready', label, ownerId: auth.memberId, error: undefined }, () => {
-          this.credentials.set(request.roomId, { cookie, label, ownerId: auth.memberId })
+        this.rooms.updateSource(token, request.roomId, request.expectedRevision, { mode: 'hosted', provider: platform, credential: 'ready', label, ownerId: auth.memberId, error: undefined }, () => {
+          this.credentials.set(request.roomId, { provider: platform, cookie, label, ownerId: auth.memberId })
           this.pending.delete(request.roomId)
         })
       }
@@ -100,14 +102,14 @@ export class HostedMedia {
     }
     else if (request.action === 'revoke') {
       // Keep hosted selected: revocation must never silently switch to personal accounts.
-      this.rooms.updateSource(token, request.roomId, request.expectedRevision, { credential: 'none', label: undefined, ownerId: undefined, error: '房间登录凭据已撤销，请重新绑定或主动切回个人音源' }, () => { this.pending.get(request.roomId)?.abort(); this.credentials.delete(request.roomId) })
+      this.rooms.updateSource(token, request.roomId, request.expectedRevision, { provider: undefined, credential: 'none', label: undefined, ownerId: undefined, error: '房间登录凭据已撤销，请重新绑定或主动切回个人音源' }, () => { this.pending.get(request.roomId)?.abort(); this.credentials.delete(request.roomId) })
       const latest = this.rooms.authorize(token, request.roomId).snapshot
       if (latest.source?.mode === 'hosted') this.rooms.sourceFailed(request.roomId, latest.source.version, latest.source.error!)
     }
     else {
       const source = auth.snapshot.source
       const mode = request.action === 'source' ? request.mode : source?.mode ?? 'independent'
-      if (mode === 'hosted' && (!this.credentials.has(request.roomId) || source?.credential !== 'ready')) throw new HostedSourceError('请先绑定有效的网易云房间账号')
+      if (mode === 'hosted' && (!this.credentials.has(request.roomId) || source?.credential !== 'ready')) throw new HostedSourceError('请先绑定有效的房间账号')
       this.rooms.updateSource(token, request.roomId, request.expectedRevision, { mode, error: undefined }, () => { this.pending.get(request.roomId)?.abort() })
     }
     return { ok: true, snapshot: this.rooms.authorize(token, request.roomId).snapshot }
@@ -126,9 +128,10 @@ export class HostedMedia {
         try {
           const credential = this.credentials.get(state.roomId)
           if (!credential || state.source?.credential !== 'ready') throw new HostedSourceError('房间账号不可用，请房主重新绑定', true)
-          if (track.provider !== 'netease') throw new HostedSourceError('托管实验仅支持网易云，请更换曲目或主动切回个人音源')
-          const source = await this.provider.resolve(credential.cookie, track.id, controller.signal)
-          return { source, controller, roomId: state.roomId, version: state.source.version, playbackId: state.playbackId, trackId: track.id, streams: new Set<AbortController>() }
+          if (track.provider !== credential.provider) throw new HostedSourceError('当前歌曲与房间账号平台不匹配，请房主绑定对应平台账号或主动切回个人音源')
+          const provider = this.providers[credential.provider]
+          const source = await provider.resolve(credential.cookie, track.id, controller.signal)
+          return { provider, platform: credential.provider, source, controller, roomId: state.roomId, version: state.source.version, playbackId: state.playbackId, trackId: track.id, streams: new Set<AbortController>() }
         }
         catch (error) { if (!controller.signal.aborted) this.fail(state.roomId, state.source!.version, error); throw error }
       })()
@@ -155,6 +158,7 @@ export class HostedMedia {
   }
 
   private fail(roomId: string, version: number, error: unknown) {
+    if (this.states.get(roomId)?.source?.version !== version) return
     const safe = error instanceof HostedSourceError ? error : new HostedSourceError('房间音源请求失败，请房主重试或重新绑定账号')
     if (safe.invalidCredential) this.credentials.delete(roomId)
     this.rooms.sourceFailed(roomId, version, safe.message, safe.invalidCredential)
@@ -173,19 +177,19 @@ export class HostedMedia {
   private async upstream(resource: Resource, request: Request, signal: AbortSignal) {
     let url = resource.source.url
     for (let hop = 0; hop < 4; hop++) {
-      const headers = new Headers({ 'accept-encoding': 'identity' })
+      const headers = new Headers({ ...resource.provider.mediaHeaders, 'accept-encoding': 'identity' })
       const range = request.headers.get('range')
       if (range) headers.set('range', range)
       const timeout = new AbortController()
       const timer = setTimeout(() => timeout.abort(), 15_000)
       let result: Response
-      try { result = await this.fetcher(validateNeteaseMediaUrl(url), { method: request.method, headers, signal: AbortSignal.any([signal, timeout.signal]), redirect: 'manual', credentials: 'omit' }) }
+      try { result = await this.fetcher(resource.provider.validateMediaUrl(url), { method: request.method, headers, signal: AbortSignal.any([signal, timeout.signal]), redirect: 'manual', credentials: 'omit' }) }
       finally { clearTimeout(timer) }
       if (![301, 302, 303, 307, 308].includes(result.status)) return result
       const location = result.headers.get('location')
       await result.body?.cancel()
       if (!location) throw new HostedSourceError('房间音源跳转无效')
-      url = validateNeteaseMediaUrl(new URL(location, url).href)
+      url = resource.provider.validateMediaUrl(new URL(location, url).href)
     }
     throw new HostedSourceError('房间音源跳转次数过多')
   }
@@ -217,8 +221,8 @@ export class HostedMedia {
         // Refresh a signed URL only when the provider confirms identical file bytes.
         if (!resource.refreshing) resource.refreshing = (async () => {
           const credential = this.credentials.get(resource.roomId)
-          if (!credential) throw new HostedSourceError('房间凭据已撤销', true)
-          const updated = await this.provider.resolve(credential.cookie, resource.trackId, resource.controller.signal)
+          if (!credential || credential.provider !== resource.platform) throw new HostedSourceError('房间凭据已撤销', true)
+          const updated = await resource.provider.resolve(credential.cookie, resource.trackId, resource.controller.signal)
           if (!updated.hash || updated.hash !== resource.source.hash || !updated.size || updated.size !== resource.source.size) throw new HostedSourceError('房间音源已过期或内容已变化，请房主重试以重新准备音源')
           resource.source = updated
         })().finally(() => { resource.refreshing = undefined })
@@ -236,7 +240,7 @@ export class HostedMedia {
         return new Response(null, { status: 416, headers })
       }
       const type = response.headers.get('content-type')?.split(';')[0] ?? ''
-      if ((!type.startsWith('audio/') && type !== 'application/octet-stream') || (length && (!/^\d+$/.test(length) || Number(length) > MAX_RESPONSE_BYTES)) || (response.headers.get('content-encoding') && response.headers.get('content-encoding') !== 'identity')) throw new HostedSourceError('房间音源不是受支持的音频响应')
+      if ((!type.startsWith('audio/') && type !== 'application/octet-stream' && !resource.provider.acceptsMediaType?.(type)) || (length && (!/^\d+$/.test(length) || Number(length) > MAX_RESPONSE_BYTES)) || (response.headers.get('content-encoding') && response.headers.get('content-encoding') !== 'identity')) throw new HostedSourceError('房间音源不是受支持的音频响应')
       if (response.status === 206) {
         const match = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(contentRange ?? '')
         if (!range || !match || Number(match[2]) < Number(match[1]) || Number(match[3]) <= Number(match[2]) || (length && Number(length) !== Number(match[2]) - Number(match[1]) + 1)) throw new HostedSourceError('房间音源的 Range 响应无效')

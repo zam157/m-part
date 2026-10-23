@@ -1,6 +1,6 @@
 import * as v from 'valibot'
 import { roomControl } from '@m-part/listen-core/protocol'
-import { HostedSourceError } from '../providers/netease'
+import { HostedSourceError } from '../providers/shared'
 import type { HostedMedia } from './hosted-media'
 import { isRoomOriginAllowed } from './origin'
 
