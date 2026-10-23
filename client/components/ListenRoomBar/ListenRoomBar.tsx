@@ -1,6 +1,6 @@
 import { useNavigate } from '@solidjs/router'
 import { Show } from 'solid-js'
-import { dismissRoomError, leaveListenRoom, pauseRoomLocally, resumeRoomPlayback, roomPlayerActive, roomView } from '~/composables/listen-room'
+import { leaveListenRoom, pauseRoomLocally, resumeRoomPlayback, roomPlayerActive, roomView } from '~/composables/listen-room'
 
 export const roomStatusLabel = () => {
   const view = roomView()
@@ -15,24 +15,19 @@ export const roomStatusLabel = () => {
 export default function ListenRoomBar() {
   const navigate = useNavigate()
   return (
-    <Show when={roomPlayerActive() || roomView().error}>
+    <Show when={roomPlayerActive()}>
       <aside aria-label="一起听状态" class="shrink-0 border-t border-border bg-accent/60 px-4 py-2 flex items-center gap-3 text-xs min-w-0 max-[520px]:flex-wrap">
         <span class="i-lucide:headphones text-4 shrink-0" />
         <button class="min-w-0 flex-1 text-left truncate" onClick={() => navigate('/listen')}>
-          <Show when={roomPlayerActive()} fallback={roomView().error}>
-            一起听 · {roomView().snapshot?.code ?? '连接中'} · {roomStatusLabel()}
-            <Show when={roomView().error}><span class="text-destructive ml-2">{roomView().error}</span></Show>
-          </Show>
+          一起听 · {roomView().snapshot?.code ?? '连接中'} · {roomStatusLabel()}
         </button>
-        <Show when={roomPlayerActive()} fallback={<button class="ghost-btn px-2 h-7" aria-label="关闭一起听提示" onClick={dismissRoomError}>关闭</button>}>
-          <Show when={!roomView().isHost}>
-            <button class="ghost-btn px-2 h-7" onClick={() => roomView().away ? resumeRoomPlayback() : pauseRoomLocally()}>{roomView().away ? '恢复同步' : '暂离'}</button>
-          </Show>
-          <Show when={roomView().status === 'blocked' || roomView().status === 'failed'}>
-            <button class="ghost-btn px-2 h-7" onClick={resumeRoomPlayback}>恢复播放</button>
-          </Show>
-          <button class="ghost-btn px-2 h-7" onClick={leaveListenRoom}>退出</button>
+        <Show when={!roomView().isHost}>
+          <button class="ghost-btn px-2 h-7" onClick={() => roomView().away ? resumeRoomPlayback() : pauseRoomLocally()}>{roomView().away ? '恢复同步' : '暂离'}</button>
         </Show>
+        <Show when={roomView().status === 'blocked' || roomView().status === 'failed'}>
+          <button class="ghost-btn px-2 h-7" onClick={resumeRoomPlayback}>恢复播放</button>
+        </Show>
+        <button class="ghost-btn px-2 h-7" onClick={leaveListenRoom}>退出</button>
       </aside>
     </Show>
   )

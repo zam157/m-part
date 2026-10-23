@@ -1,6 +1,6 @@
 import { createSignal, For, Show } from 'solid-js'
 import { clsx } from 'cn/lite'
-import { createListenRoom, dismissRoomError, joiningRoom, joinListenRoom, leaveListenRoom, pauseRoomLocally, resumeRoomPlayback, roomPlayerActive, roomServer, roomView, setRoomServer } from '~/composables/listen-room'
+import { createListenRoom, joiningRoom, joinListenRoom, leaveListenRoom, pauseRoomLocally, resumeRoomPlayback, roomPlayerActive, roomServer, roomView, setRoomServer } from '~/composables/listen-room'
 import { playing, playQueue, prevNext, setPlaying, setShowPlayQueue } from '~/composables/player'
 import { roomStatusLabel } from '~/components/ListenRoomBar/ListenRoomBar'
 
@@ -24,11 +24,6 @@ export default function ListenPage() {
     <div class="flex-1 min-w-0 min-h-0 overflow-auto p-6 max-[760px]:p-4">
       <div class="max-w-220 mx-auto space-y-6">
         <header><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm mt-2">在同一个房间听同一首歌。房主控制播放和队列，每个人使用自己的音乐账号与播放权限。</p></header>
-        <Show when={roomView().error}>
-          <div role="alert" class="rounded-xl border border-destructive/30 p-4 text-sm flex gap-3 items-center">
-            <span class="flex-1">{roomView().error}</span><button class="ghost-btn h-8 px-2 shrink-0" onClick={dismissRoomError}>关闭</button>
-          </div>
-        </Show>
         <Show when={roomPlayerActive()} fallback={(
           <section class="rounded-2xl border border-border p-5 space-y-5">
             <label class="block text-sm">房间服务器

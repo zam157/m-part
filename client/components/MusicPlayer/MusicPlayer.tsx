@@ -1,7 +1,8 @@
 import { clsx } from 'cn/lite'
-import { createSignal, Show } from 'solid-js'
+import { createMemo, createSignal, Show } from 'solid-js'
 import AlertPopover from '~/components/AlertPopover/AlertPopover'
 import Tooltip from '~/components/Tooltip/Tooltip'
+import { dismissRoomError, roomPlayerActive, roomView } from '~/composables/listen-room'
 import {
   currentSong, currentSourceInfo, dismissPlaybackError, playbackError, setShowPlayQueue, setVolume, showPlayQueue, volume,
 } from '~/composables/player'
@@ -18,6 +19,15 @@ export default function MusicPlayer() {
   const [showExpanded, setShowExpanded] = createSignal(false)
   let expandedDialog: HTMLDialogElement | undefined
   const hasSong = () => !!currentSong()
+  // 房间每 250ms 更新状态；相同错误不重置浮层计时，也不重建重试按钮。
+  const roomError = createMemo(() => roomView().error || null)
+  const roomPlaybackFailed = createMemo(() => roomPlayerActive() && (roomView().status === 'failed' || roomView().status === 'blocked'))
+  const canRetry = () => roomError() ? roomPlaybackFailed() : !!playbackError()
+  function dismissError() {
+    // 音源加载失败会同时写入播放器和房间，关闭时一起清除，避免旧错误再次弹出。
+    dismissPlaybackError()
+    dismissRoomError()
+  }
 
   return (
     <footer aria-label="音乐播放器" class="relative shrink-0 bg-background select-none">
@@ -58,11 +68,11 @@ export default function MusicPlayer() {
       </div>
       <ExpandedPlayer show={showExpanded()} onShowChange={setShowExpanded} ref={element => { expandedDialog = element }} />
       <AlertPopover
-        title="播放失败"
-        message={playbackError()}
+        title={roomError() && !roomPlaybackFailed() ? '一起听提示' : '播放失败'}
+        message={roomError() || playbackError()}
         variant="destructive"
-        onDismiss={dismissPlaybackError}
-        action={{ label: '重试', onClick: retryPlayback }}
+        onDismiss={dismissError}
+        action={canRetry() ? { label: '重试', onClick: retryPlayback } : undefined}
         portalMount={showExpanded() ? expandedDialog : undefined}
       />
     </footer>
