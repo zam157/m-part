@@ -9,8 +9,8 @@ export const roomStatusLabel = () => {
   if (view.snapshot?.source?.error && !view.personalSource && view.snapshot.source.mode === 'hosted') return '房间音源不可用'
   if (view.away) return '已暂离同步'
   if (view.inSync) return '已同步'
-  if (view.status === 'ready' && view.snapshot?.status === 'paused') return view.isHost ? '房间已暂停' : '房主已暂停'
-  return { loading: '正在准备音源', ready: '等待房主播放', following: '正在跟随', buffering: '音频缓冲中', away: '已暂离同步', blocked: '请点击恢复以允许播放', failed: '本机音源不可用' }[view.status]
+  if (view.status === 'ready' && view.snapshot?.status === 'paused') return '房间已暂停'
+  return { loading: '正在准备音源', ready: '等待房主或管理员播放', following: '正在跟随', buffering: '音频缓冲中', away: '已暂离同步', blocked: '请点击恢复以允许播放', failed: '本机音源不可用' }[view.status]
 }
 
 export default function ListenRoomBar() {

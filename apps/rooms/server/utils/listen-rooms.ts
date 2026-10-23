@@ -1,6 +1,6 @@
-import type { ClientMessage, MemberStatus, RoomSnapshot, RoomSource, ServerMessage } from '@m-part/listen-core/protocol'
+import type { ClientMessage, RoomHistoryEntry, MemberStatus, RoomSnapshot, RoomSource, ServerMessage } from '@m-part/listen-core/protocol'
 import { randomBytes, randomInt, randomUUID } from 'node:crypto'
-import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, LAB_TRACK, LISTEN_PROTOCOL, START_LEAD_MS } from '@m-part/listen-core/protocol'
+import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, LAB_TRACK, LISTEN_PROTOCOL, ROOM_HISTORY_LIMIT, START_LEAD_MS } from '@m-part/listen-core/protocol'
 import { roomPosition } from '@m-part/listen-core/clock'
 
 export interface RoomConnection {
@@ -9,6 +9,8 @@ export interface RoomConnection {
   close: () => void
 }
 interface Member {
+  admin: boolean
+  activityBudget?: { at: number, count: number }
   id: string
   name: string
   token: string
@@ -28,7 +30,7 @@ export class ListenRooms {
   private bindings = new Map<string, { room: Room, member: Member }>()
   private tokens = new Map<string, { room: Room, member: Member }>()
 
-  constructor(private now = () => performance.now(), private onSnapshot: (state: RoomSnapshot) => void = () => {}) {}
+  constructor(private now = () => performance.now(), private onSnapshot: (state: RoomSnapshot) => void = () => {}, private wallTime = () => Date.now()) {}
 
   get hasRooms() { return this.rooms.size > 0 }
 
@@ -36,8 +38,27 @@ export class ListenRooms {
     return {
       ...room.state,
       track: { ...room.state.track }, queue: room.state.queue.map(t => ({ ...t })),
-      members: room.members.map(m => ({ id: m.id, name: m.name, generation: m.generation, online: !!m.connection, status: m.status, message: m.message })),
+      history: room.state.history.map(entry => ({ ...entry })),
+      members: room.members.map(m => ({ role: m.id === room.state.hostId ? 'host' : m.admin ? 'admin' : 'member', id: m.id, name: m.name, generation: m.generation, online: !!m.connection, status: m.status, message: m.message })),
     }
+  }
+
+  private record(room: Room, kind: RoomHistoryEntry['kind'], text: string, member?: Member) {
+    room.state.history.push({ id: ++room.state.activityVersion, at: this.wallTime(), kind, text: text.slice(0, 500), ...(member ? { memberId: member.id, name: member.name } : {}) })
+    if (room.state.history.length > ROOM_HISTORY_LIMIT) room.state.history.splice(0, room.state.history.length - ROOM_HISTORY_LIMIT)
+  }
+
+  private recordCommand(room: Room, member: Member, message: Extract<ClientMessage, { type: 'command' }>, previousTitle?: string) {
+    const current = room.state.currentIndex === null ? undefined : room.state.queue[room.state.currentIndex]
+    const title = current?.title ?? '歌曲'
+    const labels: Record<typeof message.action, string> = {
+      play: '开始播放', pause: '暂停了全员播放', seek: `将进度调整至 ${Math.floor(room.state.positionAtAnchor / 60)}:${String(Math.floor(room.state.positionAtAnchor % 60)).padStart(2, '0')}`,
+      restart: '重新播放了当前歌曲', queue: `替换了播放队列（${room.state.queue.length} 首）`,
+      select: `切换到「${title}」`, append: `添加并播放「${title}」`, 'add-next': `将「${message.track?.title ?? '歌曲'}」设为下一首`,
+      remove: `移除了「${previousTitle ?? '歌曲'}」`, mode: `切换播放模式：${{ order: '顺序播放', loop: '列表循环', random: '随机播放', 'single-loop': '单曲循环' }[room.state.playMode]}`,
+      next: `切换下一首「${title}」`, previous: `切换上一首「${title}」`, ended: room.state.wantsToPlay ? `自动播放「${title}」` : '队列播放结束',
+    }
+    this.record(room, 'operation', labels[message.action], member)
   }
 
   private broadcast(room: Room) {
@@ -173,6 +194,7 @@ export class ListenRooms {
       this.disconnect(connection.id)
       if (member.id === room.state.hostId) this.end(room)
       else {
+        this.record(room, 'operation', '离开了房间', member)
         room.members = room.members.filter(m => m !== member)
         this.broadcast(room)
       }
@@ -180,17 +202,52 @@ export class ListenRooms {
       return
     }
     if (room.state.status === 'ended') return this.error(connection, 'ended', '房间已结束')
+    if (message.type === 'chat' || message.type === 'role') {
+      const previous = member.replies.get(message.commandId)
+      if (previous) { connection.send(previous.reply); return }
+      let reply: ServerMessage
+      if (room.state.kind !== 'music') reply = this.error(connection, 'invalid', '实验房间不支持聊天或管理员', message.commandId)
+      else if (message.type === 'role' && member.id !== room.state.hostId) reply = this.error(connection, 'host-only', '仅房主可授权或撤销管理员', message.commandId)
+      else {
+        const budget = member.activityBudget && this.now() - member.activityBudget.at < 10_000 ? member.activityBudget : { at: this.now(), count: 0 }
+        member.activityBudget = budget
+        if (++budget.count > 8) reply = this.error(connection, 'rate-limit', '发送或操作过于频繁，请稍后再试', message.commandId)
+        else if (message.type === 'role') {
+          const target = [...room.members, ...room.retired].find(m => m.id === message.memberId)
+          if (!target || target.id === room.state.hostId) reply = this.error(connection, 'invalid', '请选择房间内的其他成员', message.commandId)
+          else {
+            const admin = message.role === 'admin'
+            if (target.admin !== admin) {
+              target.admin = admin
+              this.record(room, 'operation', `${admin ? '授权' : '撤销'}「${target.name}」${admin ? '为管理员' : '的管理员权限'}`, member)
+            }
+            reply = { type: 'ack', commandId: message.commandId, revision: room.state.revision }
+            connection.send(reply); this.broadcast(room)
+          }
+        }
+        else {
+          this.record(room, 'chat', message.text, member)
+          reply = { type: 'ack', commandId: message.commandId, revision: room.state.revision }
+          connection.send(reply); this.broadcast(room)
+        }
+      }
+      this.remember(member, message.commandId, reply)
+      return
+    }
     if (message.type === 'command') {
       const previous = member.replies.get(message.commandId)
       if (previous) { connection.send(previous.reply); return }
       let reply: ServerMessage
-      if (member.id !== room.state.hostId) reply = this.error(connection, 'host-only', '仅房主可控制房间', message.commandId)
+      if (member.id !== room.state.hostId && (!member.admin || room.state.kind !== 'music' || message.action === 'ended')) reply = this.error(connection, 'host-only', '仅房主或管理员可控制房间（自动切歌由房主执行）', message.commandId)
+      else if (!room.members.find(m => m.id === room.state.hostId)?.connection) reply = this.error(connection, 'host-offline', '房主暂时离线，恢复连接后才能控制播放', message.commandId)
       else if (message.expectedRevision !== room.state.revision) {
         reply = this.error(connection, 'conflict', '状态已更新，请重新操作', message.commandId)
         connection.send({ type: 'snapshot', snapshot: this.snapshot(room) })
       }
       else if (message.action === 'seek' && message.position === undefined) reply = this.error(connection, 'invalid', '缺少目标位置', message.commandId)
       else {
+        const previousTitle = room.state.queue.find(t => t.queueItemId === message.queueItemId)?.title
+        const previousRevision = room.state.revision
         const musicActions = ['queue', 'select', 'append', 'add-next', 'remove', 'mode', 'next', 'previous', 'ended']
         if (musicActions.includes(message.action)) {
           const failure = this.musicCommand(room, message)
@@ -221,6 +278,7 @@ export class ListenRooms {
             ...(message.action === 'restart' ? { playbackId: randomUUID() } : {}),
           })
         }
+        if (room.state.revision !== previousRevision) this.recordCommand(room, member, message, previousTitle)
         reply = { type: 'ack', commandId: message.commandId, revision: room.state.revision }
         connection.send(reply)
         this.broadcast(room)
@@ -265,6 +323,7 @@ export class ListenRooms {
     const failed = source.mode === 'hosted' && !!source.error
     const wanted = room.state.wantsToPlay && !failed
     this.change(room, { source, wantsToPlay: wanted, positionAtAnchor: roomPosition(room.state, this.now()), anchorServerTime: this.now(), status: wanted ? 'preparing' : 'paused', pauseReason: failed ? 'failed' : wanted ? null : 'user' })
+    this.record(room, 'operation', patch.credential === 'ready' ? '绑定并启用了房间托管账号' : patch.credential === 'none' ? '撤销了房间托管账号' : patch.mode === 'independent' ? '切换为各自取源' : '重新准备房间托管音源', this.tokens.get(token)!.member)
     this.broadcast(room)
     return source
   }
@@ -273,6 +332,7 @@ export class ListenRooms {
     const room = [...this.rooms.values()].find(r => r.state.roomId === roomId)
     if (!room || room.state.source?.version !== version || room.state.source.mode !== 'hosted' || room.state.source.error) return
     this.freeze(room, 'failed', false)
+    this.record(room, 'operation', '房间托管音源不可用，已暂停播放')
     room.state.source = { ...room.state.source, error: message, ...(invalidCredential ? { credential: 'invalid' as const } : {}) }
     this.broadcast(room)
   }
@@ -306,7 +366,7 @@ export class ListenRooms {
             protocol: LISTEN_PROTOCOL, roomId: randomUUID(), code, revision: 0, playbackId: randomUUID(), track: { ...LAB_TRACK },
             kind: message.kind ?? 'lab', queue: [], currentIndex: null, playMode: 'order',
             source: { mode: 'independent', version: 0, credential: 'none' },
-            status: 'paused', wantsToPlay: false, pauseReason: 'user', positionAtAnchor: 0, anchorServerTime: this.now(), rate: 1, hostId: '', members: [],
+            status: 'paused', wantsToPlay: false, pauseReason: 'user', positionAtAnchor: 0, anchorServerTime: this.now(), rate: 1, hostId: '', members: [], activityVersion: 0, history: [],
           }, members: [], retired: [], createdAt: this.now(), order: [],
         }
         if (message.kind === 'music') {
@@ -324,7 +384,7 @@ export class ListenRooms {
         if (room.members.length >= 5) return this.error(connection, 'capacity', '房间最多 5 人')
         if (!room.members.find(m => m.id === room.state.hostId)?.connection) return this.error(connection, 'host-offline', '房主暂时离线，请稍后加入')
       }
-      member = { id: randomUUID(), name: message.name.trim() || '听众', token: randomBytes(32).toString('hex'), generation: 0, status: 'loading', lastSeen: this.now(), replies: new Map() }
+      member = { admin: false, id: randomUUID(), name: message.name.trim() || '听众', token: randomBytes(32).toString('hex'), generation: 0, status: 'loading', lastSeen: this.now(), replies: new Map() }
       room.members.push(member)
       if (!room.state.hostId) room.state.hostId = member.id
       this.tokens.set(member.token, { room, member })
@@ -335,6 +395,7 @@ export class ListenRooms {
     member.disconnectedAt = undefined
     member.status = 'loading'
     this.bindings.set(connection.id, { room, member })
+    this.record(room, 'operation', message.type === 'create' ? '创建了房间' : message.type === 'resume' ? '重新连接了房间' : '加入了房间', member)
     connection.send({ type: 'welcome', token: member.token, memberId: member.id, generation: member.generation, snapshot: this.snapshot(room) })
     this.broadcast(room)
   }
@@ -352,6 +413,7 @@ export class ListenRooms {
   private end(room: Room) {
     this.freeze(room, 'host-disconnected', false)
     room.state.status = 'ended'
+    this.record(room, 'operation', '房间已结束')
     this.broadcast(room)
     for (const member of room.members) {
       this.tokens.delete(member.token)

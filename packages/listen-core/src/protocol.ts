@@ -1,7 +1,7 @@
 import * as v from 'valibot'
 
 /** Only public track metadata crosses the wire; source URLs and cookies never do. */
-export const LISTEN_PROTOCOL = 3
+export const LISTEN_PROTOCOL = 4
 export const LAB_TRACK = { id: 'calibration-v1', duration: 90 } as const
 export const HEARTBEAT_MS = 5_000
 export const CONNECTION_TIMEOUT_MS = 12_000
@@ -35,6 +35,8 @@ export const clientMessage = v.variant('type', [
     action: v.picklist(['play', 'pause', 'seek', 'restart', 'queue', 'select', 'append', 'add-next', 'remove', 'mode', 'next', 'previous', 'ended']),
     position: v.optional(position), tracks: v.optional(tracks), track: v.optional(track), queueItemId: v.optional(shortText), mode: v.optional(mode),
   }),
+  v.strictObject({ type: v.literal('role'), commandId: shortText, memberId: shortText, role: v.picklist(['admin', 'member']) }),
+  v.strictObject({ type: v.literal('chat'), commandId: shortText, text: v.pipe(v.string(), v.maxLength(500), v.transform(s => s.replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '').trim()), v.minLength(1)) }),
   v.strictObject({ type: v.literal('report'), revision, playbackId: shortText, status: memberStatus, message: v.optional(v.pipe(v.string(), v.maxLength(300))), duration: v.optional(position) }),
   v.strictObject({ type: v.literal('leave') }),
 ])
@@ -66,6 +68,13 @@ export type RoomControl = v.InferOutput<typeof roomControl>
 export const roomTicket = v.strictObject({ ticket: v.pipe(v.string(), v.minLength(32), v.maxLength(80)), leaseMs: v.pipe(v.number(), v.minValue(1000), v.maxValue(300_000)) })
 export type RoomTicket = v.InferOutput<typeof roomTicket>
 
+export const ROOM_HISTORY_LIMIT = 200
+const historyEntry = v.strictObject({
+  id: revision, at: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(8_640_000_000_000_000)), kind: v.picklist(['chat', 'operation']),
+  memberId: v.optional(shortText), name: v.optional(shortText), text: v.pipe(v.string(), v.maxLength(500)),
+})
+export type RoomHistoryEntry = v.InferOutput<typeof historyEntry>
+
 export interface RoomSnapshot {
   protocol: typeof LISTEN_PROTOCOL
   roomId: string
@@ -85,7 +94,9 @@ export interface RoomSnapshot {
   anchorServerTime: number
   rate: 1
   hostId: string
-  members: { id: string, name: string, generation: number, online: boolean, status: MemberStatus, message?: string }[]
+  activityVersion: number
+  history: RoomHistoryEntry[]
+  members: { role: 'host' | 'admin' | 'member', id: string, name: string, generation: number, online: boolean, status: MemberStatus, message?: string }[]
 }
 
 export type ServerMessage =
@@ -105,7 +116,8 @@ const snapshot = v.strictObject({
   status: v.picklist(['preparing', 'scheduled', 'playing', 'paused', 'ended']), wantsToPlay: v.boolean(),
   pauseReason: v.nullable(v.picklist(['user', 'host-buffering', 'blocked', 'failed', 'host-disconnected'])),
   positionAtAnchor: position, anchorServerTime: clockTime, rate: v.literal(1), hostId: shortText,
-  members: v.pipe(v.array(v.strictObject({ id: shortText, name: shortText, generation: revision, online: v.boolean(), status: memberStatus, message: v.optional(text) })), v.maxLength(5)),
+  activityVersion: revision, history: v.pipe(v.array(historyEntry), v.maxLength(ROOM_HISTORY_LIMIT)),
+  members: v.pipe(v.array(v.strictObject({ role: v.picklist(['host', 'admin', 'member']), id: shortText, name: shortText, generation: revision, online: v.boolean(), status: memberStatus, message: v.optional(text) })), v.maxLength(5)),
 })
 export { snapshot as roomSnapshot }
 export const serverMessage = v.variant('type', [

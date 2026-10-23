@@ -12,7 +12,7 @@ export default function PlaybackControls(props: { expanded?: boolean, portalMoun
   const playModeIcon = () => ({ order: 'i-lucide:list-ordered', loop: 'i-lucide:repeat', random: 'i-lucide:shuffle', 'single-loop': 'i-lucide:repeat-1' }[playMode()])
   return (
     <div role="group" aria-label="播放控制" class={clsx('flex items-center', props.expanded ? 'justify-between gap-3 max-[400px]:gap-2' : 'gap-1 justify-self-start max-[760px]:row-start-2')}>
-      <Tooltip portalMount={props.portalMount} content={`${playModeLabel()}，${canControlRoom() ? '点击切换' : '由房主控制'}`}>
+      <Tooltip portalMount={props.portalMount} content={`${playModeLabel()}，${canControlRoom() ? '点击切换' : '由房主或管理员控制'}`}>
         {trigger => (
           <button {...trigger} class={clsx('ghost-btn text-muted-foreground', props.expanded ? 'size-10' : 'size-8')} disabled={!hasSong() || !canControlRoom()} aria-label={`播放模式：${playModeLabel()}`} onClick={togglePlayMode}>
             <span class={clsx(playModeIcon(), 'text-4')} />

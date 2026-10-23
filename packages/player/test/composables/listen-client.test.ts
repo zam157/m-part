@@ -24,7 +24,7 @@ const track = { provider: 'netease' as const, id: 'one', title: 'Song', duration
 const snapshot = (patch: Partial<RoomSnapshot> = {}): RoomSnapshot => ({
   protocol: LISTEN_PROTOCOL, roomId: 'room', code: '12345678', revision: 0, playbackId: 'playback', kind: 'music', queue: [track], currentIndex: 0, playMode: 'order',
   track: { id: track.queueItemId, duration: 120 }, status: 'paused', wantsToPlay: false, pauseReason: 'user', positionAtAnchor: 0, anchorServerTime: 0, rate: 1,
-  hostId: 'host', members: [], ...patch,
+  hostId: 'host', members: [], activityVersion: 0, history: [], ...patch,
 })
 let client: ListenClient
 let socket: Socket
@@ -252,4 +252,96 @@ it.each(['netease', 'qq', 'bili'] as const)('sends explicit %s credential select
   expect(roomRequest).toHaveBeenLastCalledWith('http://localhost:3410', 'secret', expect.objectContaining({ action: 'credential', provider, cookie: 'private-session' }), expect.any(AbortSignal))
   expect(JSON.stringify(socket.sent)).not.toContain('private-session')
   expect(JSON.stringify(persist.mock.calls)).not.toContain('private-session')
+})
+
+describe('administrator controls and room activity', () => {
+  const members: RoomSnapshot['members'] = [{ id: 'host', name: 'Host', role: 'host', generation: 1, online: true, status: 'ready' }, { id: 'member', name: 'Admin', role: 'admin', generation: 1, online: true, status: 'ready' }]
+  it('enables administrator controls immediately and clears queued controls on revocation', async () => {
+    await connect()
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ members, activityVersion: 1 }) })
+    expect(client.canControl).toBe(true)
+    client.control({ type: 'next', direction: 1 }); client.control({ type: 'seek', position: 25 })
+    expect(socket.sent.filter(m => m.type === 'command')).toHaveLength(1)
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ members: members.map(m => ({ ...m, role: m.id === 'host' ? 'host' : 'member' })), activityVersion: 2 }) })
+    expect(client.canControl).toBe(false)
+    expect(client.busy).toBe(false)
+    client.control({ type: 'next', direction: 1 })
+    expect(socket.sent.filter(m => m.type === 'command')).toHaveLength(1)
+  })
+  it('administrator play/pause affects the room, automatic ended stays host-only', async () => {
+    await connect()
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ members, activityVersion: 1 }) })
+    client.control({ type: 'play', playing: false })
+    expect(socket.sent.at(-1)).toMatchObject({ type: 'command', action: 'pause' })
+    client.control({ type: 'ended' })
+    expect(socket.sent.filter(m => m.type === 'command')).toHaveLength(1)
+    expect(await client.manageSource('revoke')).toBe(false)
+    expect(await client.setMemberRole('someone', 'admin')).toBe(false)
+  })
+  it('chat and role-only updates keep native audio and in-flight preparation untouched', async () => {
+    await connect()
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ revision: 1, status: 'playing', wantsToPlay: true }) })
+    await vi.advanceTimersByTimeAsync(100)
+    vi.mocked(playback.load).mockClear(); vi.mocked(playback.audio.pause).mockClear()
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ revision: 1, status: 'playing', wantsToPlay: true, members, activityVersion: 2, history: [{ id: 2, at: Date.now(), kind: 'chat', name: 'Host', text: 'Hi' }] }) })
+    expect(playback.load).not.toHaveBeenCalled()
+    expect(playback.audio.pause).not.toHaveBeenCalled()
+    expect(playback.audio.paused).toBe(false)
+    expect(client.snapshot?.history.at(-1)?.text).toBe('Hi')
+  })
+  it('waits for chat acknowledgement, reports rejection, and retains the room connection', async () => {
+    await connect()
+    const sent = client.sendChat('  Hello  ')
+    const message = socket.sent.at(-1) as Extract<ClientMessage, { type: 'chat' }>
+    expect(message).toMatchObject({ type: 'chat', text: 'Hello' })
+    expect(client.interactionBusy).toBe(true)
+    await socket.receive({ type: 'ack', commandId: message.commandId, revision: 0 })
+    expect(await sent).toBe(true)
+    expect(client.interactionBusy).toBe(false)
+    const denied = client.sendChat('Again')
+    const next = socket.sent.at(-1) as typeof message
+    await socket.receive({ type: 'error', code: 'rate-limit', message: '过于频繁', commandId: next.commandId })
+    expect(await denied).toBe(false)
+    expect(client.connection).toBe('connected')
+    expect(client.error).toBe('过于频繁')
+  })
+  it('resolves uncertain sends on timeout/disconnect without automatically resending', async () => {
+    await connect()
+    const pending = client.sendChat('Maybe delivered')
+    await vi.advanceTimersByTimeAsync(8500)
+    expect(await pending).toBe(false)
+    expect(client.error).toContain('确认超时')
+    expect(socket.sent.filter(m => m.type === 'chat')).toHaveLength(1)
+    const disconnected = client.sendChat('Not sure')
+    socket.close()
+    expect(await disconnected).toBe(false)
+    expect(client.interactionBusy).toBe(false)
+  })
+  it('does not replace newer roles/history with an older same-revision HTTP response', async () => {
+    await connect('host')
+    let finish!: (value: unknown) => void
+    roomRequest.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    const request = client.manageSource('revoke')
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ activityVersion: 2, members, history: [{ id: 2, at: Date.now(), kind: 'chat', text: 'Latest' }] }) })
+    finish({ ok: true, snapshot: snapshot({ activityVersion: 1, history: [] }) })
+    expect(await request).toBe(true)
+    expect(client.snapshot?.history[0]?.text).toBe('Latest')
+    expect(client.snapshot?.members[1]?.role).toBe('admin')
+  })
+  it('preserves unchanged member and history objects across heartbeats and new activity', async () => {
+    await connect()
+    const history = [{ id: 1, at: Date.now(), kind: 'chat' as const, text: 'First' }]
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ activityVersion: 1, members, history }) })
+    const oldMember = client.snapshot!.members[1]
+    const oldEntry = client.snapshot!.history[0]
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ activityVersion: 1, members, history }) })
+    expect(client.snapshot!.members[1]).toBe(oldMember)
+    expect(client.snapshot!.history[0]).toBe(oldEntry)
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ activityVersion: 2, members, history: [...history, { id: 2, at: Date.now(), kind: 'chat', text: 'Second' }] }) })
+    expect(client.snapshot!.history[0]).toBe(oldEntry)
+    expect(client.snapshot!.members[1]).toBe(oldMember)
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ activityVersion: 3, members: members.map(m => ({ ...m, role: m.id === 'member' ? 'member' : 'host' })), history }) })
+    expect(client.snapshot!.members[1]).not.toBe(oldMember)
+    expect(client.canControl).toBe(false)
+  })
 })

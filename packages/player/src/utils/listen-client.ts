@@ -1,7 +1,7 @@
 import type { HostedPlatform, RoomControl, RoomTicket, ClientMessage, MemberStatus, RoomSnapshot, SharedRoomTrack } from '@m-part/listen-core/protocol'
 import type { RoomPlayerAction } from '~/composables/player-context'
 import * as v from 'valibot'
-import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, HEARTBEAT_MS, LISTEN_PROTOCOL, roomSnapshot, roomTicket, serverMessage } from '@m-part/listen-core/protocol'
+import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, HEARTBEAT_MS, LISTEN_PROTOCOL, clientMessage, roomSnapshot, roomTicket, serverMessage } from '@m-part/listen-core/protocol'
 import { ListenClock, roomPosition, shouldSeek } from '@m-part/listen-core/clock'
 import { prepareMedia, startMedia } from '@m-part/listen-core/browser/media'
 import { sendRoomControl } from './room-http'
@@ -48,6 +48,7 @@ export class ListenClient {
   private mediaTicket?: RoomTicket & { renewAt: number, key: string }
   private renewing = false
   private management?: AbortController
+  private interaction?: { id: string, sentAt: number, finish: (ok: boolean) => void }
   private confirmations = 0
   private commands: Command[] = []
   private pending?: { id: string, revision?: number, sentAt: number }
@@ -66,6 +67,8 @@ export class ListenClient {
   }
 
   get isHost() { return !!this.snapshot && this.memberId === this.snapshot.hostId }
+  get canControl() { return this.isHost || !!this.snapshot?.members.some(member => member.id === this.memberId && member.role === 'admin') }
+  get interactionBusy() { return !!this.interaction }
   get busy() { return !!this.pending || !!this.commands.length }
 
   async resume(identity: RoomIdentity) {
@@ -123,14 +126,16 @@ export class ListenClient {
         else if (message.type === 'snapshot') {
           const state = message.snapshot
           if (state.roomId !== this.snapshot?.roomId || state.revision < this.activeRevision) return
-          this.snapshot = state
+          if (!this.acceptSnapshot(state)) return
           if (state.status === 'ended') { this.fail('房间已结束，已恢复个人播放队列'); return }
           if (this.connection === 'connected' && this.clock.estimate && state.revision !== this.activeRevision) void this.apply(state)
           this.advanceCommands()
         }
+        else if (message.type === 'ack' && message.commandId === this.interaction?.id) { this.finishInteraction(true) }
         else if (message.type === 'ack' && message.commandId === this.pending?.id) { this.pending.revision = message.revision; this.advanceCommands() }
         else if (message.type === 'error') {
           this.error = message.message
+          if (message.commandId === this.interaction?.id) this.finishInteraction(false)
           if (message.commandId === this.pending?.id) { this.pending = undefined; this.commands = [] }
           if (['expired', 'ended', 'not-found', 'unauthorized'].includes(message.code) || !this.identity || this.connection !== 'connected') { this.fail(message.message); return }
         }
@@ -141,6 +146,7 @@ export class ListenClient {
     }
     socket.onclose = () => {
       if (this.socket !== socket || this.stopped) return
+      if (this.interaction) { this.error = '连接已中断，操作结果待确认，请查看记录后重试'; this.finishInteraction(false) }
       this.cancel(); this.pending = undefined; this.commands = []; this.inSync = false
       if (!this.identity) { this.fail('无法连接房间服务器，请检查地址及服务是否启动'); return }
       this.connection = 'reconnecting'
@@ -159,7 +165,7 @@ export class ListenClient {
   private ping() { this.lastPing = performance.now(); this.send({ type: 'ping', sentAt: this.lastPing }) }
 
   private enqueue(command: Command) {
-    if (!this.isHost) { this.error = '播放和队列由房主控制，你可以调音量或暂离'; this.changed(); return }
+    if (!this.canControl) { this.error = '播放和队列由房主或管理员控制，你可以调音量或暂离'; this.changed(); return }
     if (this.connection !== 'connected') { this.error = '连接恢复后才能控制房间'; this.changed(); return }
     this.error = ''
     if (command.action === 'seek') this.commands = this.commands.filter(c => c.action !== 'seek')
@@ -170,6 +176,7 @@ export class ListenClient {
   }
   private advanceCommands() {
     if (this.pending?.revision !== undefined && this.snapshot && this.snapshot.revision >= this.pending.revision) this.pending = undefined
+    if (!this.canControl) { this.commands = []; return }
     if (this.pending || !this.snapshot || this.connection !== 'connected') return
     const command = this.commands.shift()
     if (!command) return
@@ -179,12 +186,12 @@ export class ListenClient {
   }
 
   control(action: RoomPlayerAction) {
-    if (action.type === 'queue' && this.isHost && action.tracks.length > 1_000) {
+    if (action.type === 'queue' && this.canControl && action.tracks.length > 1_000) {
       this.error = '房间队列最多支持 1000 首，请缩减后重试'; this.changed(); return
     }
     if (action.type === 'play') {
       if (action.playing) this.follow()
-      else if (this.isHost) this.enqueue({ action: 'pause' })
+      else if (this.canControl) this.enqueue({ action: 'pause' })
       else this.pauseLocal()
       return
     }
@@ -222,8 +229,7 @@ export class ListenClient {
       if ('snapshot' in response) {
         const state = v.parse(roomSnapshot, response.snapshot)
         if (state.roomId !== this.identity?.roomId) throw new Error('房间实例已更新')
-        if (!this.snapshot || state.revision >= this.snapshot.revision) {
-          this.snapshot = state
+        if (this.acceptSnapshot(state)) {
           if (this.clock.estimate && state.revision !== this.activeRevision) void this.apply(state)
         }
       }
@@ -231,6 +237,49 @@ export class ListenClient {
     }
     catch (error) { if (!controller.signal.aborted) this.error = error instanceof Error ? error.message : '房间音源操作失败'; return false }
     finally { if (this.management === controller) { this.management = undefined; this.sourceBusy = false; this.changed() } }
+  }
+
+  private acceptSnapshot(state: RoomSnapshot) {
+    if (this.snapshot && (state.revision < this.snapshot.revision || state.activityVersion < this.snapshot.activityVersion)) return false
+    if (state.activityVersion === this.snapshot?.activityVersion) state.history = this.snapshot.history
+    else if (this.snapshot) {
+      const previous = new Map(this.snapshot.history.map(entry => [entry.id, entry]))
+      state.history = state.history.map(entry => previous.get(entry.id) ?? entry)
+    }
+    // Preserve focused controls and scroll positions across heartbeat snapshots.
+    if (this.snapshot) {
+      const previous = new Map(this.snapshot.members.map(member => [member.id, member]))
+      state.members = state.members.map(member => {
+        const old = previous.get(member.id)
+        return old && old.name === member.name && old.role === member.role && old.generation === member.generation && old.online === member.online && old.status === member.status && old.message === member.message ? old : member
+      })
+    }
+    this.snapshot = state
+    if (!this.canControl) { this.commands = []; this.pending = undefined }
+    return true
+  }
+
+  private finishInteraction(ok: boolean) {
+    const pending = this.interaction
+    this.interaction = undefined
+    pending?.finish(ok)
+  }
+
+  private interact(message: Extract<ClientMessage, { type: 'chat' | 'role' }>) {
+    if (this.connection !== 'connected' || this.interaction) { this.error = this.interaction ? '请等待当前发送或授权完成' : '连接恢复后才能发送消息或授权'; this.changed(); return Promise.resolve(false) }
+    const parsed = v.safeParse(clientMessage, message)
+    if (!parsed.success) { this.error = '消息不能为空且最多 500 字'; this.changed(); return Promise.resolve(false) }
+    this.error = ''
+    return new Promise<boolean>((finish) => {
+      this.interaction = { id: message.commandId, sentAt: performance.now(), finish }
+      this.send(parsed.output); this.changed()
+    })
+  }
+
+  sendChat(text: string) { return this.interact({ type: 'chat', commandId: crypto.randomUUID(), text }) }
+  setMemberRole(memberId: string, role: 'admin' | 'member') {
+    if (!this.isHost) { this.error = '仅房主可授权或撤销管理员'; this.changed(); return Promise.resolve(false) }
+    return this.interact({ type: 'role', commandId: crypto.randomUUID(), memberId, role })
   }
 
   usePersonalSource(personal: boolean) {
@@ -272,7 +321,7 @@ export class ListenClient {
   follow() {
     if (this.mediaTicket && performance.now() >= this.mediaTicket.renewAt + this.mediaTicket.leaseMs / 2) { this.loadedKey = undefined; this.mediaTicket = undefined }
     this.away = false; this.failedKey = undefined; this.status = 'loading'; this.error = ''; this.saveIdentity()
-    if (this.isHost && !this.snapshot?.wantsToPlay) this.enqueue({ action: 'play' })
+    if (this.canControl && !this.snapshot?.wantsToPlay) this.enqueue({ action: 'play' })
     else if (this.snapshot && this.clock.estimate) void this.apply(this.snapshot)
   }
   private saveIdentity() { if (this.identity) { this.identity.away = this.away; this.identity.personalSource = this.personalSource; this.persist(this.identity) } }
@@ -380,6 +429,7 @@ export class ListenClient {
     if (this.connection === 'connected' && now - this.lastResponse >= CONNECTION_TIMEOUT_MS) this.socket?.close()
     if (Number.isFinite(this.lastResponse) && now - this.lastResponse >= DISCONNECT_GRACE_MS) { this.cancel(); this.playback.audio.pause(); this.status = this.away ? 'away' : 'loading' }
     if (this.pending && now - this.pending.sentAt > 8_000) { this.error = '房间操作确认超时，请稍后重新操作'; this.pending = undefined; this.commands = []; this.ping() }
+    if (this.interaction && now - this.interaction.sentAt > 8_000) { this.error = '发送或授权确认超时，请查看记录后再试'; this.finishInteraction(false) }
     const state = this.snapshot
     if (this.connection === 'connected' && state?.source?.mode === 'hosted' && !this.personalSource && !this.away) this.renewMediaTicket()
     if (this.connection === 'connected' && state && this.clock.estimate && this.status === 'following' && !this.away && !this.playback.audio.paused) {
@@ -400,6 +450,7 @@ export class ListenClient {
   leave() { this.send({ type: 'leave' }); this.dispose(false); this.persist(undefined); this.exited(); this.changed() }
   dispose(notify = false) {
     if (notify) this.send({ type: 'leave' })
+    this.finishInteraction(false)
     this.management?.abort(); this.mediaTicket = undefined
     this.stopped = true; this.cancel(); this.playback.cancelLoad(); this.playback.audio.pause()
     clearInterval(this.interval); clearTimeout(this.retryTimer)

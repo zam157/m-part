@@ -14,7 +14,7 @@ import { savePersonalPlayerSession } from './player-persistence'
 const IDENTITY_KEY = 'm-part:listen-room:v1'
 export const [roomServer, setRoomServer] = createSignal(localStorage.getItem('m-part:room-server') || import.meta.env.VITE_ROOM_SERVER_URL || 'http://127.0.0.1:3410')
 export const [roomView, setRoomView] = createSignal<{
-  snapshot?: RoomSnapshot, memberId?: string, connection: string, status: MemberStatus, error: string, away: boolean, inSync: boolean, isHost: boolean, personalSource?: boolean, sourceBusy?: boolean,
+  snapshot?: RoomSnapshot, memberId?: string, connection: string, status: MemberStatus, error: string, away: boolean, inSync: boolean, isHost: boolean, personalSource?: boolean, sourceBusy?: boolean, canControl?: boolean, interactionBusy?: boolean,
 }>({ connection: 'idle', status: 'loading', error: '', away: false, inSync: false, isHost: false })
 export const [joiningRoom, setJoiningRoom] = createSignal(false)
 export { roomPlayerActive }
@@ -30,9 +30,9 @@ function identity(value?: RoomIdentity) {
 }
 function update() {
   if (!client) return
-  setRoomControlsWritable(client.connection === 'connected' && client.isHost)
+  setRoomControlsWritable(client.connection === 'connected' && client.canControl)
   setRoomView({ snapshot: client.connection === 'idle' ? undefined : client.snapshot, memberId: client.memberId, connection: client.connection, status: client.status,
-    error: client.error, away: client.away, personalSource: client.personalSource, sourceBusy: client.sourceBusy, inSync: client.inSync, isHost: client.connection !== 'idle' && client.isHost })
+    canControl: client.canControl, interactionBusy: client.interactionBusy, error: client.error, away: client.away, personalSource: client.personalSource, sourceBusy: client.sourceBusy, inSync: client.inSync, isHost: client.connection !== 'idle' && client.isHost })
 }
 function exit() {
   const released = unregisterRoom?.() ?? !isRoomPlayer()
@@ -114,6 +114,8 @@ export async function joinListenRoom(serverInput: string, name: string, code: st
   catch (error) { setRoomView(v => ({ ...v, error: error instanceof Error ? error.message : String(error) })) }
 }
 export async function manageRoomSource(action: 'credential' | 'revoke' | 'source' | 'retry-source', value?: string, provider?: HostedPlatform) { await client?.manageSource(action, value, provider) }
+export async function sendRoomChat(text: string) { return await client?.sendChat(text) ?? false }
+export async function setRoomMemberRole(memberId: string, role: 'admin' | 'member') { return await client?.setMemberRole(memberId, role) ?? false }
 export function usePersonalRoomSource(personal: boolean) { client?.usePersonalSource(personal) }
 export function leaveListenRoom() { client?.leave() }
 export function resumeRoomPlayback() { client?.follow() }

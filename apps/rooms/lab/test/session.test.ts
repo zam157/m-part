@@ -29,7 +29,7 @@ function media() {
 const state = (patch: Partial<RoomSnapshot> = {}): RoomSnapshot => ({
   protocol: LISTEN_PROTOCOL, roomId: 'room', code: '12345678', revision: 0, playbackId: 'playback', track: LAB_TRACK,
   status: 'paused', wantsToPlay: false, pauseReason: 'user', positionAtAnchor: 0, anchorServerTime: 0, rate: 1,
-  hostId: 'host', members: [], ...patch,
+  hostId: 'host', members: [], activityVersion: 0, history: [], ...patch,
   kind: 'lab', queue: [], currentIndex: null, playMode: 'order',
 })
 let session: ListenLabSession

@@ -1,7 +1,8 @@
 import { createSignal, For, Show } from 'solid-js'
 import { clsx } from 'cn/lite'
-import { createListenRoom, joiningRoom, joinListenRoom, leaveListenRoom, pauseRoomLocally, resumeRoomPlayback, roomPlayerActive, roomServer, roomView, setRoomServer } from '~/composables/listen-room'
+import { createListenRoom, joiningRoom, joinListenRoom, leaveListenRoom, pauseRoomLocally, resumeRoomPlayback, roomPlayerActive, roomServer, roomView, setRoomServer, setRoomMemberRole } from '~/composables/listen-room'
 import { playing, playQueue, prevNext, setPlaying, setShowPlayQueue } from '~/composables/player'
+import ListenRoomHistory from '~/components/ListenRoomHistory/ListenRoomHistory'
 import ListenRoomSources from '~/components/ListenRoomSources/ListenRoomSources'
 import { roomStatusLabel } from '~/components/ListenRoomBar/ListenRoomBar'
 
@@ -24,7 +25,7 @@ export default function ListenPage() {
   return (
     <div class="flex-1 min-w-0 min-h-0 overflow-auto p-6 max-[760px]:p-4">
       <div class="max-w-220 mx-auto space-y-6">
-        <header><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm mt-2">在同一个房间听同一首歌。房主控制播放和队列，可各自取源，也可选用房主配置的网易云、QQ 音乐或 BiliBili 托管音源。</p></header>
+        <header><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm mt-2">在同一个房间听同一首歌。房主与管理员控制播放和队列，可各自取源，也可选用房主配置的网易云、QQ 音乐或 BiliBili 托管音源。</p></header>
         <Show when={roomPlayerActive()} fallback={(
           <section class="rounded-2xl border border-border p-5 space-y-5">
             <label class="block text-sm">房间服务器
@@ -50,18 +51,18 @@ export default function ListenPage() {
         )}>
           <section class="rounded-2xl border border-border p-5 space-y-5">
             <div class="flex items-start gap-4 justify-between flex-wrap">
-              <div><p class="text-xs text-muted-foreground">{roomView().isHost ? '你是房主' : '你是房间成员'}</p><h2 class="font-mono text-8 font-semibold tracking-widest mt-1">{snapshot()?.code ?? '连接中…'}</h2><p class="text-sm text-muted-foreground mt-1" role="status">{roomStatusLabel()}</p></div>
+              <div><p class="text-xs text-muted-foreground">{roomView().isHost ? '你是房主' : roomView().canControl ? '你是管理员' : '你是房间成员'}</p><h2 class="font-mono text-8 font-semibold tracking-widest mt-1">{snapshot()?.code ?? '连接中…'}</h2><p class="text-sm text-muted-foreground mt-1" role="status">{roomStatusLabel()}</p></div>
               <div class="flex gap-2"><button class="ghost-btn px-3 h-9 border border-border" disabled={!snapshot()} onClick={copyCode}>{copied() ? '已复制' : '复制房间码'}</button><button class="ghost-btn px-3 h-9 border border-border" onClick={leaveListenRoom}>{roomView().isHost ? '结束房间' : '退出房间'}</button></div>
             </div>
             <div class="rounded-xl bg-muted/50 p-4 space-y-3">
-              <p class="font-semibold">{current()?.title ?? '还没有歌曲'}</p><p class="text-sm text-muted-foreground">{current()?.artist ?? '房主可以在搜索、歌单或首页选择歌曲'}</p>
-              <Show when={roomView().isHost} fallback={(
+              <p class="font-semibold">{current()?.title ?? '还没有歌曲'}</p><p class="text-sm text-muted-foreground">{current()?.artist ?? '房主与管理员可以在搜索、歌单或首页选择歌曲'}</p>
+              <Show when={roomView().canControl} fallback={(
                 <button class="btn px-4 py-2" onClick={() => roomView().away || roomView().status === 'blocked' || roomView().status === 'failed' ? resumeRoomPlayback() : pauseRoomLocally()}>{roomView().away || roomView().status === 'blocked' || roomView().status === 'failed' ? '恢复同步' : '暂停本机并暂离'}</button>
               )}>
                 <div class="flex gap-2 flex-wrap">
-                  <button class="ghost-btn px-3 h-9 border border-border" disabled={!current()} onClick={() => prevNext(0)}>上一首</button>
-                  <button class="btn px-4 h-9" disabled={!current()} onClick={() => setPlaying(!playing())}>{playing() ? '暂停全员' : '开始播放'}</button>
-                  <button class="ghost-btn px-3 h-9 border border-border" disabled={!current()} onClick={() => prevNext(1)}>下一首</button>
+                  <button class="ghost-btn px-3 h-9 border border-border" disabled={!current() || roomView().connection !== 'connected'} onClick={() => prevNext(0)}>上一首</button>
+                  <button class="btn px-4 h-9" disabled={!current() || roomView().connection !== 'connected'} onClick={() => setPlaying(!playing())}>{playing() ? '暂停全员' : '开始播放'}</button>
+                  <button class="ghost-btn px-3 h-9 border border-border" disabled={!current() || roomView().connection !== 'connected'} onClick={() => prevNext(1)}>下一首</button>
                 </div>
               </Show>
               <button class="ghost-btn px-3 h-8 text-sm" onClick={() => setShowPlayQueue(true)}>查看房间队列 · {snapshot()?.queue.length ?? 0} 首</button>
@@ -70,11 +71,17 @@ export default function ListenPage() {
             <div><h3 class="font-semibold mb-3">房间成员 · {snapshot()?.members.length ?? 0}/5</h3>
               <ul class="space-y-2"><For each={snapshot()?.members ?? []}>{member => (
                 <li class="rounded-lg border border-border p-3 flex items-start justify-between gap-4 text-sm">
-                  <div class="min-w-0"><span class="font-medium">{member.name}</span><Show when={member.id === snapshot()?.hostId}><span class="ml-2 text-xs text-muted-foreground">房主</span></Show><Show when={member.id === roomView().memberId}><span class="ml-2 text-xs text-muted-foreground">你</span></Show><Show when={member.message}><p class="text-xs text-destructive mt-1 break-words">{member.message}</p></Show></div>
-                  <span class={clsx('shrink-0 text-xs', member.online ? 'text-muted-foreground' : 'text-destructive')}>{member.online ? statuses[member.status] : '已断开'}</span>
+                  <div class="min-w-0"><span class="font-medium">{member.name}</span><Show when={member.id === snapshot()?.hostId}><span class="ml-2 text-xs text-muted-foreground">房主</span></Show><Show when={member.role === 'admin'}><span class="ml-2 text-xs text-primary">管理员</span></Show><Show when={member.id === roomView().memberId}><span class="ml-2 text-xs text-muted-foreground">你</span></Show><Show when={member.message}><p class="text-xs text-destructive mt-1 break-words">{member.message}</p></Show></div>
+                  <div class="shrink-0 flex flex-col items-end gap-2">
+                    <span class={clsx('text-xs', member.online ? 'text-muted-foreground' : 'text-destructive')}>{member.online ? statuses[member.status] : '已断开'}</span>
+                    <Show when={roomView().isHost && member.id !== snapshot()?.hostId}>
+                      <button class="ghost-btn text-xs h-7 px-2" disabled={roomView().connection !== 'connected' || roomView().interactionBusy} onClick={() => void setRoomMemberRole(member.id, member.role === 'admin' ? 'member' : 'admin')}>{member.role === 'admin' ? '撤销管理员' : '设为管理员'}</button>
+                    </Show>
+                  </div>
                 </li>
               )}</For></ul>
             </div>
+            <ListenRoomHistory />
             <p class="text-xs text-muted-foreground">成员不接收他人的账号凭据。试听、无版权或时长不一致的音源会标记为不可同步。退出后恢复你原来的队列，保持暂停；关闭应用页会停止播放。</p>
           </section>
         </Show>
