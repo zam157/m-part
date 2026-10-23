@@ -10,7 +10,7 @@ export default antfu(
     pnpm: true,
     ignores: [
       // 由 filesystem-routing 生成
-      'client/file-routes.d.ts',
+      'packages/player/src/file-routes.d.ts',
     ],
     rules: {
       'unocss/order': 'off',

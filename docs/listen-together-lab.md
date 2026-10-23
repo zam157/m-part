@@ -18,7 +18,7 @@ pnpm dev:listen
 
 ```bash
 pnpm build:listen
-PORT=3400 HOST=127.0.0.1 node dist/listen/server/index.mjs
+PORT=3400 HOST=127.0.0.1 node apps/rooms/dist-lab/server/index.mjs
 
 pnpm typecheck:listen
 pnpm test:listen
@@ -43,7 +43,7 @@ pnpm test:listen
 两端各点击「导出测量 JSON」，再运行：
 
 ```bash
-node experiments/listen-together/analyze.ts host.json member.json
+node apps/rooms/lab/analyze.ts host.json member.json
 ```
 
 分析器将相同控制版本、相同播放实例的稳态配对样本换算到同一校准时刻，输出双端差值 P50 / P95、校时不确定性、配对覆盖率和各状态采样数 / 估计时长。稳态定义为已成功播放且最近一次准备 / 状态转换后经过至少 2 秒；配对样本时刻间隔不超过 750ms，同一对端样本最多使用一次。

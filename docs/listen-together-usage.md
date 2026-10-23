@@ -8,7 +8,7 @@
 
 ```bash
 pnpm dev:rooms   # 房间服务 http://127.0.0.1:3410
-pnpm dev:ext     # 按日志加载 .output/chrome-mv3-dev
+pnpm dev:ext     # 按日志加载 apps/extension/.output/chrome-mv3-dev
 ```
 
 1. 房主打开侧栏「一起听」，填写服务器地址与称呼，点击「用当前队列创建」。当前歌曲和进度会带入房间，空队列也可创建。
@@ -21,7 +21,7 @@ pnpm dev:ext     # 按日志加载 .output/chrome-mv3-dev
 
 ## 局域网 HTTP 测试
 
-1. 两台电脑安装更新后的扩展（`pnpm build:ext` 产出的 `.output/chrome-mv3`）。开发构建也可使用，但修改 manifest 后需要重新加载扩展，才能申请 HTTP 主机的访问权限。
+1. 两台电脑安装更新后的扩展（`pnpm build:ext` 产出的 `apps/extension/.output/chrome-mv3`）。开发构建也可使用，但修改 manifest 后需要重新加载扩展，才能申请 HTTP 主机的访问权限。
 2. 在服务器电脑启动一个房间服务，不需要收集扩展 ID 或配置来源白名单：
 
    ```bash
@@ -35,7 +35,7 @@ HTTP 会明文传输房间状态和恢复令牌，适合可信局域网测试；
 
 通过回环、IPv4 私有地址（`10.*`、`172.16.*`–`172.31.*`、`192.168.*`）、链路本地地址或 IPv6 ULA 地址连接服务时，默认允许任意合法的 Chrome 扩展 ID 和服务同源网页。其他网页来源仍会被拒绝。如果之前导出了 `LISTEN_ALLOWED_ORIGINS`，先运行 `unset LISTEN_ALLOWED_ORIGINS`；显式设置的白名单（包括空值）会优先执行。使用自定义局域网域名时仍可显式配置允许来源。
 
-不需要热更新时，可先 `pnpm build:rooms`，再运行 `HOST=0.0.0.0 PORT=3410 node dist/rooms/server/index.mjs`。
+不需要热更新时，可先 `pnpm build:rooms`，再运行 `HOST=0.0.0.0 PORT=3410 node apps/rooms/dist/server/index.mjs`。
 
 ## 当前能力与边界
 
@@ -73,7 +73,7 @@ pnpm install --frozen-lockfile
 pnpm build:rooms
 
 LISTEN_ALLOWED_ORIGINS='chrome-extension://EXTENSION_ID' \
-  HOST=127.0.0.1 PORT=3410 node dist/rooms/server/index.mjs
+  HOST=127.0.0.1 PORT=3410 node apps/rooms/dist/server/index.mjs
 ```
 
 把 `EXTENSION_ID` 换成使用中的扩展 ID；开发目录与生产目录安装的 ID 可能不同。多个允许来源用逗号分隔；如果还提供网页前端，应加入该前端精确的 Origin（包含协议和非默认端口）。仅声明来源不能替代成员令牌校验，两者均由服务端检查。
@@ -86,18 +86,18 @@ LISTEN_ALLOWED_ORIGINS='chrome-extension://EXTENSION_ID' \
 
 ## 代码入口与验证
 
-- `client/composables/player-context.ts`：所有播放器用户操作的房间拦截入口及可写状态；不要从组件绕过它直接控制音频。
-- `client/composables/listen-room.ts`：模块级 UI 状态、连接、保护性保存、退出恢复及窗口会话。
-- `client/utils/listen-client.ts`：连接 / 重连、校时、指令串行、来源准备、缓冲与漂移恢复。
-- `client/utils/listen-media.ts`：可取消且有超时的媒体准备与播放结果。
-- `server/utils/listen-rooms.ts`：权威时间轴、队列、角色、身份与指令去重。
-- `shared/types/listen-room.ts`：双向严格校验的公开协议；禁止添加音频地址、Cookie 或第三方请求头。
-- `services/rooms/nitro.config.ts`：正式独立服务配置；`experiments/listen-together/` 保留静态音频实验及测量工具。
+- `packages/player/src/composables/player-context.ts`：所有播放器用户操作的房间拦截入口及可写状态；不要从组件绕过它直接控制音频。
+- `packages/player/src/composables/listen-room.ts`：模块级 UI 状态、连接、保护性保存、退出恢复及窗口会话。
+- `packages/player/src/utils/listen-client.ts`：连接 / 重连、校时、指令串行、来源准备、缓冲与漂移恢复。
+- `packages/listen-core/src/browser/media.ts`：可取消且有超时的媒体准备与播放结果。
+- `apps/rooms/server/utils/listen-rooms.ts`：权威时间轴、队列、角色、身份与指令去重。
+- `packages/listen-core/src/protocol.ts`：双向严格校验的公开协议；禁止添加音频地址、Cookie 或第三方请求头。
+- `apps/rooms/nitro.config.ts`：正式独立服务配置；`apps/rooms/lab/` 保留静态音频实验及测量工具。
 
 ```bash
 pnpm typecheck
 pnpm test:listen
-pnpm exec vitest run --project client
+pnpm exec vitest run --project player --project music
 pnpm build:rooms
 pnpm build:ext
 ```

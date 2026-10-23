@@ -1,0 +1,23 @@
+{
+  "name": "@m-part/listen-core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "exports": {
+    "./protocol": "./src/protocol.ts",
+    "./clock": "./src/clock.ts",
+    "./browser/media": "./src/browser/media.ts"
+  },
+  "dependencies": {
+    "valibot": "catalog:shared"
+  },
+  "devDependencies": {
+    "typescript": "catalog:dev",
+    "vitest": "catalog:dev",
+    "@types/node": "catalog:dev"
+  }
+}

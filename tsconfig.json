@@ -1,9 +1,26 @@
 {
+  "files": [],
   "references": [
-    { "path": "./tsconfig.frontend.json" },
-    { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.backend.json" },
-    { "path": "./tsconfig.listen.json" }
-  ],
-  "files": []
+    {
+      "path": "./packages/player"
+    },
+    {
+      "path": "./packages/music"
+    },
+    {
+      "path": "./packages/listen-core"
+    },
+    {
+      "path": "./packages/build-config"
+    },
+    {
+      "path": "./apps/extension"
+    },
+    {
+      "path": "./apps/web"
+    },
+    {
+      "path": "./apps/rooms"
+    }
+  ]
 }

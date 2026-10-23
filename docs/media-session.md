@@ -1,6 +1,6 @@
 # 系统媒体控制
 
-`client/composables/media-session.ts` 在 `client/main.tsx` 中启动，网页和扩展共用。通过 `navigator.mediaSession` 将当前歌曲的标题、歌手、专辑及封面同步到系统媒体界面，接收锁屏、通知栏及媒体键操作。实际按钮与进度条由浏览器和操作系统决定。
+`packages/player/src/composables/media-session.ts` 在 `packages/player/src/main.tsx` 中启动，网页和扩展共用。通过 `navigator.mediaSession` 将当前歌曲的标题、歌手、专辑及封面同步到系统媒体界面，接收锁屏、通知栏及媒体键操作。实际按钮与进度条由浏览器和操作系统决定。
 
 - 播放 / 暂停复用 `setPlaying`；上下首复用 `prevNext`，保留随机、顺序与循环模式的现有规则。停止会暂停并归零，保留队列。
 - 跳转及快进 / 快退复用 `setCurrentTime`；未指定快进 / 快退距离时使用 10 秒，位置限制在实际媒体时长内。

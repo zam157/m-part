@@ -1,0 +1,25 @@
+{
+  "name": "@m-part/extension",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@m-part/player": "workspace:*",
+    "solid-js": "catalog:frontend",
+    "@solidjs/web": "catalog:frontend",
+    "@solidjs/router": "catalog:frontend"
+  },
+  "devDependencies": {
+    "@m-part/build-config": "workspace:*",
+    "wxt": "catalog:build",
+    "vite": "catalog:build",
+    "typescript": "catalog:dev",
+    "@types/node": "catalog:dev",
+    "@types/chrome": "catalog:dev"
+  }
+}

@@ -1,5 +1,0 @@
-{
-  "extends": "./tsconfig.base.json",
-  "compilerOptions": { "lib": ["ESNext", "DOM", "DOM.Iterable"], "types": ["node", "vite/client"] },
-  "include": ["./experiments/listen-together/**/*.ts", "./services/**/*.ts", "./test/listen/**/*.ts", "./server/listen/**/*.ts", "./server/utils/listen-rooms.ts", "./shared/types/listen-room.ts", "./shared/utils/listen-clock.ts"]
-}

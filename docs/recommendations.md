@@ -1,6 +1,6 @@
 # 首页推荐
 
-`shared/types/provider.ts` 的 `Provider.getRecommendations?: () => Promise<MusicInfo[]>` 提供首页推荐音乐。不支持该能力的后续音源可以省略该方法。
+`packages/music/src/types/provider.ts` 的 `Provider.getRecommendations?: () => Promise<MusicInfo[]>` 提供首页推荐音乐。不支持该能力的后续音源可以省略该方法。
 
 - 返回音乐条目而非播放 URL，必须带正确的 `provider`、`id`、标题、秒数时长和 HTTPS 封面；点击时复用 `addToPlayQueue`，再由该音源的 `getSourceInfo` 获取最新播放地址。
 - 推荐标题按普通文本渲染。不要因为 BiliBili 搜索标题包含高亮 HTML 就对推荐标题使用 `innerHTML`。
@@ -20,7 +20,7 @@
 
 ## 首页状态
 
-`client/composables/recommendations.ts` 以音源为键保存模块级信号：`items`、`loading`、`loaded`、`error`。`Recommendations` 组件按音源单独渲染，首次加载顺序为错误 → 加载 → 数据 → 空状态。首页在两个推荐分区结束，不再展示底部搜索灵感栏目。
+`packages/player/src/composables/recommendations.ts` 以音源为键保存模块级信号：`items`、`loading`、`loaded`、`error`。`Recommendations` 组件按音源单独渲染，首次加载顺序为错误 → 加载 → 数据 → 空状态。首页在两个推荐分区结束，不再展示底部搜索灵感栏目。
 
 - 首次进入首页并行加载；离开路由再返回复用已成功获取的结果，包括空结果。
 - 同一音源合并在途请求，避免重复加载和刷新响应覆盖。

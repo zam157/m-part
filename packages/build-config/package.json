@@ -1,0 +1,28 @@
+{
+  "name": "@m-part/build-config",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    "./vite": "./src/vite.ts",
+    "./uno": "./src/uno.ts",
+    "./assets": "./src/assets.ts"
+  },
+  "dependencies": {
+    "@solidjs/vite-plugin": "catalog:build",
+    "filesystem-routing": "catalog:build",
+    "unocss": "catalog:build",
+    "@unocss/preset-web-fonts": "catalog:build",
+    "@iconify-json/lucide": "catalog:build",
+    "@iconify-json/material-symbols": "catalog:build",
+    "@iconify-json/solar": "catalog:build",
+    "vite": "catalog:build"
+  },
+  "devDependencies": {
+    "typescript": "catalog:dev",
+    "@types/node": "catalog:dev"
+  }
+}

@@ -14,3 +14,9 @@ public/assets/fonts
 # WXT
 .output
 .wxt
+
+# Workspace-generated assets and lab outputs
+apps/*/public/scripts/color-mode-bootstrap.js
+apps/*/public/assets/fonts/
+dist-lab
+dist-lab-client

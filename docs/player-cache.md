@@ -1,6 +1,6 @@
 # 播放器本地缓存
 
-`client/main.tsx` 启动 `startPlayerPersistence()`。缓存使用浏览器原生 IndexedDB，不经过 Provider、服务端或 `localStorage`，也不需要额外扩展权限。开发热更新时会清理观察者、定时器和监听器。
+`packages/player/src/main.tsx` 启动 `startPlayerPersistence()`。缓存使用浏览器原生 IndexedDB，不经过 Provider、服务端或 `localStorage`，也不需要额外扩展权限。开发热更新时会清理观察者、定时器和监听器。
 
 ## 存储与读写频率
 

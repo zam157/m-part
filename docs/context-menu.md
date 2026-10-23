@@ -23,7 +23,7 @@
 
 ## 队列语义
 
-`client/composables/player.ts` 的 `addNextToPlayQueue(music)` 是通用入口，不需要新增 Provider 接口，也不会预先请求歌曲的音频地址：
+`packages/player/src/composables/player.ts` 的 `addNextToPlayQueue(music)` 是通用入口，不需要新增 Provider 接口，也不会预先请求歌曲的音频地址：
 
 - 有当前曲目时，把目标放在其后；保持当前音频、进度、暂停状态及播放模式。
 - 队列已有该歌曲时移动原有条目，按 `provider + id` 去重；当前歌曲自身不操作，菜单中禁用。

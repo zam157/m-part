@@ -1,0 +1,28 @@
+{
+  "name": "@m-part/rooms",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "nitro dev --port 3410 --host 127.0.0.1",
+    "dev:lan": "nitro dev --port 3410 --host 0.0.0.0",
+    "build": "nitro build",
+    "start": "node dist/server/index.mjs",
+    "dev:lab": "pnpm build:lab-client && nitro dev --dir lab --port 3400 --host 127.0.0.1",
+    "build:lab-client": "vite build --config lab/vite.config.ts",
+    "build:lab": "pnpm build:lab-client && nitro build --dir lab",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@m-part/listen-core": "workspace:*",
+    "nitro": "catalog:backend",
+    "valibot": "catalog:shared"
+  },
+  "devDependencies": {
+    "typescript": "catalog:dev",
+    "vitest": "catalog:dev",
+    "@types/node": "catalog:dev",
+    "vite": "catalog:build"
+  }
+}

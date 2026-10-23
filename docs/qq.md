@@ -1,6 +1,6 @@
 # QQ 音乐音源
 
-`shared/utils/providers/qq.ts` 实现与现有页面共用的 Provider，音源标识为 `qq`，曲目标识始终使用 **song MID**；数字歌曲 ID、专辑 MID 和文件的 media MID 不能混用。参考 [Rain120/qq-music-api](https://github.com/Rain120/qq-music-api/tree/next) 的官方接口结构，没有引入该库、Axios、Koa、Node.js Buffer 或服务端代理。上游 MIT 许可保留在 [licenses/qq-music-api.txt](./licenses/qq-music-api.txt)。
+`packages/music/src/utils/providers/qq.ts` 实现与现有页面共用的 Provider，音源标识为 `qq`，曲目标识始终使用 **song MID**；数字歌曲 ID、专辑 MID 和文件的 media MID 不能混用。参考 [Rain120/qq-music-api](https://github.com/Rain120/qq-music-api/tree/next) 的官方接口结构，没有引入该库、Axios、Koa、Node.js Buffer 或服务端代理。上游 MIT 许可保留在 [licenses/qq-music-api.txt](./licenses/qq-music-api.txt)。
 
 ## 能力及接口
 
@@ -24,10 +24,10 @@ RPC 统一 POST 到 `https://u.y.qq.com/cgi-bin/musicu.fcg`，同时检查顶层
 
 ## 浏览器登录态与扩展权限
 
-- 请求全部经过 `shared/utils/fetch.ts`，扩展默认使用 `credentials: 'include'`；Referer / Origin 由 [public/rules/qq.json](../public/rules/qq.json) 注入。不要在组件请求接口，也不要手动拼 Cookie、Host、User-Agent 等浏览器管理的请求头。
+- 请求全部经过 `packages/music/src/utils/fetch.ts`，扩展默认使用 `credentials: 'include'`；Referer / Origin 由 [apps/extension/public/rules/qq.json](../apps/extension/public/rules/qq.json) 注入。不要在组件请求接口，也不要手动拼 Cookie、Host、User-Agent 等浏览器管理的请求头。
 - `qq-session.ts` 仅从 `https://y.qq.com/` 读取 Cookie：优先 QQ 音乐账号 `qqmusic_uin`，兼容 `uin`、`wxuin`，处理 `o` 和前导零；认证 key 优先 `qqmusic_key`，兼容 `qm_keyst`、`p_skey`、`skey`。用 DJB2 生成 `g_tk` / `auth_tkn`，认证 key 仅放 RPC 请求体，不放 URL。
 - 不缓存、持久化或打印 key，不修改 Cookie；每次操作重新读取。账号与 key 不存在时返回未登录，资料 / 收藏接口的认证错误也转为登录提示；网络错误仍显示失败。歌单分页时发现账号变化会停止读取，避免混入其他账号的数据。
-- `wxt.config.ts` 声明 `*.y.qq.com`、`*.qqmusic.qq.com`、实际返回的 `aqqmusic.tc.qq.com` 和封面 `y.gtimg.cn` 权限。修改权限或 DNR 后要重新加载扩展，仅刷新页面不会更新 manifest。
+- `apps/extension/wxt.config.ts` 声明 `*.y.qq.com`、`*.qqmusic.qq.com`、实际返回的 `aqqmusic.tc.qq.com` 和封面 `y.gtimg.cn` 权限。修改权限或 DNR 后要重新加载扩展，仅刷新页面不会更新 manifest。
 
 ## 播放、歌词和完整歌单
 

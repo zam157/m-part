@@ -20,19 +20,19 @@
 
 | 位置 | 现状 | 对一起听的影响 |
 | --- | --- | --- |
-| `client/composables/player.ts` | 模块级 `new Audio()`，已有取源、播放 / 暂停、跳转、切歌和队列 | 可复用播放引擎；需拆开准备音源和开始播放 |
+| `packages/player/src/composables/player.ts` | 模块级 `new Audio()`，已有取源、播放 / 暂停、跳转、切歌和队列 | 可复用播放引擎；需拆开准备音源和开始播放 |
 | 同上 | `ended` 自动切歌，本地生成随机顺序，`setPlayQueue()` 会立即播放 | 房间中只能由房主决定下一首，成员不能各自随机和自动切歌 |
 | 同上 | `sourceRevision` / `playIntent` 阻止过期取源及播放请求 | 可沿用，并增加房间版本与本次播放实例标识 |
 | 同上 | 扩展模式 `loadQuality()` 设置媒体源后即返回，`setPlaying()` 在内部处理播放失败 | `await` 返回不代表媒体已就绪或已播放；房间接入需要明确的成功、受阻、失败及过期结果 |
-| `client/components/MusicPlayer/components/player-controls.ts` | 切音质保存旧进度，加载后恢复 | 房间模式加载结束后须重新计算目标进度，不能恢复加载前的旧时间 |
-| `client/composables/media-session.ts` | 系统媒体按键直接调用播放器函数 | 页面、右键菜单、队列和系统媒体按键都要经过同一控制入口 |
-| `client/composables/player-persistence.ts` | 持续监听队列、位置和音量，在暂停、seek、页面隐藏时刷盘 | 仅备份内存不足以保护个人队列；接入前先隔离房间数据与个人缓存写入 |
-| `shared/utils/providers/` | 按本机登录态获取第三方音源 | 独立模式沿用；托管模式需服务端会话适配，不能直接依赖浏览器 Cookie API 与自动携带凭据的行为 |
-| `server/utils/proxy.ts` / `server/api/proxy/` | 现有 web 代理包含请求头转换及 Bili 请求转发 | 不是房间媒体服务；须另加成员鉴权、凭据隔离、上游限制、流式响应和 Range 验证 |
-| `shared/types/music-info.ts` | `MusicInfo` 可以携带 `src`，`SourceInfo` 包含 URL / 请求头 | 不能直接把这些对象序列化发送到房间，必须定义独立的允许字段集合 |
-| `entrypoints/background.ts` | 只处理打开页面和扩展安装 | 当前没有后台音频或房间连接；关闭应用页会停止播放 |
-| `vite.config.ts` / `package.json` | Nitro 插件已注释，无 `dev` 脚本，服务端测试项目也已注释 | `server/` 虽存在，当前默认构建并未接入它；需要补服务端启动、构建和部署 |
-| `nitro.config.ts` | 未启用 WebSocket | 需增加配置及路由，先验证当前安装版本的运行行为 |
+| `packages/player/src/components/MusicPlayer/components/player-controls.ts` | 切音质保存旧进度，加载后恢复 | 房间模式加载结束后须重新计算目标进度，不能恢复加载前的旧时间 |
+| `packages/player/src/composables/media-session.ts` | 系统媒体按键直接调用播放器函数 | 页面、右键菜单、队列和系统媒体按键都要经过同一控制入口 |
+| `packages/player/src/composables/player-persistence.ts` | 持续监听队列、位置和音量，在暂停、seek、页面隐藏时刷盘 | 仅备份内存不足以保护个人队列；接入前先隔离房间数据与个人缓存写入 |
+| `packages/music/src/utils/providers/` | 按本机登录态获取第三方音源 | 独立模式沿用；托管模式需服务端会话适配，不能直接依赖浏览器 Cookie API 与自动携带凭据的行为 |
+| `apps/web/server/utils/proxy.ts` / `apps/web/server/api/proxy/` | 现有 web 代理包含请求头转换及 Bili 请求转发 | 不是房间媒体服务；须另加成员鉴权、凭据隔离、上游限制、流式响应和 Range 验证 |
+| `packages/music/src/types/music-info.ts` | `MusicInfo` 可以携带 `src`，`SourceInfo` 包含 URL / 请求头 | 不能直接把这些对象序列化发送到房间，必须定义独立的允许字段集合 |
+| `apps/extension/entrypoints/background.ts` | 只处理打开页面和扩展安装 | 当前没有后台音频或房间连接；关闭应用页会停止播放 |
+| `apps/web/vite.config.ts` / `package.json` | Nitro 插件已注释，无 `dev` 脚本，服务端测试项目也已注释 | `apps/web/server/` 虽存在，当前默认构建并未接入它；需要补服务端启动、构建和部署 |
+| `apps/web/nitro.config.ts` | 未启用 WebSocket | 需增加配置及路由，先验证当前安装版本的运行行为 |
 
 注意：README 和部分旧笔记仍描述 Vite + Nitro 一体构建，实施时应以当前配置为准。
 
@@ -200,7 +200,7 @@ flowchart LR
 
 建议 Provider 增加结构化的完整 / 试听 / 不可播放状态及可用区间，避免依赖「试听」文案判断。时长比较只能辅助发现差异，不能证明音频内容一致；完整曲和从歌曲中段开始的试听片段不能按同一时间轴同步。
 
-首版不自动用另一个音源替换：不同版本、前奏、静音、现场录音会导致同一个时间点对应不同内容。队列共享仅发送白名单字段，**不广播 `src`、`SourceInfo`、上游签名音频 URL、Cookie、第三方请求头或登录凭据**。独立模式通过既有 Provider 和 `shared/utils/fetch.ts` 获取第三方数据；托管模式通过受控服务端适配取源，成员另行获取本人的短期媒体票据。房间凭据的管理入口与队列共享分离。
+首版不自动用另一个音源替换：不同版本、前奏、静音、现场录音会导致同一个时间点对应不同内容。队列共享仅发送白名单字段，**不广播 `src`、`SourceInfo`、上游签名音频 URL、Cookie、第三方请求头或登录凭据**。独立模式通过既有 Provider 和 `packages/music/src/utils/fetch.ts` 获取第三方数据；托管模式通过受控服务端适配取源，成员另行获取本人的短期媒体票据。房间凭据的管理入口与队列共享分离。
 
 ### 自动播放与系统媒体控制
 
@@ -248,7 +248,7 @@ Chrome 116 起 service worker 可通过 30 秒活动窗口内交换 WebSocket �
 
 ## 改动边界与验证顺序
 
-建议新增 `shared/types/listen-room.ts`（协议）、`server/utils/listen-rooms.ts`（房间状态机）、`server/routes/listen-ws.ts`（连接）、`client/composables/listen-room.ts`（连接 / 校时 / 重连），以及房间入口与成员面板。托管模式另增服务端 Provider 会话适配、凭据管理、媒体票据、流式音频路由和有界缓存，不能直接将现有通用代理作为房间媒体入口。路径是建议，实施时再确定。
+建议新增 `packages/listen-core/src/protocol.ts`（协议）、`apps/rooms/server/utils/listen-rooms.ts`（房间状态机）、`apps/web/server/routes/listen-ws.ts`（连接）、`packages/player/src/composables/listen-room.ts`（连接 / 校时 / 重连），以及房间入口与成员面板。托管模式另增服务端 Provider 会话适配、凭据管理、媒体票据、流式音频路由和有界缓存，不能直接将现有通用代理作为房间媒体入口。路径是建议，实施时再确定。
 
 最重要的改造是给播放器增加「用户控制意图」入口和「应用远程状态」入口，并将媒体准备、定位和播放结果显式返回给房间控制层。远程状态内部产生的 `pause` / `seek` / `load` 事件不能反过来广播成新命令，否则会形成回声循环。音质切换、错误重试、页面快捷键、队列操作及 Media Session 都要检查，不能只改主播放按钮。个人模式保持原行为，房间队列应用与个人状态恢复均不能直接调用会自动播放的 `setPlayQueue()`。
 

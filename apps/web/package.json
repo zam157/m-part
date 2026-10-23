@@ -1,0 +1,29 @@
+{
+  "name": "@m-part/web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3333",
+    "build": "vite build && nitro build",
+    "preview": "node dist/server/index.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@m-part/player": "workspace:*",
+    "@m-part/music": "workspace:*",
+    "nitro": "catalog:backend",
+    "solid-js": "catalog:frontend",
+    "@solidjs/web": "catalog:frontend",
+    "@solidjs/router": "catalog:frontend"
+  },
+  "devDependencies": {
+    "@m-part/build-config": "workspace:*",
+    "typescript": "catalog:dev",
+    "vitest": "catalog:dev",
+    "@types/node": "catalog:dev",
+    "vite": "catalog:build",
+    "@types/chrome": "catalog:dev"
+  }
+}

@@ -14,7 +14,6 @@
     "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
     "noEmit": true,
-    "outDir": "./tsc-output",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
@@ -22,7 +21,10 @@
     "skipLibCheck": true
   },
   "exclude": [
-    "./dist/**",
-    "./node_modules/**"
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.output/**",
+    "**/.wxt/**",
+    "**/.nitro/**"
   ]
 }

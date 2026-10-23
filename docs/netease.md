@@ -4,8 +4,8 @@
 
 ## 请求与加密
 
-- Provider：`shared/utils/providers/netease.ts`，注册在 `shared/utils/providers/index.ts`。
-- 加密：`shared/utils/providers/netease-crypto.ts`。WEAPI 使用两次 AES-128-CBC / PKCS#7，第二层使用每次请求新生成的 16 字符密钥；密钥倒序后按协议做无填充 RSA。
+- Provider：`packages/music/src/utils/providers/netease.ts`，注册在 `packages/music/src/utils/providers/index.ts`。
+- 加密：`packages/music/src/utils/providers/netease-crypto.ts`。WEAPI 使用两次 AES-128-CBC / PKCS#7，第二层使用每次请求新生成的 16 字符密钥；密钥倒序后按协议做无填充 RSA。
 - AES 复用项目已有的 `crypto-es`；随机数来自浏览器 `crypto.getRandomValues`，RSA 使用原生 BigInt。运行时代码不使用 Node crypto、Buffer、fs 或第三方 API 服务库。
 - 加密表单通过 `tRequest` 发送到 `https://music.163.com/weapi/...`。`tRequest` 的 URLSearchParams 请求体会按表单编码，普通对象仍按 JSON 编码。
 - 接口 code 与 HTTP 状态分别检查；请求失败会抛出可展示的错误，不能映射为「没有结果」。
@@ -30,7 +30,7 @@
 
 ## 扩展权限与登录态
 
-`wxt.config.ts` 声明 `music.163.com` 及其子域、`*.music.126.net` 的 HTTPS 权限。`public/rules/netease.json` 为 API 请求设置网易云 Referer / Origin，为音频请求设置 Referer。
+`apps/extension/wxt.config.ts` 声明 `music.163.com` 及其子域、`*.music.126.net` 的 HTTPS 权限。`apps/extension/public/rules/netease.json` 为 API 请求设置网易云 Referer / Origin，为音频请求设置 Referer。
 
 登录 cookie 由浏览器 `credentials: 'include'` 携带，不在代码中复制、记录或拼接 Cookie 头。扩展增加 `cookies` 权限，只通过 `chrome.cookies.get` 读取 `music.163.com` 的 `__csrf`，作为 WEAPI 加密参数，不读取或持久化 `MUSIC_U`。这里使用的是现有只读接口，页面提供前往官方站点登录与返回刷新入口；调试时应在实际运行扩展的 Chrome 配置中登录，不能假定 MCP 共享日常浏览器的登录态。
 
@@ -53,4 +53,4 @@
 3. 点击歌曲后确认 CDN 的 `media` 请求成功、音频 `readyState` 和播放进度正常。可限速检查 `audio.buffered` 尚未覆盖整首时已经开始播放，并测试跳转到未缓冲位置，再暂停。
 4. 检查不可播放歌曲的错误提示、重试和切换歌曲后的恢复；不要把「搜索成功」等同于「有播放权限」。
 
-自动检查：`pnpm typecheck`、`pnpm test client --run`、`pnpm build:ext`。加密测试使用 Node/OpenSSL 的独立实现对照浏览器算法；Node 只用于测试，不进入扩展产物。本机 Node 26 若出现 jsdom 的 localStorage 错误，可临时用 `NODE_OPTIONS=--no-experimental-webstorage pnpm test client --run`。
+自动检查：`pnpm typecheck`、`pnpm test:frontend`、`pnpm build:ext`。加密测试使用 Node/OpenSSL 的独立实现对照浏览器算法；Node 只用于测试，不进入扩展产物。本机 Node 26 若出现 jsdom 的 localStorage 错误，可临时用 `NODE_OPTIONS=--no-experimental-webstorage pnpm test:frontend`。

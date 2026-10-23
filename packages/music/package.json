@@ -1,0 +1,29 @@
+{
+  "name": "@m-part/music",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "exports": {
+    "./providers": "./src/utils/providers/index.ts",
+    "./providers/*": "./src/utils/providers/*.ts",
+    "./types/*": "./src/types/*.ts",
+    "./fetch": "./src/utils/fetch.ts",
+    "./constants": "./src/utils/constants.ts",
+    "./url": "./src/utils/url.ts",
+    "./proxy-headers": "./src/proxy-headers.ts"
+  },
+  "dependencies": {
+    "crypto-es": "catalog:shared"
+  },
+  "devDependencies": {
+    "typescript": "catalog:dev",
+    "vitest": "catalog:dev",
+    "@types/node": "catalog:dev",
+    "vite": "catalog:build",
+    "jsdom": "catalog:dev"
+  }
+}

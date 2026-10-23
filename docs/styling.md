@@ -21,13 +21,13 @@ cn('text-9 text-primary', 'i-solar:play-circle-bold')
 
 ## 快捷方式（shortcut）与工具类的叠加
 
-`uno.config.ts` 里的 shortcut（`btn` / `ghost-btn` / `border-btn` / `card` / `empty` / `skeleton` / `responsive-cols` …）会展开成一串工具类。本项目开启了 `outputToCssLayers`：shortcut 在 `shortcuts` 层，直接工具类在后面的 `default` 层，因此调用处的工具类可覆盖 shortcut 的默认值；同一层内仍需检查生成顺序与选择器优先级，不能依赖 class 字符串的先后顺序。
+`packages/build-config/src/uno.ts` 里的 shortcut（`btn` / `ghost-btn` / `border-btn` / `card` / `empty` / `skeleton` / `responsive-cols` …）会展开成一串工具类。本项目开启了 `outputToCssLayers`：shortcut 在 `shortcuts` 层，直接工具类在后面的 `default` 层，因此调用处的工具类可覆盖 shortcut 的默认值；同一层内仍需检查生成顺序与选择器优先级，不能依赖 class 字符串的先后顺序。
 
 踩过的实例：`card` 曾自带 `w-full max-w-sm`，搜索页网格里每格超过 384px 时卡片被卡住、剩余宽度变成视觉 gap（容器宽度 > 约 2016px 才出现，很容易漏掉）。排查手法是直接看产物 CSS 里 shortcut 展开成了什么。
 
 ## 原子类优先与 CSS 的保留范围
 
-- 布局、间距、字号、颜色和响应式状态直接写 UnoCSS 类；重复的组合放在 `uno.config.ts` 的 shortcuts（如 `sidebar-item`、`page-title`、`popover-surface`），不要再增加只负责这些属性的语义 CSS 类。
+- 布局、间距、字号、颜色和响应式状态直接写 UnoCSS 类；重复的组合放在 `packages/build-config/src/uno.ts` 的 shortcuts（如 `sidebar-item`、`page-title`、`popover-surface`），不要再增加只负责这些属性的语义 CSS 类。
 - 全局 CSS 只保留文档默认值和减少动画设置。组件 CSS 主要保留原生锚点、`@starting-style` 与 `display` / `overlay` 离散过渡等规则，避免迁移时丢失浮层定位或退场效果。
 - 连续变化的进度、音量通过行内 CSS 自定义属性传值，宽高与定位使用 `w-[--progress-percent]` 等类，不动态拼接 UnoCSS 类名。
 - 当前 `presetWind4` 会把 `bg-[repeating-radial-gradient(...)]` 解析成 `background-color`，导致渐变无效；使用 `[background-image:repeating-radial-gradient(...)]`。锚点名 `--thumb` 保留原生 CSS：`[anchor-name:--thumb]` 会被改写成 `anchor-name: var(--thumb)`。
@@ -90,5 +90,5 @@ grid-cols-[repeat(auto-fill,minmax(clamp(300px,15vw,360px),1fr))]
 
 ## 两条不能动的构建约定
 
-- `vite-shared.ts` 里的 `solid({ solid: { omitQuotes: false } })`：Solid 编译器默认省略「唯一属性」的引号（`class="empty"` → `class=empty`），编译产物里该 token 就无法被 UnoCSS 提取，单 token 的 class 会**静默丢样式**
+- `packages/build-config/src/vite.ts` 里的 `solid({ solid: { omitQuotes: false } })`：Solid 编译器默认省略「唯一属性」的引号（`class="empty"` → `class=empty`），编译产物里该 token 就无法被 UnoCSS 提取，单 token 的 class 会**静默丢样式**
 - `unocss` 必须 ≥ 66.10：66.8.x 在 Vite 8 的多环境构建里找不到 `vite:css-post`（`[unocss] failed to find vite:css-post plugin`），生产 CSS 只剩 4 kB，工具类全丢

@@ -13,7 +13,7 @@
 | `@solidjs/vite-plugin` | `3.0.0-next.43` | 旧的 `vite-plugin-solid` 已更名，v3 只是再导出新包 |
 | `filesystem-routing` | `0.3.1` | 生成 `virtual:file-routes` |
 
-- JSX 类型来自 `@solidjs/web`（`tsconfig.frontend.json` 的 `jsxImportSource`），不要写 `import { h } from 'solid-js'`
+- JSX 类型来自 `@solidjs/web`（`packages/player/tsconfig.json` 的 `jsxImportSource`），不要写 `import { h } from 'solid-js'`
 - **`solid-js/web` 与 `solid-js/store` 子路径已删除**：`render` / `Portal` / `Dynamic` / `isServer` 从 `@solidjs/web` 导入；`createStore` 仍在 `solid-js` 根导出
 - 控制流重命名：`<Suspense>` → `<Loading>`、`<ErrorBoundary>` → `<Errored>`；`<For>` / `<Show>` / `<Switch>` / `<Match>` 保留
 - 已移除：`onMount`（改用 `createEffect` 或 `onSettled`）、`batch`、`produce`、`createSelector`、`createDeferred`、`observable`、`indexArray`
@@ -34,9 +34,9 @@ a() // => 1（下一个 microtask 也会自动提交）
 
 推论：
 
-- 不要「写完立刻回读」，把新值显式传参。参考 `client/composables/player.ts`：`createRandomOrder(length)` 是纯函数，`playSource(music, src, provider)`、`loadQuality(sourceInfo, quality)` 都把值显式带进来
+- 不要「写完立刻回读」，把新值显式传参。参考 `packages/player/src/composables/player.ts`：`createRandomOrder(length)` 是纯函数，`playSource(music, src, provider)`、`loadQuality(sourceInfo, quality)` 都把值显式带进来
 - **事件处理器里同样会踩**：`MusicPlayer` 的进度条曾把「本次手势的 rect」存成 signal，`pointerdown` 里写完后在同一个同步块里读 → 拿到 `null` → 表现是「拖动能调进度、单击不能」（拖动靠随后的 `pointermove`，那时写入已提交）。这种一次手势内的中间量用普通 `let`，不要用 signal
-- 测试里断言前先提交：`import { flush } from 'solid-js'`；`test/client/composables/player.test.ts` 用 `commit(() => action())` 包装
+- 测试里断言前先提交：`import { flush } from 'solid-js'`；`packages/player/test/composables/player.test.ts` 用 `commit(() => action())` 包装
 
 ## 2. ⚠️ 渲染期写信号会直接抛错（不是警告）
 
@@ -88,7 +88,7 @@ Write into reactive state inside an owned scope (component, computation) is not 
 
 `render()` 在**初始挂载**期间会强制检查 Loading 边界（`enforceLoadingBoundary(true)`），此时若有异步读取逃到根节点就会告警，并把整棵根节点的挂载推迟到异步就绪。本项目里的来源是 `filesystem-routing` 的代码分割路由（`@solidjs/router/fs` 用 `lazy()` 包装组件）。
 
-已在 `client/App.tsx` 修好：只把**内容区**包进 `<Loading fallback={<PageLoading />}>`，侧边栏 / 播放列表 / 播放器留在边界外 —— 初始加载时外壳立刻可见，只有内容区显示 loading；站内跳转到未加载的分块时保留旧内容不闪。
+已在 `packages/player/src/App.tsx` 修好：只把**内容区**包进 `<Loading fallback={<PageLoading />}>`，侧边栏 / 播放列表 / 播放器留在边界外 —— 初始加载时外壳立刻可见，只有内容区显示 loading；站内跳转到未加载的分块时保留旧内容不闪。
 
 **不要把整个 shell 或 `<Router>` 包进边界**（会整屏闪回 fallback）。
 
@@ -98,17 +98,17 @@ Write into reactive state inside an owned scope (component, computation) is not 
 - `classList` 已从 JSX 类型移除：条件类名用 `clsx`（见 [styling.md](./styling.md)）
 - `aria-*` 只接受 `'true' | 'false'` 字面量；空元素必须自闭合（`<img ... />`）
 - 数组状态保持不可变：`setList([...list(), item])`
-- 模块级的 `createMemo` / `createEffect` 要包在 `createRoot(...)` 里（`client/composables/player.ts` 就是这么做的），否则 dev 会提示 owner 缺失
+- 模块级的 `createMemo` / `createEffect` 要包在 `createRoot(...)` 里（`packages/player/src/composables/player.ts` 就是这么做的），否则 dev 会提示 owner 缺失
 
 ## 6. 测试
 
 - Vitest 不需要手工配置：`@solidjs/vite-plugin` 会自动注入（jsdom 默认环境、客户端姿态、jest-dom setupFiles）；它在 `config` hook 里读 `userConfig.test.environment` 判断姿态
 - 遇到「`createSignal` 写不进去」先怀疑暂存 / flush，而不是解析到了 SSR 构建（SSR 的 setter 会走 `warnServerWrite`，同样是静默忽略）
-- 断言前 `flush()`；`pnpm test server` 需要先跑 `pnpm dev`
+- 断言前 `flush()`；`pnpm test:backend` 需要先构建并启动 Web 生产服务
 - `pnpm test` 退出码是 0，但结尾会打印 `close timed out after 10000ms`（jsdom + vitest 4 的既有现象）
 
 ## 7. 工具链
 
 - `pnpm 12.3.4` 无法解析带 `//` 注释的 `package.json`（报 `key must be a string at line N`）→ `package.json` 必须是纯 JSON
-- 类型检查用 `tsc --build`（`vue-tsc` 已移除）
+- 类型检查用 `pnpm typecheck`（`vue-tsc` 已移除）
 - `pnpm lint` **不可用**：`typescript-eslint` 尚不支持本仓库的 TypeScript 7.x（既有问题，别拿它当验收）

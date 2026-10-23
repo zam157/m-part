@@ -1,0 +1,32 @@
+{
+  "name": "@m-part/player",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "exports": {
+    "./main": "./src/main.tsx"
+  },
+  "dependencies": {
+    "@m-part/music": "workspace:*",
+    "@m-part/listen-core": "workspace:*",
+    "@solidjs/router": "catalog:frontend",
+    "@solidjs/web": "catalog:frontend",
+    "solid-js": "catalog:frontend",
+    "cn": "catalog:frontend",
+    "valibot": "catalog:shared",
+    "wxt": "catalog:build"
+  },
+  "devDependencies": {
+    "@m-part/build-config": "workspace:*",
+    "typescript": "catalog:dev",
+    "vitest": "catalog:dev",
+    "@types/node": "catalog:dev",
+    "vite": "catalog:build",
+    "jsdom": "catalog:dev",
+    "@types/chrome": "catalog:dev"
+  }
+}
