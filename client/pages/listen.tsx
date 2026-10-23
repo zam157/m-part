@@ -34,7 +34,7 @@ export default function ListenPage() {
             <label class="block text-sm">房间服务器
               <input class="mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 outline-none focus:border-ring" type="url" value={roomServer()} onInput={e => setRoomServer(e.currentTarget.value)} placeholder="https://rooms.example.com" autocomplete="url" />
             </label>
-            <p class="text-xs text-muted-foreground">所有人填写同一个已启动的房间服务器地址。远程服务器需使用 HTTPS。</p>
+            <p class="text-xs text-muted-foreground">所有人填写同一个已启动的房间服务器地址，支持 HTTP 和 HTTPS。局域网可用 HTTP，公网建议使用 HTTPS。</p>
             <label class="block text-sm">房间内的称呼
               <input class="mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 outline-none focus:border-ring" maxlength="80" value={name()} onInput={e => setName(e.currentTarget.value)} autocomplete="nickname" />
             </label>

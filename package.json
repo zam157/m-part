@@ -8,6 +8,7 @@
     "dev:ext": "wxt",
     "dev:listen": "pnpm build:listen-client && nitro dev --dir experiments/listen-together --port 3400 --host 127.0.0.1",
     "dev:rooms": "nitro dev --dir services/rooms --port 3410 --host 127.0.0.1",
+    "dev:rooms:lan": "nitro dev --dir services/rooms --port 3410 --host 0.0.0.0",
     "build:rooms": "nitro build --dir services/rooms",
     "build:listen-client": "vite build --config experiments/listen-together/vite.config.ts",
     "build:listen": "pnpm build:listen-client && nitro build --dir experiments/listen-together",

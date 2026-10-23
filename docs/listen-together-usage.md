@@ -17,7 +17,24 @@ pnpm dev:ext     # 按日志加载 .output/chrome-mv3-dev
 4. 成员可以调音量、切本机音质、暂停自己或恢复跟随。房主专属操作会禁用；通过系统媒体按键等其他入口发出的越权操作也会被拦截。
 5. 退出后恢复原来的个人队列、进度和播放模式，默认保持暂停。房主退出会结束房间，所有成员恢复个人状态。
 
-`127.0.0.1` 只表示当前电脑。两台电脑上的 `127.0.0.1` 不是同一台服务器；异地使用需要下文的公共 HTTPS 服务地址。也可构建时通过 `VITE_ROOM_SERVER_URL=https://rooms.example.com` 设置默认地址，用户仍可在界面修改。设置只保存服务器地址，不含恢复凭据。
+`127.0.0.1` 只表示当前电脑。两台电脑上的 `127.0.0.1` 不是同一台服务器；跨设备使用需要双方都能访问的服务地址，支持 HTTP 和 HTTPS（分别连接 WS / WSS）。也可构建时通过 `VITE_ROOM_SERVER_URL=https://rooms.example.com` 设置默认地址，用户仍可在界面修改。设置只保存服务器地址，不含恢复凭据。
+
+## 局域网 HTTP 测试
+
+1. 两台电脑安装更新后的扩展（`pnpm build:ext` 产出的 `.output/chrome-mv3`），并从各自的 `chrome://extensions` 复制扩展 ID。开发构建也可使用，但修改 manifest 后需要重新加载扩展，才能申请 HTTP 主机的访问权限。
+2. 在服务器电脑启动一个房间服务，将两端的扩展 Origin 都加入白名单；相同 ID 只填一次：
+
+   ```bash
+   LISTEN_ALLOWED_ORIGINS='chrome-extension://HOST_EXTENSION_ID,chrome-extension://MEMBER_EXTENSION_ID' \
+     pnpm dev:rooms:lan
+   ```
+
+3. 假设服务器局域网 IP 为 `192.168.1.10`，另一台电脑先打开 `http://192.168.1.10:3410/health`，应返回 JSON。系统防火墙需允许该端口；两台设备应处于可互相访问的网络，访客 Wi-Fi 的设备隔离可能阻止连接。
+4. 两端在「一起听」填写 `http://192.168.1.10:3410`，允许扩展访问该主机。房主创建后，朋友用房间码加入。不要填写 `0.0.0.0`（监听地址）或另一台电脑自己的 `127.0.0.1`。
+
+HTTP 会明文传输房间状态和恢复令牌，适合可信局域网测试；公网建议 HTTPS。此步骤以扩展客户端为准，普通 HTTPS 网页连接 HTTP / WS 仍可能被浏览器的混合内容策略拦截。
+
+不需要热更新时，可先 `pnpm build:rooms`，再使用同一份 `LISTEN_ALLOWED_ORIGINS` 设置运行 `HOST=0.0.0.0 PORT=3410 node dist/rooms/server/index.mjs`。
 
 ## 当前能力与边界
 
@@ -58,13 +75,13 @@ LISTEN_ALLOWED_ORIGINS='chrome-extension://EXTENSION_ID' \
   HOST=127.0.0.1 PORT=3410 node dist/rooms/server/index.mjs
 ```
 
-把 `EXTENSION_ID` 换成使用中的扩展 ID；开发目录与生产目录安装的 ID 可能不同。多个允许来源用逗号分隔；如果还提供网页前端，应加入该前端精确的 HTTPS Origin。仅声明来源不能替代成员令牌校验，两者均由服务端检查。
+把 `EXTENSION_ID` 换成使用中的扩展 ID；开发目录与生产目录安装的 ID 可能不同。多个允许来源用逗号分隔；如果还提供网页前端，应加入该前端精确的 Origin（包含协议和非默认端口）。仅声明来源不能替代成员令牌校验，两者均由服务端检查。
 
-在 Node 前配置 HTTPS / WSS 反向代理，将 `/ws` 的 WebSocket Upgrade 转发至该端口，并设置适合长连接的超时。用户统一填写如 `https://rooms.example.com` 的根地址，不附路径、账号、查询参数或恢复令牌。`GET /health` 返回服务名、协议版本和独立取源模式，可用于健康检查。
+公网建议在 Node 前配置 HTTPS / WSS 反向代理，将 `/ws` 的 WebSocket Upgrade 转发至该端口，并设置适合长连接的超时。用户统一填写如 `https://rooms.example.com` 的根地址，也允许 HTTP；不附路径、账号、查询参数或恢复令牌。`GET /health` 返回服务名、协议版本和独立取源模式，可用于健康检查。
 
 默认本机开发只接受本机同源页面及 Chrome 扩展来源；公网环境显式设置 `LISTEN_ALLOWED_ORIGINS`。已有应用层连接、消息、队列、验证尝试和来源频率上限；反向代理还应限制连接 / 请求速率和报文大小，按服务器容量设置进程资源上限。当前为单实例内存房间，多实例部署需要房间归属和统一排序，不能直接启动多个不共享状态的实例做负载均衡。
 
-扩展已声明本机服务器权限；用户连接自行填写的 HTTPS 域名时，仅申请该域名的可选权限。实际生成的扩展 CSP 未限制 `connect-src` / `media-src`，不阻止 WSS 和现有音源。房间服务从不使用音乐平台的 DNR 请求头规则，也没有接收上游任意 URL 的媒体代理。
+扩展已声明本机服务器权限；用户连接自行填写的 HTTP / HTTPS 主机时，仅申请该协议和主机的可选权限。实际生成的扩展 CSP 未限制 `connect-src` / `media-src`，允许房间连接和现有音源。房间服务从不使用音乐平台的 DNR 请求头规则，也没有接收上游任意 URL 的媒体代理。
 
 ## 代码入口与验证
 

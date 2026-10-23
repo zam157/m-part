@@ -6,6 +6,7 @@ import { createSignal } from 'solid-js'
 import { TARGET_EXTENSION } from '#shared/utils/constants'
 import { LISTEN_PROTOCOL } from '#shared/types/listen-room'
 import { ListenClient, publicTrack } from '~/utils/listen-client'
+import { normalizeRoomServer } from '~/utils/listen-server'
 import { applyRoomQueue, audio, cancelRoomSource, currentIndex, currentTime, loadRoomSource, playQueue, resetPlayer, restorePlayerSession } from './player'
 import { isRoomPlayer, roomPlayerActive, setRoomControlsWritable, setRoomPlayerHandler } from './player-context'
 import { savePersonalPlayerSession } from './player-persistence'
@@ -23,12 +24,6 @@ let backup: PlayerCache | undefined
 let unregisterRoom: (() => boolean) | undefined
 let setupVersion = 0
 
-export function normalizeRoomServer(input: string) {
-  const url = new URL(input.trim())
-  if (url.username || url.password || url.search || url.hash || (url.pathname !== '/' && url.pathname !== '')) throw new Error('服务器地址只填写域名和端口，不包含路径或凭据')
-  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname))) throw new Error('远程房间服务器必须使用 HTTPS，本机可使用 HTTP')
-  return url.origin
-}
 function identity(value?: RoomIdentity) {
   if (value) sessionStorage.setItem(IDENTITY_KEY, JSON.stringify(value))
   else sessionStorage.removeItem(IDENTITY_KEY)

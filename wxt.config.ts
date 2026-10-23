@@ -54,7 +54,7 @@ export default defineConfig({
       'https://aqqmusic.tc.qq.com/*',
       'https://y.gtimg.cn/*',
     ],
-    optional_host_permissions: ['https://*/*'],
+    optional_host_permissions: ['http://*/*', 'https://*/*'],
     declarative_net_request: {
       rule_resources: [
         { id: 'bilibili', enabled: true, path: 'rules/bilibili.json' },
