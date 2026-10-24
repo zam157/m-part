@@ -55,6 +55,7 @@ export class ListenRooms {
       play: '开始播放', pause: '暂停了全员播放', seek: `将进度调整至 ${Math.floor(room.state.positionAtAnchor / 60)}:${String(Math.floor(room.state.positionAtAnchor % 60)).padStart(2, '0')}`,
       restart: '重新播放了当前歌曲', queue: `替换了播放队列（${room.state.queue.length} 首）`,
       select: `切换到「${title}」`, append: `添加并播放「${title}」`, 'add-next': `将「${message.track?.title ?? '歌曲'}」设为下一首`,
+      'append-many': `批量加入 ${message.tracks?.length ?? 0} 首${message.autoplay ? `并播放「${title}」` : message.placement === 'next' ? '到下一首' : '到队列'}`,
       remove: `移除了「${previousTitle ?? '歌曲'}」`, mode: `切换播放模式：${{ order: '顺序播放', loop: '列表循环', random: '随机播放', 'single-loop': '单曲循环' }[room.state.playMode]}`,
       next: `切换下一首「${title}」`, previous: `切换上一首「${title}」`, ended: room.state.wantsToPlay ? `自动播放「${title}」` : '队列播放结束',
     }
@@ -112,6 +113,24 @@ export class ListenRooms {
       state.queue = message.tracks.filter(t => { const key = `${t.provider}:${t.id}`; if (seen.has(key)) return false; seen.add(key); return true }).map(makeTrack)
       room.order = []
       this.select(room, state.queue.length ? 0 : null)
+    }
+    else if (message.action === 'append-many') {
+      if (!message.tracks?.length) return '请选择要加入的分 P'
+      const seen = new Set<string>()
+      const selected = message.tracks.filter(t => { const key = `${t.provider}:${t.id}`; if (seen.has(key)) return false; seen.add(key); return true })
+        .map(t => state.queue.find(old => old.provider === t.provider && old.id === t.id) ?? makeTrack(t))
+      const ids = new Set(selected.map(t => t.queueItemId))
+      let queue = [...state.queue]
+      if (message.placement === 'next' && current) {
+        queue = queue.filter(t => !ids.has(t.queueItemId) || t.queueItemId === current.queueItemId)
+        queue.splice(queue.findIndex(t => t.queueItemId === current.queueItemId) + 1, 0, ...selected.filter(t => t.queueItemId !== current.queueItemId))
+      }
+      else queue.push(...selected.filter(t => !queue.some(old => old.queueItemId === t.queueItemId)))
+      if (queue.length > 1_000) return '房间队列最多 1000 首'
+      state.queue = queue
+      room.order = []
+      if (message.autoplay || !current) this.select(room, queue.findIndex(t => t.queueItemId === selected[0]!.queueItemId), !!message.autoplay)
+      else this.change(room, { currentIndex: queue.findIndex(t => t.queueItemId === current.queueItemId) })
     }
     else if (message.action === 'select' || message.action === 'remove') {
       const index = state.queue.findIndex(t => t.queueItemId === message.queueItemId)
@@ -248,7 +267,7 @@ export class ListenRooms {
       else {
         const previousTitle = room.state.queue.find(t => t.queueItemId === message.queueItemId)?.title
         const previousRevision = room.state.revision
-        const musicActions = ['queue', 'select', 'append', 'add-next', 'remove', 'mode', 'next', 'previous', 'ended']
+        const musicActions = ['queue', 'select', 'append', 'add-next', 'append-many', 'remove', 'mode', 'next', 'previous', 'ended']
         if (musicActions.includes(message.action)) {
           const failure = this.musicCommand(room, message)
           if (failure) {

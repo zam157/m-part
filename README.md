@@ -8,6 +8,8 @@
 
 ## 开发与构建
 
+BiliBili 多 P 视频支持选择分 P 播放、多选加入队列与一起听同步，详见 [分 P 播放](./docs/bilibili-parts.md)。
+
 需要支持原生 TypeScript 的 Node.js 22.18+（本次使用 26.12.1 验证）和 `packageManager` 指定的 pnpm 12.14.0。
 
 ```bash
@@ -72,7 +74,7 @@ NITRO_HOST=0.0.0.0 NITRO_PORT=3410 node apps/rooms/dist/server/index.mjs
 
 将 `apps/rooms/dist/` 整个目录复制到服务器即可运行，不需要同时部署播放器。公网配置 `LISTEN_ALLOWED_ORIGINS`，局域网默认允许不同合法 Chrome 扩展 ID。HTTP / HTTPS 地址均支持；公网建议 HTTPS / WSS。详见 [一起听使用与部署](./docs/listen-together-usage.md)。
 
-客户端与服务需要同时更新至协议 5。托管由房主在界面选择，Cookie 按平台选填，无需服务器开关，远程绑定会话须 HTTPS；真实服务器会话与风控仍待使用者实测，详见使用说明。
+客户端与服务需要同时更新至协议 6。托管由房主在界面选择，Cookie 按平台选填，无需服务器开关，远程绑定会话须 HTTPS；真实服务器会话与风控仍待使用者实测，详见使用说明。
 
 实验工具可比较 seek 与倍速微调，通过 `pnpm dev:listen`、`pnpm build:listen` 运行，见 [同步实验](./docs/listen-together-lab.md)。
 

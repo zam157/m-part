@@ -40,6 +40,8 @@ export interface LyricsInfo {
 
 export interface Provider {
   name: ProviderName
+  /** Resolve a container into individually playable parts, using stable per-part IDs. */
+  getTrackParts?: (music: MusicInfo, options?: { signal?: AbortSignal }) => Promise<MusicInfo[]>
   /** 读取官方歌词；不支持歌词的音源可不实现。 */
   getLyrics?: (id: string, options?: { signal?: AbortSignal }) => Promise<LyricsInfo>
   /** 首页推荐音乐；无需登录可用，返回值可直接加入播放队列。 */

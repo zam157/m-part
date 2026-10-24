@@ -1,7 +1,7 @@
 import * as v from 'valibot'
 
 /** Only public track metadata crosses the wire; source URLs and cookies never do. */
-export const LISTEN_PROTOCOL = 5
+export const LISTEN_PROTOCOL = 6
 export const LAB_TRACK = { id: 'calibration-v1', duration: 90 } as const
 export const HEARTBEAT_MS = 5_000
 export const CONNECTION_TIMEOUT_MS = 12_000
@@ -32,8 +32,9 @@ export const clientMessage = v.variant('type', [
   v.strictObject({ type: v.literal('ping'), sentAt: v.pipe(v.number(), v.finite(), v.minValue(0)) }),
   v.strictObject({
     type: v.literal('command'), commandId: shortText, expectedRevision: revision,
-    action: v.picklist(['play', 'pause', 'seek', 'restart', 'queue', 'select', 'append', 'add-next', 'remove', 'mode', 'next', 'previous', 'ended']),
+    action: v.picklist(['play', 'pause', 'seek', 'restart', 'queue', 'select', 'append', 'add-next', 'append-many', 'remove', 'mode', 'next', 'previous', 'ended']),
     position: v.optional(position), tracks: v.optional(tracks), track: v.optional(track), queueItemId: v.optional(shortText), mode: v.optional(mode),
+    placement: v.optional(v.picklist(['end', 'next'])), autoplay: v.optional(v.boolean()),
   }),
   v.strictObject({ type: v.literal('role'), commandId: shortText, memberId: shortText, role: v.picklist(['admin', 'member']) }),
   v.strictObject({ type: v.literal('chat'), commandId: shortText, text: v.pipe(v.string(), v.maxLength(500), v.transform(s => s.replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '').trim()), v.minLength(1)) }),

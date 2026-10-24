@@ -74,7 +74,7 @@
 
 ## 一起听托管约定
 
-- 当前协议版本 5，客户端、服务和实验工具同时更新。默认独立取源，房主在界面选择服务器托管即可启用，Cookie 为各平台独立的可选登录凭据，无服务器环境变量开关，支持网易云、QQ 音乐和 BiliBili 实验；每房间可同时保留三个平台账号；未绑定 / 已失效的平台使用服务器匿名请求，受限曲目明确提示。绑定账号不切换房间模式。仅当前平台的凭据变更使媒体版本和播放 revision 失效；其他平台仅更新账号状态与 activityVersion，不能中断当前音频。
+- 当前协议版本 6，客户端、服务和实验工具同时更新。默认独立取源，房主在界面选择服务器托管即可启用，Cookie 为各平台独立的可选登录凭据，无服务器环境变量开关，支持网易云、QQ 音乐和 BiliBili 实验；每房间可同时保留三个平台账号；未绑定 / 已失效的平台使用服务器匿名请求，受限曲目明确提示。绑定账号不切换房间模式。仅当前平台的凭据变更使媒体版本和播放 revision 失效；其他平台仅更新账号状态与 activityVersion，不能中断当前音频。
 - 房主独占管理员授权、结束房间与托管凭据管理；管理员可控制播放和队列。自动切歌、媒体就绪时长与全员缓冲仍以房主为准。角色与聊天使用独立 `activityVersion`，不推进播放 `revision`；历史仅在房间内存保留最近 200 条，禁止混入凭据、上游地址或媒体票据。
 - 不自动读取 / 上传真实 Cookie。仅房主显式提交，远程须 HTTPS（回环 HTTP 调试除外）；服务器只在内存保留受控会话。公开协议、队列、个人缓存与日志不得加入 Cookie、上游 URL 或媒体票据。
 - 音频走原生 Audio + 短期成员票据，Web 形态也不能先整首转 Blob。成员断线只取消本人的流，全局源失败才暂停房间；凭据 / 来源 / 播放实例变化必须中止旧请求，禁止悄悄改用个人账号。
@@ -83,6 +83,8 @@
 - 本机已验证用户显式绑定的网易云账号取源与 Bili 匿名播放；QQ / Bili 真实登录账号及目标部署长期风控尚未验收，模拟上游与合成音频通过不能写成真实平台已验收。详见 [使用说明](./docs/listen-together-usage.md)。
 
 ## 命名约定（2026-09 改名后）
+
+- BiliBili 单 P 曲目 ID 使用 `BV号:CID`；裸 BV 兼容旧条目的 P1。不要用 P 序号做持久身份，也不要把视频总时长当作单 P 时长。选择器、批量房间操作及接口约定见 [分 P 播放](./docs/bilibili-parts.md)。
 
 - `playlist` / `getPlaylist` = **歌单**（用户收藏的集合）：`getCurrentUser` 识别账号，`getPlaylists` 列歌单，`getPlaylist` 分页列曲目；一键播放优先用 `getAllPlaylistTracks` 整单能力（网易云每批最多 1000 首），否则分页回退。页面 `/playlists` 与 `/playlist-detail/:provider/:id` → [docs/playlists.md](./docs/playlists.md)
 - **播放列表 / 播放队列 = `playQueue` 系**：`playQueue` / `setPlayQueue` / `addToPlayQueue` / `removeFromPlayQueue` / `clearPlayQueue` / `randomPlayQueue` / `showPlayQueue` / `setShowPlayQueue`，组件在 `packages/player/src/components/PlayQueue/`

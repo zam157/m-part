@@ -49,6 +49,8 @@ export interface AlbumInfo {
 }
 
 export interface SourceInfo {
+  /** Canonical metadata after resolving a legacy container entry. Never includes media URLs. */
+  track?: MusicInfo
   /** Explicit playback rights; room sync must never treat a preview as a full track. */
   availability?: 'full' | 'preview' | 'unknown'
   url?: string

@@ -71,7 +71,7 @@ async function setup(server: string, resume = false, cancelled = () => false) {
         const queue = state.queue.map((track) => {
           const signature = JSON.stringify(track)
           const previous = cache.get(track.queueItemId)
-          const entry = previous?.signature === signature ? previous : { signature, music: { ...publicTrack(track) } }
+          const entry = previous?.signature === signature ? previous : { signature, music: { ...publicTrack(track, { preserveDuration: true }) } }
           next.set(track.queueItemId, entry)
           return entry.music
         })
@@ -99,7 +99,7 @@ export async function createListenRoom(serverInput: string, name: string) {
     if (playQueue().length > 1_000) throw new Error('房间最多支持 1000 首歌曲，请先缩减当前队列')
     const prepared = await setup(server)
     prepared.client.open(server, { type: 'create', kind: 'music', protocol: LISTEN_PROTOCOL, name: name.trim().slice(0, 80) || '房主',
-      tracks: prepared.items.slice(0, 1_000).map(publicTrack), index: prepared.selected ?? 0, position: prepared.time, autoplay: prepared.items.length > 0,
+      tracks: prepared.items.slice(0, 1_000).map(track => publicTrack(track)), index: prepared.selected ?? 0, position: prepared.time, autoplay: prepared.items.length > 0,
     })
   }
   catch (error) { setRoomView(v => ({ ...v, error: error instanceof Error ? error.message : String(error) })) }

@@ -43,6 +43,15 @@ describe('随机切歌', () => {
 })
 
 describe('添加到下一首', () => {
+  it('batches selected parts without interrupting the current audio and keeps each CID separate', async () => {
+    await player.setPlayQueue(songs.slice(0, 2)); flush()
+    const parts = [123, 456].map(cid => ({ ...songs[0]!, id: `BV1234567890:${cid}`, title: `Part ${cid}` }))
+    vi.mocked(player.audio.pause).mockClear(); vi.mocked(player.audio.play).mockClear(); vi.mocked(player.audio.load).mockClear()
+    await player.addTracksToPlayQueue([...parts, parts[0]!], 'next'); flush()
+    expect(ids()).toEqual(['a', 'BV1234567890:123', 'BV1234567890:456', 'b'])
+    expect(player.currentIndex()).toBe(0)
+    expect(player.audio.pause).not.toHaveBeenCalled(); expect(player.audio.play).not.toHaveBeenCalled(); expect(player.audio.load).not.toHaveBeenCalled()
+  })
   it.each(['order', 'loop', 'single-loop'] as const)('在 %s 模式插入下一首，保持当前歌曲、进度及播放状态', async (mode) => {
     await player.setPlayQueue(songs.slice(0, 3))
     await player.setCurrentIndex(1)

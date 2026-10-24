@@ -57,7 +57,7 @@ export function mediaUrl(input: string, platform: string, domains: readonly stri
   return url.href
 }
 
-export async function limitedJson(response: Response, platform: string) {
+export async function limitedJson(response: Response, platform: string, maximumBytes = 128 * 1024) {
   const reader = response.body?.getReader()
   if (!reader) throw new HostedSourceError(`${platform}返回了无效响应`)
   const chunks: Uint8Array[] = []
@@ -67,7 +67,7 @@ export async function limitedJson(response: Response, platform: string) {
       const value = await reader.read()
       if (value.done) break
       length += value.value.byteLength
-      if (length > 128 * 1024) throw new HostedSourceError(`${platform}返回了过大的响应`)
+      if (length > maximumBytes) throw new HostedSourceError(`${platform}返回了过大的响应`)
       chunks.push(value.value)
     }
     return JSON.parse(Buffer.concat(chunks).toString())

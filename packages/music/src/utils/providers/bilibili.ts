@@ -2,6 +2,8 @@ import type { AlbumInfo, ArtistInfo, MusicInfo, MusicQuality, PlaylistInfo } fro
 import type { Provider } from '../../types/provider'
 import type { TRequestErrorTuple } from '../fetch'
 import { generateWbiSignInfo } from './bilibili-wbi'
+import { biliPages, biliPartTrack, parseBiliTrackId, selectBiliPage } from './bilibili-parts'
+import type { BiliVideo } from './bilibili-parts'
 import { TARGET_EXTENSION, USE_GM_FETCH, USE_PROXY } from '../constants'
 import { tRequest } from '../fetch'
 import { toHttpsUrl } from '../url'
@@ -331,10 +333,6 @@ export interface SearchData<T extends SearchItem = SearchItem> {
   /** 显示列标记 */
   show_column: number
 }
-export interface VideoInfoResponse {
-  cid: number
-  [key: string]: unknown
-}
 export interface PlayurlAudioItem {
   baseUrl: string
   id: number
@@ -416,14 +414,8 @@ async function getWbiKeys(SESSDATA = ''): Promise<WbiInfo> {
   const { img_url, sub_url } = res[1].data.wbi_img
 
   return {
-    img_key: img_url.slice(
-      img_url.lastIndexOf('/') + 1,
-      img_url.lastIndexOf('./index'),
-    ),
-    sub_key: sub_url.slice(
-      sub_url.lastIndexOf('/') + 1,
-      sub_url.lastIndexOf('./index'),
-    ),
+    img_key: new URL(img_url).pathname.split('/').pop()!.split('.')[0]!,
+    sub_key: new URL(sub_url).pathname.split('/').pop()!.split('.')[0]!,
   }
 }
 // #endregion
@@ -475,7 +467,7 @@ const getBuvidInfo = createAsyncCache('buvid_info', async () => {
   throw new Error('Failed to fetch buvid info')
 })
 
-const getWbiInfo = createAsyncCache('wbi_info', getWbiKeys)
+const getWbiInfo = createAsyncCache('wbi_info:v2', getWbiKeys)
 async function getCookie() {
   const buvidInfo = await getBuvidInfo()
 
@@ -614,12 +606,10 @@ async function searchBase(keyword: string, page: number, type: BiliSearchType) {
   return res[1].data
 }
 
-async function fetchCid(bvid?: string, aid?: number) {
-  if (!bvid && !aid) {
-    throw new Error('Either bvid or aid must be provided')
-  }
-  const res = await biliRequestHelper<VideoInfoResponse>(`${API_HOST}/x/web-interface/view`, {
-    searchParams: bvid ? { bvid } : { aid },
+async function fetchVideo(bvid: string, signal?: AbortSignal) {
+  const res = await biliRequestHelper<BiliVideo>(`${API_HOST}/x/web-interface/view`, {
+    searchParams: { bvid },
+    signal,
     headers: {
       cookie: '',
     },
@@ -627,7 +617,8 @@ async function fetchCid(bvid?: string, aid?: number) {
   if (!res[0]) {
     throw new Error('Failed to fetch video info')
   }
-  return res[1].data.cid
+  if (res[1].data.bvid !== bvid) throw new Error('BiliBili 视频资料不匹配')
+  return res[1].data
 }
 
 function fetchUserDetail(mid: string | number) {
@@ -830,11 +821,19 @@ const biliProvider = {
       },
     ]
   },
+  async getTrackParts(music: MusicInfo, options?: { signal?: AbortSignal }) {
+    const { bvid } = parseBiliTrackId(music.id)
+    const video = await fetchVideo(bvid, options?.signal)
+    const pages = biliPages(video)
+    return pages.map(page => biliPartTrack(music, video, page, pages.length))
+  },
   async getSourceInfo(musicInfo: MusicInfo) {
-    const cid = await fetchCid(musicInfo.id)
+    const { bvid, cid } = parseBiliTrackId(musicInfo.id)
+    const video = await fetchVideo(bvid)
+    const page = selectBiliPage(video, cid)
     const searchParams = {
-      bvid: musicInfo.id,
-      cid,
+      bvid,
+      cid: page.cid,
       fnval: 16, // 获取 DASH 格式的播放链接
       from_client: 'BROWSER',
       web_location: 1315873,
@@ -843,13 +842,15 @@ const biliProvider = {
     const res = await biliRequestHelper<PlayurlResponse>(`${API_HOST}/x/player/wbi/playurl`, {
       headers: {
         cookie: '',
-        referer: `https://www.bilibili.com/video/${musicInfo.id}`,
+        referer: `https://www.bilibili.com/video/${bvid}`,
       },
       searchParams,
     })
-    if (!res[0] || !res[1].data.dash.audio?.[0]) {
-      throw new Error('Failed to fetch playurl')
-    }
+    if (!res[0]) throw new Error(`BiliBili 音源获取失败：${res[2]}`)
+    const data = res[1].data
+    if (!data?.dash?.audio?.length) throw new Error('BiliBili 没有可播放的音轨')
+    const duration = Number(data.timelength) / 1000
+    if (!Number.isFinite(duration) || duration <= 0 || Math.abs(duration - page.duration) > Math.max(2, page.duration * 0.01) || data.is_preview || data.isPreview || (Array.isArray(data.durl) && data.durl.length)) throw new Error('BiliBili 未提供所选分 P 的完整音轨或仅允许试看')
     /**
      * 按照 id 降序排序，优先级为 30216 > 30232 > 30280 > 30250 > 30251 > 其他
      * @param id 音质 ID
@@ -902,9 +903,10 @@ const biliProvider = {
       })
 
     return {
+      track: biliPartTrack(musicInfo, video, page, biliPages(video).length),
       headers: {
         'origin': 'https://www.bilibili.com',
-        'referer': `https://www.bilibili.com/video/${musicInfo.id}`,
+        'referer': `https://www.bilibili.com/video/${bvid}`,
         'user-agent': USER_AGENT,
       },
       qualities,

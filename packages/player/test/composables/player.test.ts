@@ -42,7 +42,7 @@ describe('player.ts', () => {
   const mockSongs: Readonly<MusicInfo[]> = Object.freeze([
     {
       provider: 'bili',
-      id: 'BV16G411973A',
+      id: 'BV16G411973A:1',
       title: 'Song 1',
       artist: 'Artist A',
       duration: 1992,
@@ -51,7 +51,7 @@ describe('player.ts', () => {
     },
     {
       provider: 'bili',
-      id: 'BV16G411973B',
+      id: 'BV16G411973B:2',
       title: 'Song 1',
       artist: 'Artist A',
       duration: 1992,
@@ -60,7 +60,7 @@ describe('player.ts', () => {
     },
     {
       provider: 'bili',
-      id: 'BV16G411973C',
+      id: 'BV16G411973C:3',
       title: 'Song 1',
       artist: 'Artist A',
       duration: 1992,
@@ -69,7 +69,7 @@ describe('player.ts', () => {
     },
     {
       provider: 'bili',
-      id: 'BV16G411973D',
+      id: 'BV16G411973D:4',
       title: 'Song 1',
       artist: 'Artist A',
       duration: 1992,

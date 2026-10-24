@@ -6,7 +6,10 @@ import { errorMessage } from '../utils/index'
 import { providers } from '@m-part/music/providers'
 import { createMemo, createRoot, createSignal } from 'solid-js'
 import type { PlayerCache } from '~/utils/player-storage'
-import { dispatchRoomPlayer } from './player-context'
+import { canControlRoom, dispatchRoomPlayer, isRoomPlayer, playerContextVersion } from './player-context'
+import { chooseBiliParts } from './bili-parts'
+import type { PartAction } from './bili-parts'
+import { parseBiliTrackId } from '@m-part/music/providers/bilibili-parts'
 
 // #region types
 export type PlayMode = 'order' | 'loop' | 'random' | 'single-loop'
@@ -302,6 +305,9 @@ async function playSource(music: MusicInfo | undefined, src: string | null, prov
         if (revision !== sourceRevision)
           return
         setCurrentSourceInfo(sourceInfo)
+        if (sourceInfo.track && !isRoomPlayer()) {
+          setPlayQueueState(items => items.map(item => item.provider === music.provider && item.id === music.id ? sourceInfo.track! : item))
+        }
         // TODO: 记住上次使用的音质，优先选择上次使用的音质, 目前先默认选择第一个音质
         const defaultQuality = sourceInfo.qualities?.[0]
         // 显式传 sourceInfo，不在这里读 signal（写入尚未提交，读到的还是 null）
@@ -549,6 +555,7 @@ export async function setPlayQueue(newPlayQueue: MusicInfo[]) {
  * 添加到播放列表
  */
 export async function addToPlayQueue(item: MusicInfo) {
+  if (item.provider === 'bili' && !item.id.includes(':') && providers.bili?.getTrackParts && await selectPartsIfNeeded(item, 'play')) return
   if (dispatchRoomPlayer({ type: 'append', track: item })) return
   // 避免重复添加同一首歌
   const list = playQueue()
@@ -576,6 +583,7 @@ export async function addToPlayQueue(item: MusicInfo) {
 
 /** 将歌曲放到当前曲目之后，保留当前播放；空队列直接播放。 */
 export async function addNextToPlayQueue(item: MusicInfo) {
+  if (item.provider === 'bili' && !item.id.includes(':') && providers.bili?.getTrackParts && await selectPartsIfNeeded(item, 'next')) return
   if (dispatchRoomPlayer({ type: 'add-next', track: item })) return
   const list = playQueue()
   const current = currentIndex()
@@ -604,6 +612,45 @@ export async function addNextToPlayQueue(item: MusicInfo) {
     order.splice(order.indexOf(nextCurrent) + 1, 0, insertAt)
     setRandomPlayQueueState(order)
   }
+}
+
+/** All part entry points resolve before dispatching either local or room operations. */
+async function selectPartsIfNeeded(item: MusicInfo, action: PartAction, force = false) {
+  if (item.provider !== 'bili') return false
+  try { if (!force && parseBiliTrackId(item.id).cid !== undefined) return false } catch { return false }
+  if (!canControlRoom()) return true
+  const scope = playerContextVersion()
+  const selection = await chooseBiliParts(item, action, force)
+  if (selection && scope === playerContextVersion() && canControlRoom()) await addTracksToPlayQueue(selection.tracks, selection.action)
+  return true
+}
+export async function openBiliParts(item: MusicInfo) { await selectPartsIfNeeded(item, 'play', true) }
+
+export async function addTracksToPlayQueue(items: MusicInfo[], action: PartAction) {
+  if (!items.length || !canControlRoom()) return
+  if (dispatchRoomPlayer({ type: 'append-many', tracks: items, placement: action === 'next' ? 'next' : 'end', autoplay: action === 'play' })) return
+  const original = playQueue()
+  const current = currentIndex() === null ? undefined : original[currentIndex()!]
+  const seen = new Set<string>()
+  const selected = items.filter(item => { const key = `${item.provider}:${item.id}`; if (seen.has(key)) return false; seen.add(key); return true })
+    .map(item => original.find(old => old.provider === item.provider && old.id === item.id) ?? item)
+  let queue = [...original]
+  if (action === 'next' && current) {
+    queue = queue.filter(item => !selected.includes(item) || item === current)
+    queue.splice(queue.indexOf(current) + 1, 0, ...selected.filter(item => item !== current))
+  }
+  else queue.push(...selected.filter(item => !queue.includes(item)))
+  setPlayQueueState(queue)
+  if (playMode() === 'random') setRandomPlayQueueState(createRandomOrder(queue.length))
+  if (action === 'play') {
+    await startPlaying(selected[0], queue.indexOf(selected[0]!))
+    await setPlaying(true)
+  }
+  else if (!current) {
+    await startPlaying(queue[0], 0)
+    await setPlaying(false)
+  }
+  else setCurrentIndexState(queue.indexOf(current))
 }
 
 /**

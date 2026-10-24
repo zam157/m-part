@@ -163,6 +163,12 @@ it('only shares public metadata even if local MusicInfo contains audio and lyric
   expect(result).not.toHaveProperty('lrc')
   expect(result).not.toHaveProperty('cookie')
 })
+it('lets a legacy BV entry establish P1 duration while preserving known CID and authoritative snapshot durations', () => {
+  const legacy = { ...track, provider: 'bili' as const, id: 'BV1234567890', duration: 530118 }
+  expect(publicTrack(legacy).duration).toBe(0)
+  expect(publicTrack({ ...legacy, id: `${legacy.id}:123`, duration: 429 }).duration).toBe(429)
+  expect(publicTrack({ ...legacy, duration: 429 }, { preserveDuration: true }).duration).toBe(429)
+})
 
 
 describe('hosted client source control', () => {

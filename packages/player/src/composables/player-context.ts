@@ -8,6 +8,7 @@ export type RoomPlayerAction =
   | { type: 'next', direction: 0 | 1 }
   | { type: 'queue', tracks: MusicInfo[] }
   | { type: 'append' | 'add-next', track: MusicInfo }
+  | { type: 'append-many', tracks: MusicInfo[], placement: 'end' | 'next', autoplay: boolean }
   | { type: 'mode', mode: 'order' | 'loop' | 'random' | 'single-loop' }
   | { type: 'quality', quality: MusicQuality }
   | { type: 'retry' | 'ended' }
@@ -16,15 +17,19 @@ const [roomPlayerActive, setActive] = createSignal(false)
 export const [roomControlsWritable, setRoomControlsWritable] = createSignal(true)
 export const canControlRoom = () => !roomPlayerActive() || roomControlsWritable()
 let handler: ((action: RoomPlayerAction) => void) | undefined
+let contextVersion = 0
+export function playerContextVersion() { return contextVersion }
 export { roomPlayerActive }
 export function isRoomPlayer() { return !!handler }
 export function setRoomPlayerHandler(next?: (action: RoomPlayerAction) => void) {
   handler = next
+  contextVersion++
   setActive(!!next)
   setRoomControlsWritable(!next)
   return () => {
     if (handler !== next) return false
     handler = undefined
+    contextVersion++
     setActive(false)
     setRoomControlsWritable(true)
     return true

@@ -70,6 +70,23 @@ describe('QQ hosted adapter', () => {
 })
 
 describe('BiliBili hosted adapter', () => {
+  it.each([undefined, 456])('selects the requested page %s and checks its own duration rather than the video total', async (cid) => {
+    const detail = { ...view, duration: 300, pages: [{ cid: 123, page: 1, part: 'First', duration: 120 }, { cid: 456, page: 2, part: 'Second', duration: 180 }], padding: 'x'.repeat(130 * 1024) }
+    const data = { ...dash, timelength: cid === 456 ? 180000 : 120000 }
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(bili(detail)).mockResolvedValueOnce(bili(nav)).mockResolvedValueOnce(bili(data))
+    await expect(createBiliHostedProvider(fetcher).resolve('', cid ? `${view.bvid}:${cid}` : view.bvid, signal())).resolves.toEqual({ url: audio.baseUrl })
+    expect(new URL(String(fetcher.mock.calls[0]?.[0])).searchParams.get('bvid')).toBe(view.bvid)
+    expect(new URL(String(fetcher.mock.calls[2]?.[0])).searchParams.get('cid')).toBe(String(cid ?? 123))
+  })
+  it('rejects a foreign or removed CID before requesting any media', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(bili({ ...view, pages: [{ cid: 123, page: 1, part: 'First', duration: 120 }] }))
+    await expect(createBiliHostedProvider(fetcher).resolve('', `${view.bvid}:999`, signal())).rejects.toThrow('不属于')
+    expect(fetcher).toHaveBeenCalledOnce()
+  })
+  it('keeps video detail responses bounded even for multipart metadata', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(bili({ ...view, padding: 'x'.repeat(1024 * 1024) }))
+    await expect(createBiliHostedProvider(fetcher).resolve('', view.bvid, signal())).rejects.toThrow('过大')
+  })
   it('uses WBI keys from an anonymous nav response without requiring login', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(bili(view)).mockResolvedValueOnce(Response.json({ code: -101, data: { ...nav, isLogin: false, mid: 0 } })).mockResolvedValueOnce(bili(dash))
     await expect(createBiliHostedProvider(fetcher).resolve('', view.bvid, signal())).resolves.toEqual({ url: audio.baseUrl })

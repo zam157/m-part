@@ -4,6 +4,7 @@ import * as v from 'valibot'
 import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, HEARTBEAT_MS, LISTEN_PROTOCOL, clientMessage, roomSnapshot, roomTicket, serverMessage } from '@m-part/listen-core/protocol'
 import { ListenClock, roomPosition, shouldSeek } from '@m-part/listen-core/clock'
 import { prepareMedia, startMedia } from '@m-part/listen-core/browser/media'
+import { parseBiliTrackId } from '@m-part/music/providers/bilibili-parts'
 import { sendRoomControl } from './room-http'
 
 export interface RoomIdentity { server: string, token: string, roomId: string, away: boolean, personalSource?: boolean }
@@ -186,7 +187,7 @@ export class ListenClient {
   }
 
   control(action: RoomPlayerAction) {
-    if (action.type === 'queue' && this.canControl && action.tracks.length > 1_000) {
+    if ((action.type === 'queue' || action.type === 'append-many') && this.canControl && action.tracks.length > 1_000) {
       this.error = '房间队列最多支持 1000 首，请缩减后重试'; this.changed(); return
     }
     if (action.type === 'play') {
@@ -206,7 +207,8 @@ export class ListenClient {
       return
     }
     if (action.type === 'ended') { if (this.isHost) this.enqueue({ action: 'ended' }); return }
-    if (action.type === 'queue') this.enqueue({ action: 'queue', tracks: action.tracks.map(publicTrack) })
+    if (action.type === 'queue') this.enqueue({ action: 'queue', tracks: action.tracks.map(track => publicTrack(track)) })
+    else if (action.type === 'append-many') this.enqueue({ action: 'append-many', tracks: action.tracks.map(track => publicTrack(track)), placement: action.placement, autoplay: action.autoplay })
     else if (action.type === 'append' || action.type === 'add-next') this.enqueue({ action: action.type, track: publicTrack(action.track) })
     else if (action.type === 'select' || action.type === 'remove') this.enqueue({ action: action.type, queueItemId: this.snapshot?.queue[action.index]?.queueItemId })
     else if (action.type === 'mode') this.enqueue({ action: 'mode', mode: action.mode })
@@ -463,9 +465,11 @@ export class ListenClient {
   }
 }
 
-export function publicTrack(track: { provider: SharedRoomTrack['provider'], id: string, title: string, duration: number, coverUrl: string, artist?: string, album?: string }) {
+export function publicTrack(track: { provider: SharedRoomTrack['provider'], id: string, title: string, duration: number, coverUrl: string, artist?: string, album?: string }, options?: { preserveDuration?: boolean }) {
+  let legacyBili = false
+  if (track.provider === 'bili') { try { legacyBili = parseBiliTrackId(track.id).cid === undefined } catch {} }
   return {
-    provider: track.provider, id: String(track.id), title: track.title.slice(0, 300), duration: Number.isFinite(track.duration) ? Math.max(0, Math.min(86_400, track.duration)) : 0,
+    provider: track.provider, id: String(track.id), title: track.title.slice(0, 300), duration: (!legacyBili || options?.preserveDuration) && Number.isFinite(track.duration) ? Math.max(0, Math.min(86_400, track.duration)) : 0,
     coverUrl: /^https:\/\//i.test(track.coverUrl) ? track.coverUrl : '', artist: track.artist?.slice(0, 300), album: track.album?.slice(0, 300),
   }
 }

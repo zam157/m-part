@@ -5,6 +5,7 @@ import PlayQueue from './components/PlayQueue/PlayQueue'
 import Sidebar from './components/Sidebar/Sidebar'
 import ContextMenuHost from './components/ContextMenu/ContextMenuHost'
 import ListenRoomBar from './components/ListenRoomBar/ListenRoomBar'
+import BiliPartPicker from './components/BiliPartPicker/BiliPartPicker'
 
 export interface AppProps {
   children?: JSX.Element
@@ -49,6 +50,7 @@ export default function App(props: AppProps) {
       <ListenRoomBar />
       <MusicPlayer />
       <ContextMenuHost />
+      <BiliPartPicker />
     </div>
   )
 }
