@@ -88,14 +88,15 @@ it('preserves new typing while a previous message awaits acknowledgement and blo
   expect(send).toHaveBeenCalledTimes(1)
 })
 
-it('does not force scrolling while reading older records and offers a return to latest button', () => {
+it('preserves older records without adding controls and resumes following near the bottom', () => {
   const list = container.querySelector<HTMLDivElement>('[aria-label="房间记录"]')!
+  const buttonCount = container.querySelectorAll('button').length
   Object.defineProperties(list, { scrollHeight: { value: 1_000 }, clientHeight: { value: 200 } })
   list.scrollTop = 100; list.dispatchEvent(new Event('scroll')); flush()
   view([...history, { id: 3, at: 1_800_000_002_000, kind: 'chat', text: '新消息' }])
   expect(list.scrollTop).toBe(100)
-  const button = Array.from(container.querySelectorAll('button')).find(button => button.textContent === '有新记录，查看最新')!
-  expect(button).toBeTruthy(); button.click(); flush()
+  expect(container.querySelectorAll('button')).toHaveLength(buttonCount)
+  list.scrollTop = 800; list.dispatchEvent(new Event('scroll')); flush()
+  view([...history, { id: 4, at: 1_800_000_003_000, kind: 'chat', text: '继续跟随' }])
   expect(list.scrollTop).toBe(1_000)
-  expect(container.textContent).not.toContain('有新记录，查看最新')
 })

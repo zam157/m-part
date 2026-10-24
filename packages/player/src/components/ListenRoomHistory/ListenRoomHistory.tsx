@@ -5,7 +5,6 @@ import { roomView, sendRoomChat } from '~/composables/listen-room'
 export default function ListenRoomHistory() {
   const [filter, setFilter] = createSignal<'all' | 'chat' | 'operation'>('all')
   const [draft, setDraft] = createSignal('')
-  const [unread, setUnread] = createSignal(false)
   const [sending, setSending] = createSignal(false)
   let list: HTMLDivElement | undefined
   let following = true
@@ -15,11 +14,10 @@ export default function ListenRoomHistory() {
   const time = (at: number) => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   function latest() {
     if (list) list.scrollTop = list.scrollHeight
-    following = true; setUnread(false)
+    following = true
   }
   createEffect(() => entries().at(-1)?.id, () => {
     if (following) latest()
-    else setUnread(true)
   })
   async function send() {
     const text = draft()
@@ -44,7 +42,7 @@ export default function ListenRoomHistory() {
           <For each={filters}>{item => <button class={clsx('ghost-btn h-7 px-2 text-xs', filter() === item.id && 'bg-muted')} aria-pressed={filter() === item.id ? 'true' : 'false'} onClick={() => { following = true; setFilter(item.id); latest() }}>{item.label}</button>}</For>
         </div>
       </div>
-      <div ref={list} class="h-72 overflow-y-auto overscroll-contain rounded-xl border border-border p-3 space-y-3" aria-label="房间记录" onScroll={() => { if (list) following = list.scrollHeight - list.scrollTop - list.clientHeight < 48; if (following) setUnread(false) }}>
+      <div ref={list} class="h-72 overflow-y-auto rounded-xl border border-border p-3 space-y-3" aria-label="房间记录" onScroll={() => { if (list) following = list.scrollHeight - list.scrollTop - list.clientHeight < 48 }}>
         <Show when={entries().length} fallback={<p class="text-sm text-muted-foreground">暂无记录</p>}>
           <For each={entries()}>{entry => (
             <article class={clsx('text-sm break-words whitespace-pre-wrap [overflow-wrap:anywhere]', entry.kind === 'operation' && 'text-muted-foreground text-xs')}>
@@ -54,7 +52,6 @@ export default function ListenRoomHistory() {
           )}</For>
         </Show>
       </div>
-      <Show when={unread()}><button class="ghost-btn h-7 text-xs px-2" onClick={latest}>有新记录，查看最新</button></Show>
       <form class="flex gap-2 items-end" onSubmit={event => { event.preventDefault(); void send() }}>
         <label class="flex flex-col gap-1 flex-1 min-w-0 text-xs text-muted-foreground">
           <span>发送消息（{draft().length}/500）</span>
