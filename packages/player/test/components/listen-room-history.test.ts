@@ -53,6 +53,30 @@ it('clears only acknowledged drafts and retains text on failure without resendin
   expect(input.value).toBe(''); expect(send).toHaveBeenCalledTimes(2)
 })
 
+it('sends on Enter without adding a newline and ignores a held Enter key', async () => {
+  const input = draft('键盘发送')
+  const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+  input.dispatchEvent(enter); flush()
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', repeat: true, bubbles: true, cancelable: true })); flush()
+  expect(enter.defaultPrevented).toBe(true)
+  expect(send).toHaveBeenCalledExactlyOnceWith('键盘发送')
+  await settled()
+  expect(input.value).toBe('')
+})
+
+it.each([
+  { name: 'Shift+Enter newline', shiftKey: true },
+  { name: 'IME composition', isComposing: true },
+  { name: 'IME confirmation fallback', keyCode: 229 },
+])('keeps the native behavior for $name without sending', ({ name: _, ...options }) => {
+  const input = draft('尚未发送')
+  const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...options })
+  input.dispatchEvent(enter); flush()
+  expect(enter.defaultPrevented).toBe(false)
+  expect(send).not.toHaveBeenCalled()
+  expect(input.value).toBe('尚未发送')
+})
+
 it('preserves new typing while a previous message awaits acknowledgement and blocks double submit', async () => {
   let ack!: (ok: boolean) => void
   send.mockImplementationOnce(() => new Promise<boolean>(resolve => { ack = resolve }))

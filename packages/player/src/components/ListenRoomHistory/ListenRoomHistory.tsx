@@ -30,6 +30,12 @@ export default function ListenRoomHistory() {
     }
     finally { setSending(false) }
   }
+  function handleKeyDown(event: KeyboardEvent) {
+    // Some IMEs report Enter with isComposing=false but keyCode=229.
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return
+    event.preventDefault()
+    if (!event.repeat) void send()
+  }
   return (
     <section aria-label="房间聊天与操作历史" class="space-y-3 min-w-0">
       <div class="flex items-center gap-3 flex-wrap justify-between">
@@ -50,8 +56,9 @@ export default function ListenRoomHistory() {
       </div>
       <Show when={unread()}><button class="ghost-btn h-7 text-xs px-2" onClick={latest}>有新记录，查看最新</button></Show>
       <form class="flex gap-2 items-end" onSubmit={event => { event.preventDefault(); void send() }}>
-        <label class="flex-1 min-w-0 text-xs text-muted-foreground">发送消息（{draft().length}/500）
-          <textarea class="input mt-1 w-full resize-none h-20 text-sm" aria-label="聊天消息" value={draft()} onInput={event => setDraft(event.currentTarget.value)} maxlength="500" placeholder="和房间里的朋友聊聊…" />
+        <label class="flex flex-col gap-1 flex-1 min-w-0 text-xs text-muted-foreground">
+          <span>发送消息（{draft().length}/500）</span>
+          <textarea class="input block w-full resize-none h-20 text-sm" aria-label="聊天消息" title="Enter 发送，Shift + Enter 换行" value={draft()} onInput={event => setDraft(event.currentTarget.value)} onKeyDown={handleKeyDown} maxlength="500" placeholder="和房间里的朋友聊聊…" />
         </label>
         <button class="btn h-9 px-3 shrink-0" type="submit" disabled={disabled() || !draft().trim()}>{sending() ? '发送中…' : '发送'}</button>
       </form>
