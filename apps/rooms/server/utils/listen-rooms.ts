@@ -1,6 +1,6 @@
 import type { ClientMessage, RoomHistoryEntry, MemberStatus, RoomSnapshot, RoomSource, ServerMessage } from '@m-part/listen-core/protocol'
 import { randomBytes, randomInt, randomUUID } from 'node:crypto'
-import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, LAB_TRACK, LISTEN_PROTOCOL, ROOM_HISTORY_LIMIT, START_LEAD_MS } from '@m-part/listen-core/protocol'
+import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, LAB_TRACK, LISTEN_PROTOCOL, ROOM_HISTORY_LIMIT, START_LEAD_MS, currentRoomSource } from '@m-part/listen-core/protocol'
 import { roomPosition } from '@m-part/listen-core/clock'
 
 export interface RoomConnection {
@@ -96,7 +96,7 @@ export class ListenRooms {
     this.change(room, {
       currentIndex: track ? index : null, track: { id: track?.queueItemId ?? '', duration: track?.duration ?? 0 },
       positionAtAnchor: 0, anchorServerTime: this.now(), playbackId: randomUUID(),
-      ...(room.state.source?.credential === 'ready' ? { source: { ...room.state.source, error: undefined } } : {}),
+      ...(room.state.source ? { source: currentRoomSource({ ...room.state.source, error: undefined }, track?.provider) } : {}),
       wantsToPlay: !!track && wantsToPlay, status: track && wantsToPlay ? 'preparing' : 'paused', pauseReason: track && wantsToPlay ? null : 'user',
     })
   }
@@ -311,19 +311,22 @@ export class ListenRooms {
     return { memberId: binding.member.id, generation: binding.member.generation, isHost: binding.member.id === binding.room.state.hostId, snapshot: this.snapshot(binding.room) }
   }
 
-  updateSource(token: string, roomId: string, expectedRevision: number, patch: Partial<RoomSource>, commit: () => void = () => {}) {
+  updateSource(token: string, roomId: string, expectedRevision: number, patch: Partial<RoomSource>, commit: () => void = () => {}, options: { affectsPlayback?: boolean, operation?: string } = {}) {
     const auth = this.authorize(token, roomId)
     if (!auth.isHost) throw new Error('仅房主可管理房间音源')
     if (auth.snapshot.kind !== 'music') throw new Error('实验房间不支持托管音源')
     if (auth.snapshot.revision !== expectedRevision) throw new Error('房间状态已更新，请重新操作')
     const { room } = this.tokens.get(token)!
-    const source = { mode: 'independent' as const, version: 0, credential: 'none' as const, ...room.state.source, ...patch }
+    const source = currentRoomSource({ mode: 'independent', version: 0, credential: 'none', ...room.state.source, ...patch }, room.state.currentIndex === null ? undefined : room.state.queue[room.state.currentIndex]?.provider)
     commit()
-    source.version++
-    const failed = source.mode === 'hosted' && !!source.error
-    const wanted = room.state.wantsToPlay && !failed
-    this.change(room, { source, wantsToPlay: wanted, positionAtAnchor: roomPosition(room.state, this.now()), anchorServerTime: this.now(), status: wanted ? 'preparing' : 'paused', pauseReason: failed ? 'failed' : wanted ? null : 'user' })
-    this.record(room, 'operation', patch.credential === 'ready' ? '绑定并启用了房间托管账号' : patch.credential === 'none' ? '撤销了房间托管账号' : patch.mode === 'independent' ? '切换为各自取源' : '重新准备房间托管音源', this.tokens.get(token)!.member)
+    if (options.affectsPlayback !== false) {
+      source.version++
+      const failed = source.mode === 'hosted' && !!source.error
+      const wanted = room.state.wantsToPlay && !failed
+      this.change(room, { source, wantsToPlay: wanted, positionAtAnchor: roomPosition(room.state, this.now()), anchorServerTime: this.now(), status: wanted ? 'preparing' : 'paused', pauseReason: failed ? 'failed' : wanted ? null : 'user' })
+    }
+    else room.state.source = source
+    this.record(room, 'operation', options.operation ?? (patch.mode === 'independent' ? '切换为各自取源' : '重新准备房间托管音源'), this.tokens.get(token)!.member)
     this.broadcast(room)
     return source
   }
@@ -333,7 +336,10 @@ export class ListenRooms {
     if (!room || room.state.source?.version !== version || room.state.source.mode !== 'hosted' || room.state.source.error) return
     this.freeze(room, 'failed', false)
     this.record(room, 'operation', '房间托管音源不可用，已暂停播放')
-    room.state.source = { ...room.state.source, error: message, ...(invalidCredential ? { credential: 'invalid' as const } : {}) }
+    const source = room.state.source
+    const provider = source.provider
+    const account = provider ? source.accounts?.[provider] : undefined
+    room.state.source = currentRoomSource({ ...source, error: message, ...(invalidCredential && provider && account ? { accounts: { ...source.accounts, [provider]: { ...account, credential: 'invalid' } } } : {}) }, provider)
     this.broadcast(room)
   }
 
@@ -365,7 +371,7 @@ export class ListenRooms {
           state: {
             protocol: LISTEN_PROTOCOL, roomId: randomUUID(), code, revision: 0, playbackId: randomUUID(), track: { ...LAB_TRACK },
             kind: message.kind ?? 'lab', queue: [], currentIndex: null, playMode: 'order',
-            source: { mode: 'independent', version: 0, credential: 'none' },
+            source: { mode: 'independent', version: 0, credential: 'none', accounts: {} },
             status: 'paused', wantsToPlay: false, pauseReason: 'user', positionAtAnchor: 0, anchorServerTime: this.now(), rate: 1, hostId: '', members: [], activityVersion: 0, history: [],
           }, members: [], retired: [], createdAt: this.now(), order: [],
         }

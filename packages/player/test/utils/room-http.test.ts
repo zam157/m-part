@@ -8,7 +8,7 @@ describe('room HTTP control transport', () => {
   it('uses bearer authentication with credentials omitted, never forwarding the browser session', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ ok: true }))
     vi.stubGlobal('fetch', fetcher)
-    await sendRoomControl('https://rooms.example', 'member-token', { action: 'revoke', roomId: 'room', expectedRevision: 1 })
+    await sendRoomControl('https://rooms.example', 'member-token', { action: 'revoke', provider: 'netease', roomId: 'room', expectedRevision: 1 })
     const options = fetcher.mock.calls[0]?.[1]
     expect(options).toMatchObject({ credentials: 'omit', method: 'POST' })
     expect(new Headers(options?.headers).get('authorization')).toBe('Bearer member-token')
@@ -17,7 +17,7 @@ describe('room HTTP control transport', () => {
   })
   it('retains controlled API error messages even for non-2xx status codes', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ error: '仅房主可管理房间音源' }, { status: 403 })))
-    await expect(sendRoomControl('https://rooms.example', 'token', { action: 'revoke', roomId: 'room', expectedRevision: 1 })).rejects.toThrow('仅房主')
+    await expect(sendRoomControl('https://rooms.example', 'token', { action: 'revoke', provider: 'netease', roomId: 'room', expectedRevision: 1 })).rejects.toThrow('仅房主')
   })
   it('blocks credential submission over LAN HTTP before any network request', async () => {
     const fetcher = vi.fn()

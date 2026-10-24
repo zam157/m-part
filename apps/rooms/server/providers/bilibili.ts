@@ -14,10 +14,11 @@ export function createBiliHostedProvider(fetcher: typeof fetch = fetch): HostedP
   async function request(path: string, cookie: string, params: Record<string, string | number>, signal: AbortSignal) {
     const url = new URL(`https://api.bilibili.com${path}`)
     for (const [key, value] of Object.entries(params)) url.searchParams.set(key, String(value))
-    const response = await fetcher(url.href, { redirect: 'manual', credentials: 'omit', signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]), headers: { ...headers, cookie } })
+    const response = await fetcher(url.href, { redirect: 'manual', credentials: 'omit', signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]), headers: { ...headers, ...(cookie ? { cookie } : {}) } })
     if (!response.ok) { await response.body?.cancel(); throw new HostedSourceError('BiliBili 托管请求失败，请重新登录或稍后重试', response.status === 401) }
     const result = await limitedJson(response, 'BiliBili')
-    if (result?.code !== 0 || !result.data) throw new HostedSourceError('BiliBili 会话不可用、视频无权限或请求受限，请重新绑定或稍后重试', [-101, -111].includes(result?.code))
+    const anonymousNav = !cookie && path === '/x/web-interface/nav' && result?.code === -101 && result.data?.isLogin === false
+    if ((result?.code !== 0 && !anonymousNav) || !result.data) throw new HostedSourceError('BiliBili 会话不可用、视频无权限或请求受限，请重新绑定或稍后重试', [-101, -111].includes(result?.code))
     return result.data
   }
   return {
@@ -35,7 +36,7 @@ export function createBiliHostedProvider(fetcher: typeof fetch = fetch): HostedP
       const view = await request('/x/web-interface/view', cookie, { bvid: id }, signal)
       if (view.bvid !== id || !Number.isSafeInteger(view.cid) || view.cid <= 0) throw new HostedSourceError('BiliBili 未返回目标视频信息')
       const nav = await request('/x/web-interface/nav', cookie, {}, signal)
-      if (!nav.isLogin) throw new HostedSourceError('BiliBili 登录凭据已失效，请重新登录', true)
+      if (cookie && !nav.isLogin) throw new HostedSourceError('BiliBili 登录凭据已失效，请重新登录', true)
       const keys = [nav.wbi_img?.img_url, nav.wbi_img?.sub_url].map(value => typeof value === 'string' ? /\/([a-f\d]{32})\.[a-z]+(?:\?.*)?$/i.exec(value)?.[1] : undefined)
       if (!keys[0] || !keys[1]) throw new HostedSourceError('BiliBili 签名信息不可用，请稍后重试')
       const params = { bvid: id, cid: view.cid, fnval: 16, from_client: 'BROWSER', web_location: 1315873, fnver: 0 }
@@ -44,7 +45,14 @@ export function createBiliHostedProvider(fetcher: typeof fetch = fetch): HostedP
       // AAC stereo only; do not select video, Dolby or Hi-Res tracks the browser may not decode.
       const audio = data.dash.audio.filter((item: { id?: number, codecs?: string }) => [30280, 30232, 30216].includes(item.id ?? 0) && typeof item.codecs === 'string' && /^mp4a\./i.test(item.codecs)).sort((a: { bandwidth: number }, b: { bandwidth: number }) => b.bandwidth - a.bandwidth)[0]
       if (!audio) throw new HostedSourceError('BiliBili 没有可播放的完整 AAC 音轨')
-      const url = validateBiliMediaUrl(audio.baseUrl || audio.base_url)
+      // Primary URLs may use a peer CDN or custom port. Prefer a validated official backup.
+      const candidates = [audio.baseUrl || audio.base_url, ...(audio.backupUrl || audio.backup_url || [])]
+      let url: string | undefined
+      for (const candidate of candidates) {
+        if (typeof candidate !== 'string') continue
+        try { url = validateBiliMediaUrl(candidate); break } catch {}
+      }
+      if (!url) throw new HostedSourceError('BiliBili 没有允许访问的音频 CDN，请稍后重试')
       // WBI signed URLs have no verified byte hash: expiry requires an explicit new source version.
       return { url }
     },

@@ -222,7 +222,7 @@ export class ListenClient {
     const base = { roomId: this.identity.roomId, expectedRevision: this.snapshot.revision }
     const request: RoomControl = action === 'credential' ? { ...base, action, provider: provider ?? 'netease', cookie: value ?? '' }
       : action === 'source' ? { ...base, action, mode: value === 'hosted' ? 'hosted' : 'independent' }
-        : { ...base, action }
+        : action === 'revoke' ? { ...base, action, provider: provider ?? this.snapshot.source?.provider ?? 'netease' } : { ...base, action }
     try {
       const response = await sendRoomControl(this.identity.server, this.identity.token, request, controller.signal)
       if (!response || typeof response !== 'object' || !('ok' in response) || response.ok !== true) throw new Error('房间服务器响应不兼容')

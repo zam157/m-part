@@ -26,7 +26,7 @@ export function createNeteaseHostedProvider(fetcher: typeof fetch = fetch): Host
     const response = await fetcher(`https://music.163.com/weapi/${path}`, {
       method: 'POST', redirect: 'manual', credentials: 'omit',
       signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
-      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie, referer: 'https://music.163.com/' },
+      headers: { 'content-type': 'application/x-www-form-urlencoded', ...(cookie ? { cookie } : {}), referer: 'https://music.163.com/' },
       body: new URLSearchParams(encryptWeapi({ ...data, csrf_token: csrf })),
     })
     if (!response.ok) { await response.body?.cancel(); throw new HostedSourceError('网易云托管请求失败，可能需要重新登录或稍后重试', [401, 403].includes(response.status)) }
@@ -36,6 +36,7 @@ export function createNeteaseHostedProvider(fetcher: typeof fetch = fetch): Host
   }
   return {
     parseCookie: parseNeteaseCookie, validateMediaUrl: validateNeteaseMediaUrl,
+    mediaHeaders: { referer: 'https://music.163.com/', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36' },
     async validate(cookie, signal) {
       const result = await request('w/nuser/account/get', cookie, {}, signal)
       const id = result.profile?.userId
@@ -46,7 +47,7 @@ export function createNeteaseHostedProvider(fetcher: typeof fetch = fetch): Host
       if (!/^\d{1,20}$/.test(id)) throw new HostedSourceError('网易云歌曲 ID 无效')
       const result = await request('song/enhance/player/url', cookie, { ids: JSON.stringify([id]), br: 320000 }, signal)
       const item = Array.isArray(result.data) ? result.data.find((entry: { id?: unknown }) => String(entry.id) === id) : undefined
-      if (!item || item.code !== 200 || !item.url) throw new HostedSourceError('房间账号没有完整音源，可能需要会员、登录或版权权限')
+      if (!item || item.code !== 200 || !item.url) throw new HostedSourceError(cookie ? '房间账号没有完整音源，可能需要会员或版权权限' : '网易云匿名音源不可用，请绑定账号或确认版权权限')
       if (item.freeTrialInfo) throw new HostedSourceError('房间账号只能试听，无法使用完整歌曲时间轴一起听')
       return {
         url: validateNeteaseMediaUrl(item.url),

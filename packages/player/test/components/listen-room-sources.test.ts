@@ -3,6 +3,7 @@ import { flush } from 'solid-js'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import ListenRoomSources from '~/components/ListenRoomSources/ListenRoomSources'
 import { roomView, setRoomView, setRoomServer } from '~/composables/listen-room'
+import type { RoomSnapshot } from '@m-part/listen-core/protocol'
 
 const { manage, personal } = vi.hoisted(() => ({ manage: vi.fn(), personal: vi.fn() }))
 vi.mock('~/composables/listen-room', async (original) => ({ ...await original<object>(), manageRoomSource: manage, usePersonalRoomSource: personal }))
@@ -61,4 +62,18 @@ it('selects each platform explicitly and clears credentials when switching platf
   input.dispatchEvent(new Event('input', { bubbles: true })); flush()
   container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); flush()
   expect(manage).toHaveBeenLastCalledWith('credential', 'SESSDATA=private', 'bili')
+})
+
+it('enables hosted mode without cookies and manages each account separately', () => {
+  const enable = Array.from(container.querySelectorAll('button')).find(b => b.textContent === '全员使用服务器音源')!
+  expect(enable.disabled).toBe(false); enable.click(); flush()
+  expect(manage).toHaveBeenCalledWith('source', 'hosted')
+  setRoomView(v => ({ ...v, snapshot: { source: { mode: 'hosted', version: 1, provider: 'qq', credential: 'none', accounts: { netease: { credential: 'ready', version: 1, label: '网易云账号 · 尾号 1234' }, bili: { credential: 'ready', version: 1, label: 'BiliBili 账号 · 尾号 5678' } } } } as RoomSnapshot })); flush()
+  expect(container.textContent).toContain('QQ 音乐匿名托管')
+  expect(container.querySelector('[data-platform=netease]')!.textContent).toContain('1234')
+  expect(container.querySelector('[data-platform=bili]')!.textContent).toContain('5678')
+  container.querySelector<HTMLButtonElement>('[data-platform=netease] button')!.click(); flush()
+  expect(manage).toHaveBeenLastCalledWith('revoke', undefined, 'netease')
+  setRoomView(v => ({ ...v, isHost: false })); flush()
+  expect(container.querySelectorAll('[aria-label="各平台房间账号"] button')).toHaveLength(0)
 })

@@ -256,6 +256,19 @@ it.each(['netease', 'qq', 'bili'] as const)('sends explicit %s credential select
 
 describe('administrator controls and room activity', () => {
   const members: RoomSnapshot['members'] = [{ id: 'host', name: 'Host', role: 'host', generation: 1, online: true, status: 'ready' }, { id: 'member', name: 'Admin', role: 'admin', generation: 1, online: true, status: 'ready' }]
+  it('another platform account update does not reload or pause current anonymous audio', async () => {
+    await connect()
+    const source = { mode: 'hosted' as const, version: 1, provider: 'qq' as const, credential: 'none' as const, accounts: {} }
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ revision: 1, status: 'playing', wantsToPlay: true, source }) })
+    await vi.advanceTimersByTimeAsync(100)
+    vi.mocked(playback.load).mockClear(); vi.mocked(playback.audio.pause).mockClear()
+    await socket.receive({ type: 'snapshot', snapshot: snapshot({ revision: 1, status: 'playing', wantsToPlay: true, activityVersion: 1, source: { ...source, accounts: { netease: { credential: 'ready', version: 1, label: 'NetEase account' } } } }) })
+    expect(playback.load).not.toHaveBeenCalled()
+    expect(playback.audio.pause).not.toHaveBeenCalled()
+    expect(playback.audio.paused).toBe(false)
+    expect(client.snapshot?.source?.provider).toBe('qq')
+    expect(client.snapshot?.source?.accounts?.netease?.credential).toBe('ready')
+  })
   it('enables administrator controls immediately and clears queued controls on revocation', async () => {
     await connect()
     await socket.receive({ type: 'snapshot', snapshot: snapshot({ members, activityVersion: 1 }) })

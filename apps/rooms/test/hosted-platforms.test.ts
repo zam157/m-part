@@ -21,6 +21,16 @@ function biliResolve(data: unknown = dash, detail: unknown = view) {
 }
 
 describe('QQ hosted adapter', () => {
+  it('resolves anonymous audio with zero UIN and no credentials or login validation', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(rpc({ track_info: { mid, file: { media_mid: media } } }))
+      .mockResolvedValueOnce(rpc({ sip: ['https://isure.stream.qqmusic.qq.com/'], midurlinfo: [{ songmid: mid, filename, purl: `${filename}?vkey=public` }] }))
+    await expect(createQQHostedProvider(fetcher).resolve('', mid, signal())).resolves.toMatchObject({ url: `https://isure.stream.qqmusic.qq.com/${filename}?vkey=public` })
+    for (const [, init] of fetcher.mock.calls) {
+      expect(new Headers(init?.headers).has('cookie')).toBe(false)
+      expect(JSON.parse(String(init?.body)).comm).toMatchObject({ uin: '0', authst: '' })
+    }
+    expect(JSON.parse(String(fetcher.mock.calls[1]?.[1]?.body)).req_0.param).toMatchObject({ uin: '0', loginflag: 1 })
+  })
   it('strips unrelated cookies, validates the login-only endpoint and masks identity', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(rpc({ info: { nick: 'Private nickname', uin: 12345678 } }))
     const provider = createQQHostedProvider(fetcher)
@@ -60,6 +70,11 @@ describe('QQ hosted adapter', () => {
 })
 
 describe('BiliBili hosted adapter', () => {
+  it('uses WBI keys from an anonymous nav response without requiring login', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(bili(view)).mockResolvedValueOnce(Response.json({ code: -101, data: { ...nav, isLogin: false, mid: 0 } })).mockResolvedValueOnce(bili(dash))
+    await expect(createBiliHostedProvider(fetcher).resolve('', view.bvid, signal())).resolves.toEqual({ url: audio.baseUrl })
+    for (const [, init] of fetcher.mock.calls) expect(new Headers(init?.headers).has('cookie')).toBe(false)
+  })
   it('validates login status and strips unrelated cookies on the fixed API host', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(bili(nav))
     await expect(createBiliHostedProvider(fetcher).validate(parseBiliCookie(biliCookie), signal())).resolves.toBe('BiliBili 账号 · 尾号 5678')
@@ -81,6 +96,13 @@ describe('BiliBili hosted adapter', () => {
     expect(url.searchParams.get('w_rid')).toMatch(/^[a-f\d]{32}$/)
     expect(url.searchParams.has('wts')).toBe(true)
     expect(url.href).not.toContain('SESSDATA')
+  })
+  it('uses an allowlisted official backup when the primary CDN or port is not allowed', async () => {
+    await expect(biliResolve({ ...dash, dash: { audio: [{ ...audio, baseUrl: 'https://peer.example:4483/audio.m4s', backupUrl: ['https://another.invalid/audio', audio.baseUrl] }] } }).result).resolves.toEqual({ url: audio.baseUrl })
+  })
+  it('does not accept anonymous login errors from the playurl endpoint', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(bili(view)).mockResolvedValueOnce(Response.json({ code: -101, data: { ...nav, isLogin: false } })).mockResolvedValueOnce(Response.json({ code: -101, data: dash }))
+    await expect(createBiliHostedProvider(fetcher).resolve('', view.bvid, signal())).rejects.toThrow('会话不可用')
   })
   it.each([
     { ...dash, is_preview: 1 }, { ...dash, timelength: 30000 }, { ...dash, timelength: undefined }, { dash: { video: [audio] } },

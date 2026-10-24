@@ -16,10 +16,10 @@ export const validateQQMediaUrl = (input: string) => mediaUrl(input, 'QQ 音乐'
 
 export function createQQHostedProvider(fetcher: typeof fetch = fetch): HostedProvider {
   async function rpc(cookie: string, module: string, method: string, param: Record<string, unknown>, signal: AbortSignal) {
-    const login = session(cookie)
+    const login = cookie ? session(cookie) : { uin: '0', key: '', token: 5381, cookie: '' }
     const response = await fetcher('https://u.y.qq.com/cgi-bin/musicu.fcg', {
       method: 'POST', redirect: 'manual', credentials: 'omit', signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
-      headers: { 'content-type': 'application/json', cookie: login.cookie, referer: 'https://y.qq.com/', origin: 'https://y.qq.com' },
+      headers: { 'content-type': 'application/json', ...(cookie ? { cookie: login.cookie } : {}), referer: 'https://y.qq.com/', origin: 'https://y.qq.com' },
       body: JSON.stringify({ comm: { ct: 24, cv: 0, uin: login.uin, format: 'json', g_tk: login.token, authst: login.key, auth_tkn: login.token }, req_0: { module, method, param } }),
     })
     if (!response.ok) { await response.body?.cancel(); throw new HostedSourceError('QQ 音乐托管请求失败，请重新登录或稍后重试', [401, 403].includes(response.status)) }
@@ -47,7 +47,7 @@ export function createQQHostedProvider(fetcher: typeof fetch = fetch): HostedPro
       if (!/^[a-z\d]{14}$/i.test(media)) throw new HostedSourceError('QQ 音乐媒体 MID 无效')
       const filenames = [`M800${id}${media}.mp3`, `M500${id}${media}.mp3`, `C400${media}.m4a`]
       const data = await rpc(cookie, 'vkey.GetVkeyServer', 'CgiGetVkey', {
-        guid: String(randomInt(1_000_000_000, 2_000_000_000)), uin: session(cookie).uin, loginflag: 1, platform: '20',
+        guid: String(randomInt(1_000_000_000, 2_000_000_000)), uin: cookie ? session(cookie).uin : '0', loginflag: 1, platform: '20',
         songmid: filenames.map(() => id), songtype: filenames.map(() => track.type ?? 0), filename: filenames,
       }, signal)
       const domain = Array.isArray(data.sip) ? data.sip.find((url: unknown) => typeof url === 'string' && /^https?:\/\//.test(url)) : undefined
@@ -59,7 +59,7 @@ export function createQQHostedProvider(fetcher: typeof fetch = fetch): HostedPro
         if (new URL(url).pathname.split('/').pop() !== filename || item.freeTrialInfo || item.trial) throw new HostedSourceError('QQ 音乐仅提供试听或不匹配的音源，无法一起听完整歌曲')
         return { url }
       }
-      throw new HostedSourceError('QQ 音乐房间账号没有完整音源，请确认登录、会员或版权权限')
+      throw new HostedSourceError(cookie ? 'QQ 音乐房间账号没有完整音源，请确认会员或版权权限' : 'QQ 音乐匿名音源不可用，请绑定账号或确认版权权限')
     },
   }
 }

@@ -25,7 +25,7 @@ export default function ListenPage() {
   return (
     <div class="flex-1 min-w-0 min-h-0 overflow-auto p-6 max-[760px]:p-4">
       <div class="max-w-220 mx-auto space-y-6">
-        <header><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm mt-2">在同一个房间听同一首歌。房主与管理员控制播放和队列，可各自取源，也可选用房主配置的网易云、QQ 音乐或 BiliBili 托管音源。</p></header>
+        <header><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm mt-2">在同一个房间听同一首歌。房主与管理员控制播放和队列，可各自取源，也可使用网易云、QQ 音乐或 BiliBili 的服务器匿名 / 账号托管音源。</p></header>
         <Show when={roomPlayerActive()} fallback={(
           <section class="rounded-2xl border border-border p-5 space-y-5">
             <label class="block text-sm">房间服务器

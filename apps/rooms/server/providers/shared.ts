@@ -10,6 +10,7 @@ export interface HostedProvider {
   mediaHeaders?: Readonly<Record<string, string>>
   acceptsMediaType?: (type: string) => boolean
   validate: (cookie: string, signal: AbortSignal) => Promise<string>
+  /** Empty cookie means an anonymous request; validation is only for explicit bindings. */
   resolve: (cookie: string, id: string, signal: AbortSignal) => Promise<HostedResource>
 }
 export type HostedProviders = Record<HostedPlatform, HostedProvider>

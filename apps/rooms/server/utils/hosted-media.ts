@@ -18,7 +18,7 @@ interface Ticket {
 
 /** Private, bounded in-memory sessions, source resolution and revocable media leases. */
 export class HostedMedia {
-  private credentials = new Map<string, Credential>()
+  private credentials = new Map<string, Partial<Record<HostedPlatform, Credential>>>()
   private states = new Map<string, RoomSnapshot>()
   private resources = new Map<string, Promise<Resource>>()
   private resolving = new Map<string, AbortController>()
@@ -47,7 +47,7 @@ export class HostedMedia {
     }
     if (state.status === 'ended') {
       this.credentials.delete(state.roomId)
-      this.pending.get(state.roomId)?.abort(); this.pending.delete(state.roomId)
+      for (const [key, controller] of this.pending) if (key.startsWith(`${state.roomId}:`)) { controller.abort(); this.pending.delete(key) }
       this.states.delete(state.roomId); this.budgets.delete(state.roomId)
     }
     for (const [key, value] of this.requests) if (this.now() - value.at >= 60_000) this.requests.delete(key)
@@ -69,7 +69,7 @@ export class HostedMedia {
 
   async control(token: string, request: RoomControl, signal: AbortSignal) {
     const auth = this.rooms.authorize(token, request.roomId)
-    this.limit(`${request.roomId}:${auth.memberId}:${request.action}`, request.action === 'credential' ? 3 : 30)
+    this.limit(`${request.roomId}:${auth.memberId}:${request.action}:${'provider' in request ? request.provider ?? 'netease' : ''}`, request.action === 'credential' ? 3 : 30)
     if (request.action === 'ticket') return this.issue(token, auth, request, signal)
     if (request.action === 'renew') {
       const ticket = this.tickets.get(request.ticket)
@@ -80,37 +80,36 @@ export class HostedMedia {
     }
     if (!auth.isHost) throw new HostedSourceError('仅房主可管理房间音源')
     if (auth.snapshot.revision !== request.expectedRevision) throw new HostedSourceError('房间状态已更新，请重新操作')
-    if (request.action === 'credential') {
+    if (request.action === 'credential' || request.action === 'revoke') {
       const platform = request.provider ?? 'netease'
-      const provider = this.providers[platform]
-      const cookie = provider.parseCookie(request.cookie)
-      this.pending.get(request.roomId)?.abort()
+      const key = `${request.roomId}:${platform}`
+      const name = { netease: '网易云', qq: 'QQ 音乐', bili: 'BiliBili' }[platform]
+      this.pending.get(key)?.abort()
       const controller = new AbortController()
-      this.pending.set(request.roomId, controller)
+      this.pending.set(key, controller)
       try {
-        const label = await provider.validate(cookie, AbortSignal.any([signal, controller.signal]))
+        const provider = this.providers[platform]
+        const cookie = request.action === 'credential' ? provider.parseCookie(request.cookie) : ''
+        const label = cookie ? await provider.validate(cookie, AbortSignal.any([signal, controller.signal])) : undefined
         signal.throwIfAborted(); controller.signal.throwIfAborted()
-        // Recheck ownership and revision after an asynchronous upstream request.
         const latest = this.rooms.authorize(token, request.roomId)
-        if (!latest.isHost || latest.generation !== auth.generation || latest.snapshot.revision !== request.expectedRevision) throw new HostedSourceError('房间状态已更新，请重新绑定')
-        this.rooms.updateSource(token, request.roomId, request.expectedRevision, { mode: 'hosted', provider: platform, credential: 'ready', label, ownerId: auth.memberId, error: undefined }, () => {
-          this.credentials.set(request.roomId, { provider: platform, cookie, label, ownerId: auth.memberId })
-          this.pending.delete(request.roomId)
-        })
+        if (!latest.isHost || latest.generation !== auth.generation || latest.snapshot.revision !== request.expectedRevision) throw new HostedSourceError('房间状态已更新，请重新操作')
+        const source = latest.snapshot.source!
+        const accounts = { ...source.accounts, [platform]: { credential: cookie ? 'ready' as const : 'none' as const, version: (source.accounts?.[platform]?.version ?? 0) + 1, ...(cookie ? { ownerId: auth.memberId, label } : {}) } }
+        const affectsPlayback = source.mode === 'hosted' && source.provider === platform
+        this.rooms.updateSource(token, request.roomId, request.expectedRevision, { accounts, ...(affectsPlayback ? { error: undefined } : {}) }, () => {
+          const sessions = { ...this.credentials.get(request.roomId) }
+          if (cookie) sessions[platform] = { provider: platform, cookie, label: label!, ownerId: auth.memberId }
+          else delete sessions[platform]
+          this.credentials.set(request.roomId, sessions)
+          this.pending.delete(key)
+        }, { affectsPlayback, operation: `${cookie ? '绑定' : '撤销'}了${name}房间账号` })
       }
-      finally { if (this.pending.get(request.roomId) === controller) this.pending.delete(request.roomId) }
-    }
-    else if (request.action === 'revoke') {
-      // Keep hosted selected: revocation must never silently switch to personal accounts.
-      this.rooms.updateSource(token, request.roomId, request.expectedRevision, { provider: undefined, credential: 'none', label: undefined, ownerId: undefined, error: '房间登录凭据已撤销，请重新绑定或主动切回个人音源' }, () => { this.pending.get(request.roomId)?.abort(); this.credentials.delete(request.roomId) })
-      const latest = this.rooms.authorize(token, request.roomId).snapshot
-      if (latest.source?.mode === 'hosted') this.rooms.sourceFailed(request.roomId, latest.source.version, latest.source.error!)
+      finally { if (this.pending.get(key) === controller) this.pending.delete(key) }
     }
     else {
-      const source = auth.snapshot.source
-      const mode = request.action === 'source' ? request.mode : source?.mode ?? 'independent'
-      if (mode === 'hosted' && (!this.credentials.has(request.roomId) || source?.credential !== 'ready')) throw new HostedSourceError('请先绑定有效的房间账号')
-      this.rooms.updateSource(token, request.roomId, request.expectedRevision, { mode, error: undefined }, () => { this.pending.get(request.roomId)?.abort() })
+      const mode = request.action === 'source' ? request.mode : auth.snapshot.source?.mode ?? 'independent'
+      this.rooms.updateSource(token, request.roomId, request.expectedRevision, { mode, error: undefined })
     }
     return { ok: true, snapshot: this.rooms.authorize(token, request.roomId).snapshot }
   }
@@ -126,14 +125,12 @@ export class HostedMedia {
       this.resolving.set(state.roomId, controller)
       pending = (async () => {
         try {
-          const credential = this.credentials.get(state.roomId)
-          if (!credential || state.source?.credential !== 'ready') throw new HostedSourceError('房间账号不可用，请房主重新绑定', true)
-          if (track.provider !== credential.provider) throw new HostedSourceError('当前歌曲与房间账号平台不匹配，请房主绑定对应平台账号或主动切回个人音源')
-          const provider = this.providers[credential.provider]
-          const source = await provider.resolve(credential.cookie, track.id, controller.signal)
-          return { provider, platform: credential.provider, source, controller, roomId: state.roomId, version: state.source.version, playbackId: state.playbackId, trackId: track.id, streams: new Set<AbortController>() }
+          const credential = this.credentials.get(state.roomId)?.[track.provider]
+          const provider = this.providers[track.provider]
+          const source = await provider.resolve(credential?.cookie ?? '', track.id, controller.signal)
+          return { provider, platform: track.provider, source, controller, roomId: state.roomId, version: state.source!.version, playbackId: state.playbackId, trackId: track.id, streams: new Set<AbortController>() }
         }
-        catch (error) { if (!controller.signal.aborted) this.fail(state.roomId, state.source!.version, error); throw error }
+        catch (error) { if (!controller.signal.aborted) this.fail(state.roomId, state.source!.version, state.playbackId, track.provider, error); throw error }
       })()
       this.resources.set(state.roomId, pending)
     }
@@ -157,11 +154,14 @@ export class HostedMedia {
     return auth
   }
 
-  private fail(roomId: string, version: number, error: unknown) {
-    if (this.states.get(roomId)?.source?.version !== version) return
+  private fail(roomId: string, version: number, playbackId: string, platform: HostedPlatform, error: unknown) {
+    const state = this.states.get(roomId)
+    if (state?.source?.version !== version || state.playbackId !== playbackId || state.source.provider !== platform) return
     const safe = error instanceof HostedSourceError ? error : new HostedSourceError('房间音源请求失败，请房主重试或重新绑定账号')
-    if (safe.invalidCredential) this.credentials.delete(roomId)
-    this.rooms.sourceFailed(roomId, version, safe.message, safe.invalidCredential)
+    const sessions = this.credentials.get(roomId)
+    const invalid = safe.invalidCredential && !!sessions?.[platform]
+    if (invalid) delete sessions![platform]
+    this.rooms.sourceFailed(roomId, version, safe.message, invalid)
   }
 
   private charge(roomId: string, bytes: number) {
@@ -220,9 +220,8 @@ export class HostedMedia {
         await response.body?.cancel()
         // Refresh a signed URL only when the provider confirms identical file bytes.
         if (!resource.refreshing) resource.refreshing = (async () => {
-          const credential = this.credentials.get(resource.roomId)
-          if (!credential || credential.provider !== resource.platform) throw new HostedSourceError('房间凭据已撤销', true)
-          const updated = await resource.provider.resolve(credential.cookie, resource.trackId, resource.controller.signal)
+          const credential = this.credentials.get(resource.roomId)?.[resource.platform]
+          const updated = await resource.provider.resolve(credential?.cookie ?? '', resource.trackId, resource.controller.signal)
           if (!updated.hash || updated.hash !== resource.source.hash || !updated.size || updated.size !== resource.source.size) throw new HostedSourceError('房间音源已过期或内容已变化，请房主重试以重新准备音源')
           resource.source = updated
         })().finally(() => { resource.refreshing = undefined })
@@ -282,7 +281,7 @@ export class HostedMedia {
           catch (error) {
             const cancelled = signal.aborted
             signal.removeEventListener('abort', abort); release(); controller.abort(); void reader.cancel().catch(() => {})
-            if (!cancelled) this.fail(resource.roomId, resource.version, error)
+            if (!cancelled) this.fail(resource.roomId, resource.version, resource.playbackId, resource.platform, error)
             stream.error(new Error('房间媒体传输失败'))
           }
         },
@@ -294,7 +293,7 @@ export class HostedMedia {
       const cancelled = signal.aborted
       await response?.body?.cancel().catch(() => {})
       release(); controller.abort()
-      if (!cancelled) this.fail(resource.roomId, resource.version, error)
+      if (!cancelled) this.fail(resource.roomId, resource.version, resource.playbackId, resource.platform, error)
       return new Response(null, { status: 502, headers: { 'cache-control': 'no-store' } })
     }
   }

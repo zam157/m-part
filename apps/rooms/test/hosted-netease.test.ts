@@ -6,6 +6,12 @@ const response = (value: unknown, status = 200) => Response.json(value, { status
 const signal = () => new AbortController().signal
 
 describe('controlled NetEase server session adapter', () => {
+  it('resolves public audio anonymously without sending any Cookie header', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response({ code: 200, data: [{ id: 123, code: 200, url: 'https://m1.music.126.net/public.mp3' }] }))
+    await expect(createNeteaseHostedProvider(fetcher).resolve('', '123', signal())).resolves.toMatchObject({ url: 'https://m1.music.126.net/public.mp3' })
+    expect(new Headers(fetcher.mock.calls[0]?.[1]?.headers).has('cookie')).toBe(false)
+    expect(fetcher).toHaveBeenCalledOnce()
+  })
   it('uses only the fixed API host and masks the account identity', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response({ code: 200, account: { id: 12345678 }, profile: { userId: 12345678, nickname: 'Do not broadcast this' } }))
     const label = await createNeteaseHostedProvider(fetcher).validate(cookie, signal())
