@@ -35,7 +35,7 @@ export default function ListenRoomSources() {
             <Show when={source()?.credential !== 'none' && source()?.credential}><button class="ghost-btn h-8 px-3" disabled={disabled()} onClick={() => void manageRoomSource('revoke')}>撤销房间账号</button></Show>
           </div>
           <form class="space-y-3 rounded-lg bg-muted/50 p-3" onSubmit={event => { event.preventDefault(); void bind() }}>
-            <p class="text-xs text-muted-foreground">需要房间服务器开启托管实验。仅向你填写的服务器提交所选平台会话，不会自动读取浏览器 Cookie，不会发送给其他成员。更换平台会替换旧账号并停止旧音源，歌曲须与账号平台一致。凭据仅在服务内存保留，撤销、结束房间或服务重启后清除。</p>
+            <p class="text-xs text-muted-foreground">房主绑定账号后即可启用托管。仅向你填写的服务器提交所选平台会话，不会自动读取浏览器 Cookie，不会发送给其他成员。更换平台会替换旧账号并停止旧音源，歌曲须与账号平台一致。凭据仅在服务内存保留，撤销、结束房间或服务重启后清除。</p>
             <label class="block">账号平台
               <select class="input mt-2 w-full" value={platform()} disabled={disabled()} onChange={event => { setCookie(''); setPlatform(event.currentTarget.value as HostedPlatform) }}>
                 <For each={platforms}>{item => <option value={item.id}>{item.name}</option>}</For>

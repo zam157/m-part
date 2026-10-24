@@ -11,7 +11,6 @@ export default defineHandler(async (event) => {
     headers.set('access-control-expose-headers', 'Content-Range, Content-Length, Accept-Ranges')
   }
   if (!['GET', 'HEAD'].includes(event.req.method)) return new Response(null, { status: 405, headers })
-  if (process.env.LISTEN_HOSTED_ENABLED !== '1') return new Response(null, { status: 503, headers })
   const ticket = event.url.searchParams.get('ticket') ?? ''
   if (!/^[a-f\d]{64}$/.test(ticket)) return new Response(null, { status: 401, headers })
   try {

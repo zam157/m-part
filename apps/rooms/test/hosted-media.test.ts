@@ -302,7 +302,7 @@ describe('hosted room credentials and media leases', () => {
 
 describe('room HTTP authentication and credential transport', () => {
   const origin = `chrome-extension://${'a'.repeat(32)}`
-  const handler = () => createRoomControlHandler(media, { enabled: () => true })
+  const handler = () => createRoomControlHandler(media)
   const request = (body: unknown, extra: RequestInit = {}) => new Request('http://127.0.0.1:3410/room-control', { method: 'POST', headers: { origin, authorization: `Bearer ${token()}`, 'content-type': 'application/json' }, body: JSON.stringify(body), ...extra })
   it('validates preflights and rejects missing Origin, invalid tokens and extra fields', async () => {
     expect((await handler()(new Request('http://127.0.0.1/room-control', { method: 'OPTIONS', headers: { origin } }))).status).toBe(204)
@@ -318,10 +318,16 @@ describe('room HTTP authentication and credential transport', () => {
     expect(credentialTransportAllowed('http://192.168.1.10:3410')).toBe(false)
     expect(credentialTransportAllowed('http://192.168.1.10:3410', 'https://rooms.example')).toBe(true)
   })
-  it('requires explicit server opt-in before processing any hosted control', async () => {
-    const disabled = createRoomControlHandler(media, { enabled: () => false })
-    expect((await disabled(request(mutation('revoke')))).status).toBe(503)
-    expect(provider.validate).not.toHaveBeenCalled()
+  it('lets the host bind and use hosted media without server opt-in', async () => {
+    expect(state().source?.mode).toBe('independent')
+    const response = await handler()(request({ action: 'credential', cookie, roomId: state().roomId, expectedRevision: state().revision }))
+    expect(response.status).toBe(200)
+    expect(provider.validate).toHaveBeenCalledOnce()
+    expect(state().source).toMatchObject({ mode: 'hosted', credential: 'ready' })
+    const current = state()
+    const leased = await handler()(request({ action: 'ticket', roomId: current.roomId, queueItemId: current.queue[0]!.queueItemId, playbackId: current.playbackId, sourceVersion: current.source!.version }))
+    expect(leased.status).toBe(200)
+    expect((await audio(v.parse(roomTicket, await leased.json()))).status).toBe(200)
   })
 })
 

@@ -33,7 +33,7 @@ async function readControl(request: Request) {
 }
 
 /** No request bodies, bearer tokens, tickets, cookies or upstream URLs are logged. */
-export function createRoomControlHandler(media: HostedMedia, options: { enabled: () => boolean, publicOrigin?: () => string | undefined, allowedOrigins?: () => string | undefined }) {
+export function createRoomControlHandler(media: HostedMedia, options: { publicOrigin?: () => string | undefined, allowedOrigins?: () => string | undefined } = {}) {
   let active = 0
   const budgets = new Map<string, { at: number, count: number }>()
   return async (request: Request) => {
@@ -45,7 +45,6 @@ export function createRoomControlHandler(media: HostedMedia, options: { enabled:
     headers.set('access-control-allow-headers', 'authorization, content-type')
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers })
     const json = (value: unknown, status = 200) => Response.json(value, { status, headers })
-    if (!options.enabled()) return json({ error: '服务器尚未启用房间托管音源' }, 503)
     if (request.method !== 'POST') return new Response(null, { status: 405, headers })
     const token = /^Bearer ([a-f\d]{64})$/.exec(request.headers.get('authorization') ?? '')?.[1]
     if (!token) return json({ error: '房间成员身份无效，请重新连接' }, 401)
