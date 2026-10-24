@@ -1,10 +1,11 @@
+import { getTrackPartsLabel, supportsTrackParts } from '~/utils/track-parts'
 import { clsx } from 'cn/lite'
 import { createMemo, createSignal, Show } from 'solid-js'
 import AlertPopover from '~/components/AlertPopover/AlertPopover'
 import Tooltip from '~/components/Tooltip/Tooltip'
 import { dismissRoomError, roomPlayerActive, roomView } from '~/composables/listen-room'
 import {
-  currentSong, currentSourceInfo, dismissPlaybackError, playbackError, setShowPlayQueue, setVolume, showPlayQueue, volume, openBiliParts,
+  currentSong, currentSourceInfo, dismissPlaybackError, playbackError, setShowPlayQueue, setVolume, showPlayQueue, volume, openTrackParts,
 } from '~/composables/player'
 import { canControlRoom } from '~/composables/player-context'
 import ExpandedPlayer from './components/ExpandedPlayer'
@@ -52,7 +53,7 @@ export default function MusicPlayer() {
         </div>
 
         <div role="group" aria-label="播放设置" class="flex items-center gap-3 justify-self-end max-[760px]:row-start-2 max-[760px]:gap-2">
-          <Show when={currentSong()?.provider === 'bili'}><button class="ghost-btn h-9 px-2 text-xs" aria-label="选择当前视频分 P" disabled={!canControlRoom()} onClick={() => { const song = currentSong(); if (song) void openBiliParts(song) }}>分 P</button></Show>
+          <Show when={supportsTrackParts(currentSong())}><button class="ghost-btn h-9 px-2 text-xs" aria-label={`选择当前曲目的${getTrackPartsLabel(currentSong())}`} disabled={!canControlRoom()} onClick={() => { const song = currentSong(); if (song) void openTrackParts(song) }}>{getTrackPartsLabel(currentSong())}</button></Show>
           <div class="max-[1100px]:hidden"><VolumeSlider value={volume()} onValueChange={setVolume} /></div>
           <div class="hidden max-[1100px]:block"><VolumeBtn value={volume()} onValueChange={setVolume} /></div>
           <Show when={currentSourceInfo()?.qualities?.length}>

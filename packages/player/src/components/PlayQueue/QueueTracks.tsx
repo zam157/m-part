@@ -1,7 +1,8 @@
+import { getTrackPartsLabel, supportsTrackParts } from '~/utils/track-parts'
 import { clsx } from 'cn/lite'
 import { createEffect, For, Show, untrack } from 'solid-js'
 import ContextMenu from '~/components/ContextMenu/ContextMenu'
-import { currentIndex, playing, playQueue, removeFromPlayQueue, setCurrentIndex, setPlaying, openBiliParts } from '~/composables/player'
+import { currentIndex, playing, playQueue, removeFromPlayQueue, setCurrentIndex, setPlaying, openTrackParts } from '~/composables/player'
 import { canControlRoom } from '~/composables/player-context'
 import { formatTime } from '~/components/MusicPlayer/components/player-controls'
 
@@ -45,7 +46,7 @@ export default function QueueTracks(props: { open: boolean, ref?: (api: QueueTra
             destructive: true,
             disabled: !canControlRoom(),
             onSelect: () => removeFromPlayQueue(index()),
-          }, ...(song.provider === 'bili' ? [{ id: 'select-parts', label: '选择分 P', icon: 'i-lucide:list-video', disabled: !canControlRoom(), onSelect: () => { void openBiliParts(song) } }] : [])]}>{trigger => (
+          }, ...(supportsTrackParts(song) ? [{ id: 'select-parts', label: `选择${getTrackPartsLabel(song)}`, icon: 'i-lucide:list-video', disabled: !canControlRoom(), onSelect: () => { void openTrackParts(song) } }] : [])]}>{trigger => (
             <div {...trigger} class={clsx('group flex min-w-0 h-12.5 content-visibility-auto items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent/60', currentIndex() === index() && 'bg-accent')} aria-current={currentIndex() === index() ? 'true' : undefined}>
               <button class="flex flex-1 min-w-0 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring" disabled={!canControlRoom() && currentIndex() !== index()} aria-label={`播放 ${song.title}`} onClick={() => play(index())}>
                 <span class="relative size-9 shrink-0 overflow-hidden rounded-md bg-muted grid place-items-center">

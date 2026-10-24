@@ -8,7 +8,7 @@
 
 ## 开发与构建
 
-BiliBili 多 P 视频支持选择分 P 播放、多选加入队列与一起听同步，详见 [分 P 播放](./docs/bilibili-parts.md)。
+播放器按 Provider 能力提供 [通用分段选择](./docs/track-parts.md)，支持单选播放、多选加入队列与一起听同步；目前由 BiliBili 实现，详见 [分 P 播放](./docs/bilibili-parts.md)。
 
 需要支持原生 TypeScript 的 Node.js 22.18+（本次使用 26.12.1 验证）和 `packageManager` 指定的 pnpm 12.14.0。
 

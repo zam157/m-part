@@ -4,7 +4,7 @@ import * as v from 'valibot'
 import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, HEARTBEAT_MS, LISTEN_PROTOCOL, clientMessage, roomSnapshot, roomTicket, serverMessage } from '@m-part/listen-core/protocol'
 import { ListenClock, roomPosition, shouldSeek } from '@m-part/listen-core/clock'
 import { prepareMedia, startMedia } from '@m-part/listen-core/browser/media'
-import { parseBiliTrackId } from '@m-part/music/providers/bilibili-parts'
+import { needsTrackParts } from './track-parts'
 import { sendRoomControl } from './room-http'
 
 export interface RoomIdentity { server: string, token: string, roomId: string, away: boolean, personalSource?: boolean }
@@ -466,10 +466,8 @@ export class ListenClient {
 }
 
 export function publicTrack(track: { provider: SharedRoomTrack['provider'], id: string, title: string, duration: number, coverUrl: string, artist?: string, album?: string }, options?: { preserveDuration?: boolean }) {
-  let legacyBili = false
-  if (track.provider === 'bili') { try { legacyBili = parseBiliTrackId(track.id).cid === undefined } catch {} }
   return {
-    provider: track.provider, id: String(track.id), title: track.title.slice(0, 300), duration: (!legacyBili || options?.preserveDuration) && Number.isFinite(track.duration) ? Math.max(0, Math.min(86_400, track.duration)) : 0,
+    provider: track.provider, id: String(track.id), title: track.title.slice(0, 300), duration: (options?.preserveDuration || !needsTrackParts(track)) && Number.isFinite(track.duration) ? Math.max(0, Math.min(86_400, track.duration)) : 0,
     coverUrl: /^https:\/\//i.test(track.coverUrl) ? track.coverUrl : '', artist: track.artist?.slice(0, 300), album: track.album?.slice(0, 300),
   }
 }

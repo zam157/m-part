@@ -115,7 +115,7 @@ export class ListenRooms {
       this.select(room, state.queue.length ? 0 : null)
     }
     else if (message.action === 'append-many') {
-      if (!message.tracks?.length) return '请选择要加入的分 P'
+      if (!message.tracks?.length) return '请选择要加入的曲目'
       const seen = new Set<string>()
       const selected = message.tracks.filter(t => { const key = `${t.provider}:${t.id}`; if (seen.has(key)) return false; seen.add(key); return true })
         .map(t => state.queue.find(old => old.provider === t.provider && old.id === t.id) ?? makeTrack(t))

@@ -821,6 +821,10 @@ const biliProvider = {
       },
     ]
   },
+  trackPartsLabel: '分 P',
+  isTrackPart(music: MusicInfo) {
+    try { return parseBiliTrackId(music.id).cid !== undefined } catch { return false }
+  },
   async getTrackParts(music: MusicInfo, options?: { signal?: AbortSignal }) {
     const { bvid } = parseBiliTrackId(music.id)
     const video = await fetchVideo(bvid, options?.signal)

@@ -40,8 +40,12 @@ export interface LyricsInfo {
 
 export interface Provider {
   name: ProviderName
-  /** Resolve a container into individually playable parts, using stable per-part IDs. */
+  /** Resolve a container or an existing part into same-provider playable tracks, in source order with unique stable IDs. Return one track for a single-part item. */
   getTrackParts?: (music: MusicInfo, options?: { signal?: AbortSignal }) => Promise<MusicInfo[]>
+  /** Identify resolved parts locally so normal playback can skip another lookup. Omit to resolve every explicit add. */
+  isTrackPart?: (music: MusicInfo) => boolean
+  /** User-facing part name; defaults to 分段. Only used when getTrackParts is implemented. */
+  trackPartsLabel?: string
   /** 读取官方歌词；不支持歌词的音源可不实现。 */
   getLyrics?: (id: string, options?: { signal?: AbortSignal }) => Promise<LyricsInfo>
   /** 首页推荐音乐；无需登录可用，返回值可直接加入播放队列。 */

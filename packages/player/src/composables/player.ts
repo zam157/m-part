@@ -7,9 +7,9 @@ import { providers } from '@m-part/music/providers'
 import { createMemo, createRoot, createSignal } from 'solid-js'
 import type { PlayerCache } from '~/utils/player-storage'
 import { canControlRoom, dispatchRoomPlayer, isRoomPlayer, playerContextVersion } from './player-context'
-import { chooseBiliParts } from './bili-parts'
-import type { PartAction } from './bili-parts'
-import { parseBiliTrackId } from '@m-part/music/providers/bilibili-parts'
+import { chooseTrackParts } from './track-parts'
+import type { PartAction } from './track-parts'
+import { needsTrackParts, supportsTrackParts } from '~/utils/track-parts'
 
 // #region types
 export type PlayMode = 'order' | 'loop' | 'random' | 'single-loop'
@@ -555,7 +555,7 @@ export async function setPlayQueue(newPlayQueue: MusicInfo[]) {
  * 添加到播放列表
  */
 export async function addToPlayQueue(item: MusicInfo) {
-  if (item.provider === 'bili' && !item.id.includes(':') && providers.bili?.getTrackParts && await selectPartsIfNeeded(item, 'play')) return
+  if (needsTrackParts(item)) { await selectPartsIfNeeded(item, 'play'); return }
   if (dispatchRoomPlayer({ type: 'append', track: item })) return
   // 避免重复添加同一首歌
   const list = playQueue()
@@ -583,7 +583,7 @@ export async function addToPlayQueue(item: MusicInfo) {
 
 /** 将歌曲放到当前曲目之后，保留当前播放；空队列直接播放。 */
 export async function addNextToPlayQueue(item: MusicInfo) {
-  if (item.provider === 'bili' && !item.id.includes(':') && providers.bili?.getTrackParts && await selectPartsIfNeeded(item, 'next')) return
+  if (needsTrackParts(item)) { await selectPartsIfNeeded(item, 'next'); return }
   if (dispatchRoomPlayer({ type: 'add-next', track: item })) return
   const list = playQueue()
   const current = currentIndex()
@@ -616,15 +616,12 @@ export async function addNextToPlayQueue(item: MusicInfo) {
 
 /** All part entry points resolve before dispatching either local or room operations. */
 async function selectPartsIfNeeded(item: MusicInfo, action: PartAction, force = false) {
-  if (item.provider !== 'bili') return false
-  try { if (!force && parseBiliTrackId(item.id).cid !== undefined) return false } catch { return false }
-  if (!canControlRoom()) return true
+  if (!supportsTrackParts(item) || !canControlRoom()) return
   const scope = playerContextVersion()
-  const selection = await chooseBiliParts(item, action, force)
+  const selection = await chooseTrackParts(item, action, force)
   if (selection && scope === playerContextVersion() && canControlRoom()) await addTracksToPlayQueue(selection.tracks, selection.action)
-  return true
 }
-export async function openBiliParts(item: MusicInfo) { await selectPartsIfNeeded(item, 'play', true) }
+export async function openTrackParts(item: MusicInfo) { await selectPartsIfNeeded(item, 'play', true) }
 
 export async function addTracksToPlayQueue(items: MusicInfo[], action: PartAction) {
   if (!items.length || !canControlRoom()) return

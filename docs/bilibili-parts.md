@@ -16,7 +16,7 @@
 
 只有 BV 号的旧条目仍解析为 P1。普通模式成功取源后将队列资料更正为 P1 的 CID、标题与时长，保存时不含媒体 URL。创建房间或批量播放整张歌单时，不会自动把每个视频展开成所有 P：旧视频条目先以未知时长进入房间，由房主实际媒体就绪后建立 P1 的时间轴；成员保留服务广播的权威时长。需要其他 P 时使用选择器明确加入。
 
-实现分别在 `packages/music/src/utils/providers/bilibili-parts.ts`（纯身份 / 元数据）、`bilibili.ts`（浏览器 Provider）、`packages/player/src/composables/bili-parts.ts` 和 `components/BiliPartPicker/`（选择流程），以及 `apps/rooms/server/providers/bilibili.ts`（服务器取源）。
+分段选择已抽象为 [Provider 通用能力](./track-parts.md)，选择器不识别 BV / CID。BiliBili Provider 实现 `getTrackParts` / `isTrackPart` 并声明文案「分 P」。实现分别在 `packages/music/src/utils/providers/bilibili-parts.ts`（纯身份 / 元数据）、`bilibili.ts`（浏览器 Provider）、`packages/player/src/composables/track-parts.ts` 和 `components/TrackPartPicker/`（通用选择流程），以及 `apps/rooms/server/providers/bilibili.ts`（服务器取源）。
 
 ## 验证记录（2026-10-24）
 

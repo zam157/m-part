@@ -19,6 +19,12 @@ beforeEach(() => {
 })
 
 describe('BiliBili individual pages', () => {
+  it('owns its part identity rules and display label', () => {
+    expect(provider.trackPartsLabel).toBe('分 P')
+    expect(provider.isTrackPart(music)).toBe(false)
+    expect(provider.isTrackPart({ ...music, id: `${music.id}:456` })).toBe(true)
+    expect(provider.isTrackPart({ ...music, id: 'invalid:456' })).toBe(false)
+  })
   it('returns stable CID identities and each page duration instead of container totals', async () => {
     const tracks = await provider.getTrackParts(music)
     expect(tracks.map(t => [t.id, t.duration])).toEqual([['BV1234567890:123', 120], ['BV1234567890:456', 180]])

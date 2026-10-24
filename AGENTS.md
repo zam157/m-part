@@ -84,7 +84,8 @@
 
 ## 命名约定（2026-09 改名后）
 
-- BiliBili 单 P 曲目 ID 使用 `BV号:CID`；裸 BV 兼容旧条目的 P1。不要用 P 序号做持久身份，也不要把视频总时长当作单 P 时长。选择器、批量房间操作及接口约定见 [分 P 播放](./docs/bilibili-parts.md)。
+- 分段选择按 Provider 的 `getTrackParts` 能力启用，`isTrackPart` 判断已解析曲目、`trackPartsLabel` 提供文案；选择器与播放入口不得判断具体音源或解析其 ID。接入方式见 [通用分段选择](./docs/track-parts.md)。
+- BiliBili 单 P 曲目 ID 使用 `BV号:CID`；裸 BV 兼容旧条目的 P1。不要用 P 序号做持久身份，也不要把视频总时长当作单 P 时长。专有身份、批量房间操作及接口约定见 [分 P 播放](./docs/bilibili-parts.md)。
 
 - `playlist` / `getPlaylist` = **歌单**（用户收藏的集合）：`getCurrentUser` 识别账号，`getPlaylists` 列歌单，`getPlaylist` 分页列曲目；一键播放优先用 `getAllPlaylistTracks` 整单能力（网易云每批最多 1000 首），否则分页回退。页面 `/playlists` 与 `/playlist-detail/:provider/:id` → [docs/playlists.md](./docs/playlists.md)
 - **播放列表 / 播放队列 = `playQueue` 系**：`playQueue` / `setPlayQueue` / `addToPlayQueue` / `removeFromPlayQueue` / `clearPlayQueue` / `randomPlayQueue` / `showPlayQueue` / `setShowPlayQueue`，组件在 `packages/player/src/components/PlayQueue/`
