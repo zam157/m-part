@@ -2,7 +2,7 @@ import { encryptWeapi } from '@m-part/music/providers/netease-crypto'
 import { HostedSourceError, limitedJson } from './shared'
 import type { HostedProvider } from './shared'
 
-/** Only these two cookies can reach the fixed NetEase API host. */
+/** Only these two user-supplied cookies can reach the fixed NetEase API host. */
 export function parseNeteaseCookie(input: string) {
   if (input.length > 4096 || /[\r\n\x00-\x1f\x7f]/.test(input)) throw new HostedSourceError('登录凭据格式不正确')
   const cookies = new Map(input.split(';').map(part => { const at = part.indexOf('='); return [part.slice(0, at).trim(), part.slice(at + 1).trim()] }))
@@ -26,7 +26,9 @@ export function createNeteaseHostedProvider(fetcher: typeof fetch = fetch): Host
     const response = await fetcher(`https://music.163.com/weapi/${path}`, {
       method: 'POST', redirect: 'manual', credentials: 'omit',
       signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
-      headers: { 'content-type': 'application/x-www-form-urlencoded', ...(cookie ? { cookie } : {}), referer: 'https://music.163.com/' },
+      // Paid tracks need a desktop client context to receive a usable signed CDN URL.
+      // This fixed non-secret marker is server-owned; never forward supplied os/appver fields.
+      headers: { 'content-type': 'application/x-www-form-urlencoded', ...(cookie ? { cookie: `${cookie} os=pc;` } : {}), referer: 'https://music.163.com/' },
       body: new URLSearchParams(encryptWeapi({ ...data, csrf_token: csrf })),
     })
     if (!response.ok) { await response.body?.cancel(); throw new HostedSourceError('网易云托管请求失败，可能需要重新登录或稍后重试', [401, 403].includes(response.status)) }

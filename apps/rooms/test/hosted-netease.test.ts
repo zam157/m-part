@@ -18,8 +18,17 @@ describe('controlled NetEase server session adapter', () => {
     expect(label).toBe('网易云账号 · 尾号 5678')
     expect(fetcher.mock.calls[0]?.[0]).toBe('https://music.163.com/weapi/w/nuser/account/get')
     expect(fetcher.mock.calls[0]?.[1]).toMatchObject({ redirect: 'manual', credentials: 'omit' })
-    expect(new Headers(fetcher.mock.calls[0]?.[1]?.headers).get('cookie')).toBe(cookie)
+    expect(new Headers(fetcher.mock.calls[0]?.[1]?.headers).get('cookie')).toBe(`${cookie} os=pc;`)
     expect(String(fetcher.mock.calls[0]?.[1]?.body)).not.toContain('MUSIC_U')
+  })
+  it('uses a fixed desktop context for VIP source requests, ignoring supplied client cookies', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response({ code: 200, data: [{ id: 1519343, code: 200, url: 'https://m701.music.126.net/paid.mp3', md5: 'a'.repeat(32), size: 8572387 }] }))
+    const provider = createNeteaseHostedProvider(fetcher)
+    const session = provider.parseCookie(`${cookie} os=android; appver=untrusted; unrelated=private;`)
+    await expect(provider.resolve(session, '1519343', signal())).resolves.toEqual({ url: 'https://m701.music.126.net/paid.mp3', hash: 'a'.repeat(32), size: 8572387 })
+    expect(fetcher.mock.calls[0]?.[0]).toBe('https://music.163.com/weapi/song/enhance/player/url')
+    expect(new Headers(fetcher.mock.calls[0]?.[1]?.headers).get('cookie')).toBe(`${cookie} os=pc;`)
+    expect(new Headers(provider.mediaHeaders).has('cookie')).toBe(false)
   })
   it.each([
     { code: 301 }, { code: 200, profile: null }, { code: 200, account: {}, profile: { userId: 'unsafe' } },
