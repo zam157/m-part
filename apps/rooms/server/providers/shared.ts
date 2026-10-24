@@ -1,7 +1,23 @@
 import type { HostedPlatform } from '@m-part/listen-core/protocol'
 
 export class HostedSourceError extends Error {
-  constructor(message: string, readonly invalidCredential = false) { super(message) }
+  constructor(message: string, readonly invalidCredential = false, readonly diagnostics: HostedDiagnostics = {}, options?: ErrorOptions) { super(message, options) }
+}
+export interface HostedDiagnostics {
+  provider?: HostedPlatform
+  phase?: 'api' | 'cdn' | 'resolve'
+  endpoint?: string
+  httpStatus?: number
+  upstreamCodes?: unknown[]
+}
+
+/** Retain diagnostic metadata, never upstream bodies, URLs or request headers. */
+export async function withUpstreamDiagnostics<T>(details: HostedDiagnostics, operation: (details: HostedDiagnostics) => Promise<T>): Promise<T> {
+  try { return await operation(details) }
+  catch (error) {
+    if (error instanceof HostedSourceError) { Object.assign(error.diagnostics, details); throw error }
+    throw new HostedSourceError('房间上游请求失败，请稍后重试', false, details, { cause: error })
+  }
 }
 export interface HostedResource { url: string, hash?: string, size?: number }
 export interface HostedProvider {

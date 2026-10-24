@@ -3,6 +3,7 @@ import { roomControl } from '@m-part/listen-core/protocol'
 import { HostedSourceError } from '../providers/shared'
 import type { HostedMedia } from './hosted-media'
 import { isRoomOriginAllowed } from './origin'
+import { logRoomError } from './diagnostics'
 
 export function credentialTransportAllowed(server: string, publicOrigin?: string) {
   const url = new URL(server)
@@ -39,27 +40,36 @@ export function createRoomControlHandler(media: HostedMedia, options: { publicOr
   return async (request: Request) => {
     const origin = request.headers.get('origin') ?? undefined
     const headers = new Headers({ 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', vary: 'Origin' })
-    if (!origin || !isRoomOriginAllowed(request.url, origin, options.allowedOrigins?.())) return new Response(null, { status: 403, headers })
+    const reject = (status: number, message: string, body = true) => {
+      logRoomError('http.control', new HostedSourceError(message), { status })
+      return body ? Response.json({ error: message }, { status, headers }) : new Response(null, { status, headers })
+    }
+    if (!origin || !isRoomOriginAllowed(request.url, origin, options.allowedOrigins?.())) return reject(403, '请求来源不允许', false)
     headers.set('access-control-allow-origin', origin)
     headers.set('access-control-allow-methods', 'POST, OPTIONS')
     headers.set('access-control-allow-headers', 'authorization, content-type')
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers })
     const json = (value: unknown, status = 200) => Response.json(value, { status, headers })
-    if (request.method !== 'POST') return new Response(null, { status: 405, headers })
+    if (request.method !== 'POST') return reject(405, '请求方法不支持', false)
     const token = /^Bearer ([a-f\d]{64})$/.exec(request.headers.get('authorization') ?? '')?.[1]
-    if (!token) return json({ error: '房间成员身份无效，请重新连接' }, 401)
+    if (!token) return reject(401, '房间成员身份无效，请重新连接')
     const now = performance.now()
     for (const [key, entry] of budgets) if (now - entry.at >= 60_000) budgets.delete(key)
     const budget = budgets.get(origin) ?? { at: now, count: 0 }
-    if (++budget.count > 300 || active >= 40 || budgets.size > 200) return json({ error: '房间操作过于频繁，请稍后重试' }, 429)
+    if (++budget.count > 300 || active >= 40 || budgets.size > 200) return reject(429, '房间操作过于频繁，请稍后重试')
     budgets.set(origin, budget)
     active++
+    let action: string | undefined
     try {
       const control = await readControl(request)
-      if (control.action === 'credential' && !credentialTransportAllowed(request.url, options.publicOrigin?.())) return json({ error: '绑定房间账号需要 HTTPS；本机回环地址可用 HTTP 调试' }, 400)
+      action = control.action
+      if (control.action === 'credential' && !credentialTransportAllowed(request.url, options.publicOrigin?.())) return reject(400, '绑定房间账号需要 HTTPS；本机回环地址可用 HTTP 调试')
       return json(await media.control(token, control, request.signal))
     }
-    catch (error) { return json({ error: error instanceof HostedSourceError ? error.message : '房间操作未完成，请检查连接、权限和状态后重试' }, 400) }
+    catch (error) {
+      if (!request.signal.aborted) logRoomError(action ? `http.control.${action}` : 'http.control', error, { status: 400 })
+      return json({ error: error instanceof HostedSourceError ? error.message : '房间操作未完成，请检查连接、权限和状态后重试' }, 400)
+    }
     finally { active-- }
   }
 }

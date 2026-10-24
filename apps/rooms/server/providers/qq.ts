@@ -1,6 +1,6 @@
 import { randomInt } from 'node:crypto'
 import { qqToken } from '@m-part/music/providers/qq-crypto'
-import { cookieHeader, HostedSourceError, limitedJson, mediaUrl, selectedCookies } from './shared'
+import { cookieHeader, HostedSourceError, limitedJson, withUpstreamDiagnostics, mediaUrl, selectedCookies } from './shared'
 import type { HostedProvider } from './shared'
 
 const names = ['qqmusic_uin', 'uin', 'wxuin', 'qqmusic_key', 'qm_keyst', 'p_skey', 'skey', 'eas_sid', 'login_type', 'tmeLoginType'] as const
@@ -16,17 +16,21 @@ export const validateQQMediaUrl = (input: string) => mediaUrl(input, 'QQ 音乐'
 
 export function createQQHostedProvider(fetcher: typeof fetch = fetch): HostedProvider {
   async function rpc(cookie: string, module: string, method: string, param: Record<string, unknown>, signal: AbortSignal) {
-    const login = cookie ? session(cookie) : { uin: '0', key: '', token: 5381, cookie: '' }
-    const response = await fetcher('https://u.y.qq.com/cgi-bin/musicu.fcg', {
-      method: 'POST', redirect: 'manual', credentials: 'omit', signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
-      headers: { 'content-type': 'application/json', ...(cookie ? { cookie: login.cookie } : {}), referer: 'https://y.qq.com/', origin: 'https://y.qq.com' },
-      body: JSON.stringify({ comm: { ct: 24, cv: 0, uin: login.uin, format: 'json', g_tk: login.token, authst: login.key, auth_tkn: login.token }, req_0: { module, method, param } }),
+    return withUpstreamDiagnostics({ provider: 'qq', phase: 'api', endpoint: `${module}.${method}` }, async (details) => {
+      const login = cookie ? session(cookie) : { uin: '0', key: '', token: 5381, cookie: '' }
+      const response = await fetcher('https://u.y.qq.com/cgi-bin/musicu.fcg', {
+        method: 'POST', redirect: 'manual', credentials: 'omit', signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
+        headers: { 'content-type': 'application/json', ...(cookie ? { cookie: login.cookie } : {}), referer: 'https://y.qq.com/', origin: 'https://y.qq.com' },
+        body: JSON.stringify({ comm: { ct: 24, cv: 0, uin: login.uin, format: 'json', g_tk: login.token, authst: login.key, auth_tkn: login.token }, req_0: { module, method, param } }),
+      })
+      details.httpStatus = response.status
+      if (!response.ok) { await response.body?.cancel(); throw new HostedSourceError('QQ 音乐托管请求失败，请重新登录或稍后重试', [401, 403].includes(response.status)) }
+      const result = await limitedJson(response, 'QQ 音乐')
+      const codes = [result?.code, result?.req_0?.code]
+      details.upstreamCodes = codes
+      if (codes.some(code => code !== 0) || !result.req_0.data) throw new HostedSourceError('QQ 音乐会话不可用或请求受限，请重新绑定或稍后重试', codes.some(code => [1000, 2000].includes(code)))
+      return result.req_0.data
     })
-    if (!response.ok) { await response.body?.cancel(); throw new HostedSourceError('QQ 音乐托管请求失败，请重新登录或稍后重试', [401, 403].includes(response.status)) }
-    const result = await limitedJson(response, 'QQ 音乐')
-    const codes = [result?.code, result?.req_0?.code]
-    if (codes.some(code => code !== 0) || !result.req_0.data) throw new HostedSourceError('QQ 音乐会话不可用或请求受限，请重新绑定或稍后重试', codes.some(code => [1000, 2000].includes(code)))
-    return result.req_0.data
   }
   return {
     parseCookie: parseQQCookie, validateMediaUrl: validateQQMediaUrl,

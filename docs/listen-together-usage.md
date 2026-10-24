@@ -134,6 +134,12 @@ NITRO_HOST=127.0.0.1 NITRO_PORT=3410 node apps/rooms/dist/server/index.mjs
 
 QQ 的登录检查使用 `music.UserInfo.userInfoServer.GetLoginUserInfo`，不以公开用户资料接口代替登录验证。RPC 结构参考[接口源码](https://github.com/chongya369/qqmusic-api-py/blob/main/qqmusic/apis/user.py)，只调用平台 API，不引入该项目运行时代码。QQ CDN 仅添加固定 Referer；BiliBili CDN 仅添加固定 Referer / User-Agent，均不携带 API Cookie。BiliBili 允许 DASH 音轨的 MP4 MIME，仍不解析或转发视频轨；海外其他 CDN 暂未加入白名单。
 
+### 服务端错误日志
+
+运行 `pnpm dev:rooms` 或生产服务时，请求失败会直接打印到服务进程的终端，前缀为 `[listen-rooms]`，后跟单行 JSON，无需额外开关。`operation` 区分房间控制、WebSocket、音源解析、CDN 响应与流传输；可用字段包括 `provider`、`phase`、固定 API `endpoint`、对外 `status`、上游 `httpStatus`、平台 `upstreamCodes`、音频 `contentType` 和流字节数。网络异常保留受控的错误类型及 `ECONNRESET`、`ENOTFOUND`、超时等底层错误码。
+
+例如 CDN 拒绝请求时能看到 `operation: "media.response"`、`provider: "netease"`、`phase: "cdn"`、`httpStatus: 403`；重解析前会先记录 `media.refresh`。QQ 同时保留顶层和 RPC 业务码。受控提示与元数据会打印，任意上游错误原文、响应体和堆栈不直接输出；Cookie、Authorization、成员令牌、票据和完整上游 URL 不写入日志。同一异常经过多个边界只记录一次，切歌、退出造成的正常取消不刷错误日志。
+
 ### 媒体租约、Range 与资源上限
 
 - `/room-control` 使用现有成员恢复令牌作 Bearer 鉴权，显式 `credentials: 'omit'`；管理操作还校验房主及控制版本。Cookie 只发对应平台固定 API，不发 CDN、成员或 WebSocket。

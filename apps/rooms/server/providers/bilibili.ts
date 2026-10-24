@@ -1,5 +1,5 @@
 import { generateWbiSignInfo } from '@m-part/music/providers/bilibili-wbi'
-import { cookieHeader, HostedSourceError, limitedJson, mediaUrl, selectedCookies } from './shared'
+import { cookieHeader, HostedSourceError, limitedJson, withUpstreamDiagnostics, mediaUrl, selectedCookies } from './shared'
 import type { HostedProvider } from './shared'
 
 const headers = { referer: 'https://www.bilibili.com/', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36' }
@@ -12,14 +12,18 @@ export const validateBiliMediaUrl = (input: string) => mediaUrl(input, 'BiliBili
 
 export function createBiliHostedProvider(fetcher: typeof fetch = fetch): HostedProvider {
   async function request(path: string, cookie: string, params: Record<string, string | number>, signal: AbortSignal) {
-    const url = new URL(`https://api.bilibili.com${path}`)
-    for (const [key, value] of Object.entries(params)) url.searchParams.set(key, String(value))
-    const response = await fetcher(url.href, { redirect: 'manual', credentials: 'omit', signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]), headers: { ...headers, ...(cookie ? { cookie } : {}) } })
-    if (!response.ok) { await response.body?.cancel(); throw new HostedSourceError('BiliBili 托管请求失败，请重新登录或稍后重试', response.status === 401) }
-    const result = await limitedJson(response, 'BiliBili')
-    const anonymousNav = !cookie && path === '/x/web-interface/nav' && result?.code === -101 && result.data?.isLogin === false
-    if ((result?.code !== 0 && !anonymousNav) || !result.data) throw new HostedSourceError('BiliBili 会话不可用、视频无权限或请求受限，请重新绑定或稍后重试', [-101, -111].includes(result?.code))
-    return result.data
+    return withUpstreamDiagnostics({ provider: 'bili', phase: 'api', endpoint: path }, async (details) => {
+      const url = new URL(`https://api.bilibili.com${path}`)
+      for (const [key, value] of Object.entries(params)) url.searchParams.set(key, String(value))
+      const response = await fetcher(url.href, { redirect: 'manual', credentials: 'omit', signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]), headers: { ...headers, ...(cookie ? { cookie } : {}) } })
+      details.httpStatus = response.status
+      if (!response.ok) { await response.body?.cancel(); throw new HostedSourceError('BiliBili 托管请求失败，请重新登录或稍后重试', response.status === 401) }
+      const result = await limitedJson(response, 'BiliBili')
+      details.upstreamCodes = [result?.code]
+      const anonymousNav = !cookie && path === '/x/web-interface/nav' && result?.code === -101 && result.data?.isLogin === false
+      if ((result?.code !== 0 && !anonymousNav) || !result.data) throw new HostedSourceError('BiliBili 会话不可用、视频无权限或请求受限，请重新绑定或稍后重试', [-101, -111].includes(result?.code))
+      return result.data
+    })
   }
   return {
     parseCookie: parseBiliCookie, validateMediaUrl: validateBiliMediaUrl, mediaHeaders: headers,

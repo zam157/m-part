@@ -69,6 +69,23 @@ beforeEach(() => {
 })
 
 describe('hosted room credentials and media leases', () => {
+  it('logs rejected CDN requests with status and phase without leaking tickets or upstream URLs', async () => {
+    const output = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      await bind()
+      const lease = await ticket()
+      fetcher.mockResolvedValue(new Response(null, { status: 403 }))
+      expect((await audio(lease)).status).toBe(502)
+      const entries = output.mock.calls.map(call => JSON.parse(String(call[1])))
+      expect(entries).toEqual([
+        expect.objectContaining({ operation: 'media.refresh', phase: 'cdn', provider: 'netease', httpStatus: 403 }),
+        expect.objectContaining({ operation: 'media.response', phase: 'cdn', provider: 'netease', httpStatus: 403 }),
+      ])
+      for (const secret of [cookie, lease.ticket, source.url]) expect(JSON.stringify(output.mock.calls)).not.toContain(secret)
+    }
+    finally { output.mockRestore() }
+  })
+
   it('explicitly binds only allowlisted cookies and broadcasts no secrets, URLs or tickets', async () => {
     await bind()
     expect(provider.validate).toHaveBeenCalledWith('MUSIC_U=abcdefghijklmnop123456; __csrf=0123456789abcdef;', expect.any(AbortSignal))

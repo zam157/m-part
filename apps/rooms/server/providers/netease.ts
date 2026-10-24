@@ -1,5 +1,5 @@
 import { encryptWeapi } from '@m-part/music/providers/netease-crypto'
-import { HostedSourceError, limitedJson } from './shared'
+import { HostedSourceError, limitedJson, withUpstreamDiagnostics } from './shared'
 import type { HostedProvider } from './shared'
 
 /** Only these two user-supplied cookies can reach the fixed NetEase API host. */
@@ -22,19 +22,23 @@ export function validateNeteaseMediaUrl(input: string) {
 
 export function createNeteaseHostedProvider(fetcher: typeof fetch = fetch): HostedProvider {
   async function request(path: string, cookie: string, data: Record<string, unknown>, signal: AbortSignal) {
-    const csrf = /(?:^|;)\s*__csrf=([^;]+)/.exec(cookie)?.[1] ?? ''
-    const response = await fetcher(`https://music.163.com/weapi/${path}`, {
-      method: 'POST', redirect: 'manual', credentials: 'omit',
-      signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
-      // Paid tracks need a desktop client context to receive a usable signed CDN URL.
-      // This fixed non-secret marker is server-owned; never forward supplied os/appver fields.
-      headers: { 'content-type': 'application/x-www-form-urlencoded', ...(cookie ? { cookie: `${cookie} os=pc;` } : {}), referer: 'https://music.163.com/' },
-      body: new URLSearchParams(encryptWeapi({ ...data, csrf_token: csrf })),
+    return withUpstreamDiagnostics({ provider: 'netease', phase: 'api', endpoint: `/weapi/${path}` }, async (details) => {
+      const csrf = /(?:^|;)\s*__csrf=([^;]+)/.exec(cookie)?.[1] ?? ''
+      const response = await fetcher(`https://music.163.com/weapi/${path}`, {
+        method: 'POST', redirect: 'manual', credentials: 'omit',
+        signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
+        // Paid tracks need a desktop client context to receive a usable signed CDN URL.
+        // This fixed non-secret marker is server-owned; never forward supplied os/appver fields.
+        headers: { 'content-type': 'application/x-www-form-urlencoded', ...(cookie ? { cookie: `${cookie} os=pc;` } : {}), referer: 'https://music.163.com/' },
+        body: new URLSearchParams(encryptWeapi({ ...data, csrf_token: csrf })),
+      })
+      details.httpStatus = response.status
+      if (!response.ok) { await response.body?.cancel(); throw new HostedSourceError('网易云托管请求失败，可能需要重新登录或稍后重试', [401, 403].includes(response.status)) }
+      const result = await limitedJson(response, '网易云')
+      details.upstreamCodes = [result.code]
+      if (result.code !== 200) throw new HostedSourceError('网易云会话不可用或需要验证，请重新绑定或稍后重试', [301, 401, 403].includes(result.code))
+      return result
     })
-    if (!response.ok) { await response.body?.cancel(); throw new HostedSourceError('网易云托管请求失败，可能需要重新登录或稍后重试', [401, 403].includes(response.status)) }
-    const result = await limitedJson(response, '网易云')
-    if (result.code !== 200) throw new HostedSourceError('网易云会话不可用或需要验证，请重新绑定或稍后重试', [301, 401, 403].includes(result.code))
-    return result
   }
   return {
     parseCookie: parseNeteaseCookie, validateMediaUrl: validateNeteaseMediaUrl,
@@ -49,7 +53,7 @@ export function createNeteaseHostedProvider(fetcher: typeof fetch = fetch): Host
       if (!/^\d{1,20}$/.test(id)) throw new HostedSourceError('网易云歌曲 ID 无效')
       const result = await request('song/enhance/player/url', cookie, { ids: JSON.stringify([id]), br: 320000 }, signal)
       const item = Array.isArray(result.data) ? result.data.find((entry: { id?: unknown }) => String(entry.id) === id) : undefined
-      if (!item || item.code !== 200 || !item.url) throw new HostedSourceError(cookie ? '房间账号没有完整音源，可能需要会员或版权权限' : '网易云匿名音源不可用，请绑定账号或确认版权权限')
+      if (!item || item.code !== 200 || !item.url) throw new HostedSourceError(cookie ? '房间账号没有完整音源，可能需要会员或版权权限' : '网易云匿名音源不可用，请绑定账号或确认版权权限', false, { provider: 'netease', phase: 'resolve', endpoint: '/weapi/song/enhance/player/url', httpStatus: 200, upstreamCodes: [item?.code] })
       if (item.freeTrialInfo) throw new HostedSourceError('房间账号只能试听，无法使用完整歌曲时间轴一起听')
       return {
         url: validateNeteaseMediaUrl(item.url),

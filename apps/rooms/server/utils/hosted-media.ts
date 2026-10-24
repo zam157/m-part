@@ -3,6 +3,7 @@ import type { HostedProvider, HostedProviders, HostedResource } from '../provide
 import { randomBytes } from 'node:crypto'
 import { HostedSourceError } from '../providers/shared'
 import type { ListenRooms } from './listen-rooms'
+import { logRoomError } from './diagnostics'
 
 const LEASE_MS = 120_000
 const MAX_RESPONSE_BYTES = 64 * 1024 * 1024
@@ -157,6 +158,7 @@ export class HostedMedia {
   private fail(roomId: string, version: number, playbackId: string, platform: HostedPlatform, error: unknown) {
     const state = this.states.get(roomId)
     if (state?.source?.version !== version || state.playbackId !== playbackId || state.source.provider !== platform) return
+    logRoomError('media.source', error, { provider: platform })
     const safe = error instanceof HostedSourceError ? error : new HostedSourceError('房间音源请求失败，请房主重试或重新绑定账号')
     const sessions = this.credentials.get(roomId)
     const invalid = safe.invalidCredential && !!sessions?.[platform]
@@ -217,6 +219,7 @@ export class HostedMedia {
     try {
       response = await this.upstream(resource, request, signal)
       if ([403, 410].includes(response.status)) {
+        logRoomError('media.refresh', new HostedSourceError('CDN 拒绝旧地址，正在重新解析音源'), { provider: resource.platform, phase: 'cdn', httpStatus: response.status })
         await response.body?.cancel()
         // Refresh a signed URL only when the provider confirms identical file bytes.
         if (!resource.refreshing) resource.refreshing = (async () => {
@@ -228,7 +231,7 @@ export class HostedMedia {
         await resource.refreshing
         response = await this.upstream(resource, request, signal)
       }
-      if (![200, 206, 416].includes(response.status)) throw new HostedSourceError('房间音源服务拒绝请求，请房主重试或重新绑定')
+      if (![200, 206, 416].includes(response.status)) throw new HostedSourceError('房间音源服务拒绝请求，请房主重试或重新绑定', false, { phase: 'cdn', httpStatus: response.status })
       const headers = new Headers({ 'cache-control': 'no-store, private', 'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff' })
       const length = response.headers.get('content-length')
       const contentRange = response.headers.get('content-range')
@@ -281,7 +284,10 @@ export class HostedMedia {
           catch (error) {
             const cancelled = signal.aborted
             signal.removeEventListener('abort', abort); release(); controller.abort(); void reader.cancel().catch(() => {})
-            if (!cancelled) this.fail(resource.roomId, resource.version, resource.playbackId, resource.platform, error)
+            if (!cancelled) {
+              logRoomError('media.stream', error, { provider: resource.platform, phase: 'cdn', httpStatus: response!.status, expectedBytes: expectedLength, receivedBytes: bytes })
+              this.fail(resource.roomId, resource.version, resource.playbackId, resource.platform, error)
+            }
             stream.error(new Error('房间媒体传输失败'))
           }
         },
@@ -293,7 +299,10 @@ export class HostedMedia {
       const cancelled = signal.aborted
       await response?.body?.cancel().catch(() => {})
       release(); controller.abort()
-      if (!cancelled) this.fail(resource.roomId, resource.version, resource.playbackId, resource.platform, error)
+      if (!cancelled) {
+        logRoomError('media.response', error, { provider: resource.platform, phase: 'cdn', httpStatus: response?.status, contentType: response?.headers.get('content-type')?.split(';')[0] })
+        this.fail(resource.roomId, resource.version, resource.playbackId, resource.platform, error)
+      }
       return new Response(null, { status: 502, headers: { 'cache-control': 'no-store' } })
     }
   }
