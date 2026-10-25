@@ -48,7 +48,7 @@ pnpm dev:ext     # 按日志加载 apps/extension/.output/chrome-mv3-dev
 
 HTTP 会明文传输房间状态和恢复令牌，适合可信局域网测试；公网建议 HTTPS。此步骤以扩展客户端为准，普通 HTTPS 网页连接 HTTP / WS 仍可能被浏览器的混合内容策略拦截。
 
-通过回环、IPv4 私有地址（`10.*`、`172.16.*`–`172.31.*`、`192.168.*`）、链路本地地址或 IPv6 ULA 地址连接服务时，默认允许任意合法的 Chrome 扩展 ID 和服务同源网页。其他网页来源仍会被拒绝。如果之前导出了 `LISTEN_ALLOWED_ORIGINS`，先运行 `unset LISTEN_ALLOWED_ORIGINS`；显式设置的白名单（包括空值）会优先执行。使用自定义局域网域名时仍可显式配置允许来源。
+未设置 `LISTEN_ALLOWED_ORIGINS` 时不校验 Origin，网页、扩展以及不携带 Origin 的客户端均可连接；回环、局域网、公网 IP 和域名使用相同规则。如果之前导出了该变量，运行 `unset LISTEN_ALLOWED_ORIGINS` 即可恢复默认行为。只有显式配置后才按逗号分隔的精确 Origin 列表校验；显式空字符串或纯空白列表表示不允许任何来源，不等同于未设置。
 
 不需要热更新时，可先 `pnpm build:rooms`，再运行 `HOST=0.0.0.0 PORT=3410 node apps/rooms/dist/server/index.mjs`。
 
@@ -87,15 +87,14 @@ HTTP 会明文传输房间状态和恢复令牌，适合可信局域网测试；
 pnpm install --frozen-lockfile
 pnpm build:rooms
 
-LISTEN_ALLOWED_ORIGINS='chrome-extension://EXTENSION_ID' \
-  HOST=127.0.0.1 PORT=3410 node apps/rooms/dist/server/index.mjs
+HOST=127.0.0.1 PORT=3410 node apps/rooms/dist/server/index.mjs
 ```
 
-把 `EXTENSION_ID` 换成使用中的扩展 ID；开发目录与生产目录安装的 ID 可能不同。多个允许来源用逗号分隔；如果还提供网页前端，应加入该前端精确的 Origin（包含协议和非默认端口）。仅声明来源不能替代成员令牌校验，两者均由服务端检查。
+上述启动方式不校验 Origin。如需限制来源，在启动进程时添加可选环境变量 `LISTEN_ALLOWED_ORIGINS='chrome-extension://EXTENSION_ID,https://app.example.com'`。把 `EXTENSION_ID` 换成使用中的扩展 ID；开发目录与生产目录安装的 ID 可能不同。多个来源用逗号分隔，应填写前端精确的 Origin（包含协议和非默认端口，不带末尾 `/` 或路径）。配置后，WebSocket 和房间控制请求缺少 Origin 或不在列表中会被拒绝；音频请求携带 Origin 时同样校验，无 Origin 的原生 Audio 请求继续凭短期媒体票据访问。
 
 公网建议在 Node 前配置 HTTPS / WSS 反向代理，将 `/ws` 的 WebSocket Upgrade 转发至该端口，并设置适合长连接的超时。用户统一填写如 `https://rooms.example.com` 的根地址，也允许 HTTP；不附路径、账号、查询参数或恢复令牌。`GET /health` 返回服务名、协议版本、默认取源模式和 `hostedEnabled: true` 托管能力标记，可用于健康检查。
 
-默认本机及局域网 IP 接受服务同源页面与任意合法 Chrome 扩展来源；公网 IP 或域名需要显式设置 `LISTEN_ALLOWED_ORIGINS`。显式白名单在所有地址上都优先执行；不会因转发头声称内网地址而放宽来源限制。已有应用层连接、消息、队列、验证尝试和来源频率上限；反向代理还应限制连接 / 请求速率和报文大小，按服务器容量设置进程资源上限。当前为单实例内存房间，多实例部署需要房间归属和统一排序，不能直接启动多个不共享状态的实例做负载均衡。
+Origin 校验仅由 `LISTEN_ALLOWED_ORIGINS` 是否设置决定，不根据请求主机或转发头自动开启。CORS 预检和响应会按已允许的请求来源返回相应头，不携带 Origin 时不生成空的允许来源头。成员令牌、角色与媒体票据始终由服务端校验，来源放行不能代替身份认证。已有应用层连接、消息、队列、验证尝试和来源频率上限；反向代理还应限制连接 / 请求速率和报文大小，按服务器容量设置进程资源上限。当前为单实例内存房间，多实例部署需要房间归属和统一排序，不能直接启动多个不共享状态的实例做负载均衡。
 
 扩展已声明本机服务器权限；用户连接自行填写的 HTTP / HTTPS 主机时，仅申请该协议和主机的可选权限。实际生成的扩展 CSP 未限制 `connect-src` / `media-src`，允许房间连接和现有音源。房间服务不使用音乐平台的 DNR 请求头规则；托管只接受房间曲目身份，不能提交上游 URL 或任意请求头，不是开放代理。
 
@@ -115,7 +114,6 @@ pnpm dev:rooms
 
 ```bash
 LISTEN_PUBLIC_ORIGIN='https://rooms.example.com' \
-LISTEN_ALLOWED_ORIGINS='chrome-extension://EXTENSION_ID' \
 NITRO_HOST=127.0.0.1 NITRO_PORT=3410 node apps/rooms/dist/server/index.mjs
 ```
 

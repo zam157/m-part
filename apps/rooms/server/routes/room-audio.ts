@@ -12,7 +12,7 @@ export default defineHandler(async (event) => {
     return new Response(null, { status, headers })
   }
   if (origin) {
-    if (!isRoomOriginAllowed(event.req.url, origin, process.env.LISTEN_ALLOWED_ORIGINS)) return reject(403, '音频请求来源不允许')
+    if (!isRoomOriginAllowed(origin, process.env.LISTEN_ALLOWED_ORIGINS)) return reject(403, '音频请求来源不允许')
     headers.set('access-control-allow-origin', origin)
     headers.set('access-control-expose-headers', 'Content-Range, Content-Length, Accept-Ranges')
   }

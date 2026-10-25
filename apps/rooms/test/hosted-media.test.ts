@@ -322,9 +322,9 @@ describe('room HTTP authentication and credential transport', () => {
   const origin = `chrome-extension://${'a'.repeat(32)}`
   const handler = () => createRoomControlHandler(media)
   const request = (body: unknown, extra: RequestInit = {}) => new Request('http://127.0.0.1:3410/room-control', { method: 'POST', headers: { origin, authorization: `Bearer ${token()}`, 'content-type': 'application/json' }, body: JSON.stringify(body), ...extra })
-  it('validates preflights and rejects missing Origin, invalid tokens and extra fields', async () => {
+  it('allows preflights and missing Origin by default but rejects invalid tokens and extra fields', async () => {
     expect((await handler()(new Request('http://127.0.0.1/room-control', { method: 'OPTIONS', headers: { origin } }))).status).toBe(204)
-    expect((await handler()(request({}, { headers: { authorization: `Bearer ${token()}` } }))).status).toBe(403)
+    expect((await handler()(request(mutation('revoke'), { headers: { authorization: `Bearer ${token()}` } }))).status).toBe(200)
     expect((await handler()(request({}, { headers: { origin, authorization: 'Bearer invalid' } }))).status).toBe(401)
     const response = await handler()(request({ ...mutation('revoke'), url: 'http://127.0.0.1/' }))
     expect(response.status).toBe(400)

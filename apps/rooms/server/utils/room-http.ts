@@ -38,14 +38,14 @@ export function createRoomControlHandler(media: HostedMedia, options: { publicOr
   let active = 0
   const budgets = new Map<string, { at: number, count: number }>()
   return async (request: Request) => {
-    const origin = request.headers.get('origin') ?? undefined
+    const origin = request.headers.get('origin') ?? ''
     const headers = new Headers({ 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', vary: 'Origin' })
     const reject = (status: number, message: string, body = true) => {
       logRoomError('http.control', new HostedSourceError(message), { status })
       return body ? Response.json({ error: message }, { status, headers }) : new Response(null, { status, headers })
     }
-    if (!origin || !isRoomOriginAllowed(request.url, origin, options.allowedOrigins?.())) return reject(403, '请求来源不允许', false)
-    headers.set('access-control-allow-origin', origin)
+    if (!isRoomOriginAllowed(origin, options.allowedOrigins?.())) return reject(403, '请求来源不允许', false)
+    if (origin) headers.set('access-control-allow-origin', origin)
     headers.set('access-control-allow-methods', 'POST, OPTIONS')
     headers.set('access-control-allow-headers', 'authorization, content-type')
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers })

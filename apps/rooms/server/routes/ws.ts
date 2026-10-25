@@ -17,8 +17,8 @@ export default defineWebSocketHandler({
       logRoomError('ws.upgrade', new HostedSourceError(reason), { status })
       return new Response(reason, { status })
     }
-    const origin = request.headers.get('origin')
-    if (!origin || !isRoomOriginAllowed(request.url, origin, process.env.LISTEN_ALLOWED_ORIGINS)) throw reject(403, 'Origin rejected')
+    const origin = request.headers.get('origin') ?? ''
+    if (!isRoomOriginAllowed(origin, process.env.LISTEN_ALLOWED_ORIGINS)) throw reject(403, 'Origin rejected')
     const now = performance.now()
     for (const [key, entry] of upgrades) if (now - entry.at >= 60_000) upgrades.delete(key)
     if (upgrades.size >= 200 && !upgrades.has(origin)) throw reject(429, 'Too many origins')
