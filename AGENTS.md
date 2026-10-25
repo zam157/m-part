@@ -108,6 +108,7 @@
 
 完整步骤和排障见 [Chrome DevTools MCP 调试流程](./docs/extension.md#chrome-devtools-mcp-调试流程)。
 
+- 扩展公钥固定在 `apps/extension/wxt.config.ts` 的 `manifest.key`，ID 为 `cjkjimmicmbpjjbopadpdfgpgmgobddl`；不要每次构建生成密钥或依赖本地 `.keys/` 目录读取公钥。私钥只在本机被忽略的 `.keys/` 中，用于 CRX 签名。开发 / 生产共用 ID，双客户端验收使用不同浏览器配置文件或设备。
 - 用 `pnpm dev:ext` 启动 WXT 扩展开发服务，端口以启动日志为准。
 - 等 WXT 构建完成，用 MCP 的 `install_extension` 加载**绝对路径** `apps/extension/.output/chrome-mv3-dev`；生产构建目录才是 `apps/extension/.output/chrome-mv3`。端口以启动日志为准。
 - 从工具返回值获取 extension ID、page ID、Service Worker ID 和元素 uid，不要复制文档或上一会话里的 ID。打开 `chrome-extension://<extension-id>/app.html#/` 调试实际扩展页面。

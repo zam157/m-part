@@ -24,10 +24,14 @@
 
 - `m-part.pem`：Chrome 打包 CRX 时选择的私钥文件，每次复用同一份；保留本地备份，不放进扩展产物或提交到仓库。
 - `m-part.public.pem`：对应的公钥 PEM。
-- `manifest-key.txt`：单行 Base64 公钥，可填入 `apps/extension/wxt.config.ts` 的 `manifest.key`，随后重新构建。
+- `manifest-key.txt`：单行 Base64 公钥，已写入 `apps/extension/wxt.config.ts` 的 `manifest.key` 并随源码提交；构建不依赖本地 `.keys/` 目录。
 - `extension-id.txt`：该公钥对应的扩展 ID：`cjkjimmicmbpjjbopadpdfgpgmgobddl`。
 
-这些文件只在生成它们的本机存在，重新克隆仓库不会自动获得私钥。使用 `manifest.key` 固定已解压扩展 ID 的方式见 [Chrome 官方说明](https://developer.chrome.com/docs/extensions/reference/manifest/key)；不要直接修改 `.output/` 下会被构建覆盖的 manifest。本次生成文件本身不改变现有扩展 ID，配置公钥或使用对应私钥签署 CRX 后生效。
+这些文件只在生成它们的本机存在，重新克隆仓库不会自动获得私钥。公钥已在源码配置中固定，开发 / 生产构建、复制到其他目录或机器加载的 ID 均为 `cjkjimmicmbpjjbopadpdfgpgmgobddl`，见 [Chrome 官方说明](https://developer.chrome.com/docs/extensions/reference/manifest/key)。Chrome 打包 CRX 时继续选择对应的 `m-part.pem`。不要直接修改 `.output/` 下会被构建覆盖的 manifest。
+
+更新后运行 `pnpm build:ext`，在 `chrome://extensions` 中加载 `apps/extension/.output/chrome-mv3`；开发模式用 `pnpm dev:ext` 后加载 `apps/extension/.output/chrome-mv3-dev`。首次启用公钥时会切换到上述固定 ID。开发 / 生产版本使用同一个 ID，需要同时测试两个独立客户端时使用不同的浏览器配置文件或两台设备。
+
+已验证生产构建、扩展类型检查通过；开发 / 生产 manifest 公钥一致且均不含 PEM 私钥文件。分别从生产输出目录及复制后的不同目录加载时，Chrome 均返回上述固定 ID。
 
 ## 入口
 
@@ -129,7 +133,7 @@ WXT 若提示 `Load "apps/extension/.output/chrome-mv3-dev" as an unpacked exten
 3. `new_page({ url: "chrome-extension://<extension-id>/app.html#/" })` 打开应用，随后用 `list_pages` 获取实际扩展页面的 page ID 与后台 Service Worker ID。
 4. `take_snapshot({ pageId })` 获取元素 uid，再用 `fill`、`click`、`hover`、`press_key` 操作。
 
-**不要硬编码 ID**：未打包扩展的 ID 通常随绝对路径而定，换机器或 worktree 会变化，以安装返回值为准。page ID、`sw-*` 和元素 uid 也都只对当前会话/页面状态有效。
+**从工具结果读取 ID**：本项目已用 `manifest.key` 固定扩展 ID；未配置 key 的已解压扩展仍会随目录路径变化。调试时继续以安装返回值核对实际 ID；page ID、`sw-*` 和元素 uid 只对当前会话/页面状态有效。
 
 `http://localhost:<port>/app.html` 是开发资源入口；验证扩展权限、登录凭据和 DNR 时应打开 `chrome-extension://.../app.html`。扩展使用**哈希路由**，搜索页是 `app.html#/search`。
 

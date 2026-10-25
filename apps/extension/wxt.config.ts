@@ -14,6 +14,8 @@ export default defineConfig({
   imports: false,
 
   manifest: {
+    // Public key fixes unpacked builds to cjkjimmicmbpjjbopadpdfgpgmgobddl.
+    key: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8oVpudH6BmQX8F6g2eZ6CuW63Uxga0wG5PPhpu3qIwApTt5t789NUIQmNJ7cue4qPlK6aAMtDpvQqe8aTk6v2uGEZsbMv3TWEnq0YAh0q1ybvgWLWfrSkwFGXIO79htCcSKJYDm4I9eT2y6wWK90S/DW37BbR3a4MB9zWTgqZJdg+7Ap+5yqLcxO8/RtCooyYt48RgXb/H09xrcKD9mS0eN4aA492UhsEPYqirCB6jzlaOU7RErFMwXQEvgkv7sYdAcwOP3YN9NKPvD0BFF2NkThuay1k4o/Uo6n+vHgTM0gh3ClpmtJeukH3Fo4nppJOkK9nyYUzVuU6BIfYd69QQIDAQAB',
     name: 'm-part',
     description: '多音源音乐播放器：直接复用浏览器的登录凭据与网络栈，不再需要自建代理',
     minimum_chrome_version: '116',
