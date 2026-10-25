@@ -35,12 +35,18 @@ it('submits credentials only after a host action and immediately clears the pass
   expect(personal).not.toHaveBeenCalled()
 })
 
-it('hides credential management from members and keeps HTTP LAN independent mode usable', () => {
+it.each(['http://192.168.1.10:3410', 'http://rooms.example', 'https://rooms.example'])('hides credentials from members and lets the host submit using %s', (server) => {
   setRoomView(v => ({ ...v, isHost: false })); flush()
   expect(container.querySelector('form')).toBeNull()
-  setRoomView(v => ({ ...v, isHost: true })); setRoomServer('http://192.168.1.10:3410'); flush()
-  expect(container.querySelector<HTMLInputElement>('input')!.disabled).toBe(true)
-  expect(container.textContent).toContain('仍可使用各自取源')
+  setRoomView(v => ({ ...v, isHost: true })); setRoomServer(server); flush()
+  const input = container.querySelector<HTMLInputElement>('input')!
+  expect(input.disabled).toBe(false)
+  input.value = 'MUSIC_U=private-test-session'
+  input.dispatchEvent(new Event('input', { bubbles: true })); flush()
+  expect(container.querySelector<HTMLButtonElement>('button[type=submit]')!.disabled).toBe(false)
+  container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); flush()
+  expect(manage).toHaveBeenCalledWith('credential', 'MUSIC_U=private-test-session', 'netease')
+  expect(input.value).toBe('')
   expect(roomView().connection).toBe('connected')
 })
 

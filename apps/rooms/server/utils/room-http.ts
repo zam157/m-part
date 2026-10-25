@@ -5,14 +5,6 @@ import type { HostedMedia } from './hosted-media'
 import { isRoomOriginAllowed } from './origin'
 import { logRoomError } from './diagnostics'
 
-export function credentialTransportAllowed(server: string, publicOrigin?: string) {
-  const url = new URL(server)
-  if (url.protocol === 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) return true
-  if (!publicOrigin) return false
-  const configured = new URL(publicOrigin)
-  return configured.protocol === 'https:' && configured.origin === publicOrigin
-}
-
 async function readControl(request: Request) {
   const reader = request.body?.getReader()
   if (!reader) throw new HostedSourceError('缺少房间操作内容')
@@ -34,7 +26,7 @@ async function readControl(request: Request) {
 }
 
 /** No request bodies, bearer tokens, tickets, cookies or upstream URLs are logged. */
-export function createRoomControlHandler(media: HostedMedia, options: { publicOrigin?: () => string | undefined, allowedOrigins?: () => string | undefined } = {}) {
+export function createRoomControlHandler(media: HostedMedia, options: { allowedOrigins?: () => string | undefined } = {}) {
   let active = 0
   const budgets = new Map<string, { at: number, count: number }>()
   return async (request: Request) => {
@@ -63,7 +55,6 @@ export function createRoomControlHandler(media: HostedMedia, options: { publicOr
     try {
       const control = await readControl(request)
       action = control.action
-      if (control.action === 'credential' && !credentialTransportAllowed(request.url, options.publicOrigin?.())) return reject(400, '绑定房间账号需要 HTTPS；本机回环地址可用 HTTP 调试')
       return json(await media.control(token, control, request.signal))
     }
     catch (error) {

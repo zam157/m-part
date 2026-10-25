@@ -19,10 +19,11 @@ describe('room HTTP control transport', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ error: '仅房主可管理房间音源' }, { status: 403 })))
     await expect(sendRoomControl('https://rooms.example', 'token', { action: 'revoke', provider: 'netease', roomId: 'room', expectedRevision: 1 })).rejects.toThrow('仅房主')
   })
-  it('blocks credential submission over LAN HTTP before any network request', async () => {
-    const fetcher = vi.fn()
+  it.each(['http://192.168.1.10:3410', 'http://rooms.example', 'https://rooms.example'])('submits credentials over %s without checking TLS', async (server) => {
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ ok: true }))
     vi.stubGlobal('fetch', fetcher)
-    await expect(sendRoomControl('http://192.168.1.10:3410', 'token', { action: 'credential', cookie: 'private', roomId: 'room', expectedRevision: 1 })).rejects.toThrow('HTTPS')
-    expect(fetcher).not.toHaveBeenCalled()
+    const control = { action: 'credential' as const, cookie: 'private-test-session', roomId: 'room', expectedRevision: 1 }
+    await expect(sendRoomControl(server, 'token', control)).resolves.toEqual({ ok: true })
+    expect(fetcher).toHaveBeenCalledExactlyOnceWith(`${server}/room-control`, expect.objectContaining({ method: 'POST', credentials: 'omit', body: JSON.stringify(control) }))
   })
 })

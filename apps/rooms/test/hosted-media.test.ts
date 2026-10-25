@@ -8,7 +8,7 @@ import * as v from 'valibot'
 import { ListenRooms } from '../server/utils/listen-rooms'
 import { HostedMedia } from '../server/utils/hosted-media'
 import { parseNeteaseCookie, validateNeteaseMediaUrl } from '../server/providers/netease'
-import { createRoomControlHandler, credentialTransportAllowed } from '../server/utils/room-http'
+import { createRoomControlHandler } from '../server/utils/room-http'
 
 const cookie = 'MUSIC_U=abcdefghijklmnop123456; __csrf=0123456789abcdef; irrelevant=must-not-forward'
 const track = { provider: 'netease' as const, id: '123', title: 'Song', duration: 120, coverUrl: '' }
@@ -330,11 +330,11 @@ describe('room HTTP authentication and credential transport', () => {
     expect(response.status).toBe(400)
     expect(await response.text()).not.toContain('127.0.0.1')
   })
-  it('allows credentials over HTTPS or loopback HTTP, and supports an explicit TLS terminator', () => {
-    expect(credentialTransportAllowed('https://rooms.example')).toBe(true)
-    expect(credentialTransportAllowed('http://127.0.0.1:3410')).toBe(true)
-    expect(credentialTransportAllowed('http://192.168.1.10:3410')).toBe(false)
-    expect(credentialTransportAllowed('http://192.168.1.10:3410', 'https://rooms.example')).toBe(true)
+  it.each(['http://192.168.1.10:3410', 'http://rooms.example', 'https://rooms.example'])('lets the host bind credentials over %s without TLS configuration', async (server) => {
+    const response = await handler()(new Request(`${server}/room-control`, { method: 'POST', headers: { origin, authorization: `Bearer ${token()}`, 'content-type': 'application/json' }, body: JSON.stringify({ action: 'credential', cookie, roomId: state().roomId, expectedRevision: state().revision }) }))
+    expect(response.status).toBe(200)
+    expect(provider.validate).toHaveBeenCalledExactlyOnceWith(parseNeteaseCookie(cookie), expect.any(AbortSignal))
+    expect(state().source?.accounts?.netease?.credential).toBe('ready')
   })
   it('lets the host bind and use hosted media without server opt-in', async () => {
     expect(state().source?.mode).toBe('independent')

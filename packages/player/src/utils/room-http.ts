@@ -1,14 +1,8 @@
 import type { RoomControl } from '@m-part/listen-core/protocol'
 import { tRequest } from '@m-part/music/fetch'
 
-export function canSubmitRoomCredential(server: string) {
-  const url = new URL(server)
-  return url.protocol === 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
-}
-
 /** Room bearer authentication never uses a music cookie or fetch credentials. */
 export async function sendRoomControl(server: string, token: string, control: RoomControl, signal?: AbortSignal): Promise<unknown> {
-  if (control.action === 'credential' && !canSubmitRoomCredential(server)) throw new Error('绑定房间账号需要 HTTPS；局域网 HTTP 仍可使用个人音源')
   const result = await tRequest<unknown>(`${server}/room-control`, {
     method: 'POST', credentials: 'omit', acceptHttpErrors: true, signal,
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: control,

@@ -19,7 +19,7 @@
 
 ## 结论与首版范围
 
-**可行，建议由服务端同步播放状态，并支持「成员独立取源」与「房间托管取源」两种模式。** 独立模式沿用成员自己的登录态；托管模式由服务器按曲目平台选择可选的房间登录凭据或匿名请求，获取音源并转发音频。成员不接收第三方凭据；提交凭据需要 HTTPS（回环调试除外），局域网匿名托管支持 HTTP。现有播放器和 Media Session 可以复用，托管实验已新增服务端 Provider 会话适配及媒体转发能力。
+**可行，建议由服务端同步播放状态，并支持「成员独立取源」与「房间托管取源」两种模式。** 独立模式沿用成员自己的登录态；托管模式由服务器按曲目平台选择可选的房间登录凭据或匿名请求，获取音源并转发音频。成员不接收第三方凭据；HTTP / HTTPS 地址均可由房主显式提交凭据并使用托管。现有播放器和 Media Session 可以复用，托管实验已新增服务端 Provider 会话适配及媒体转发能力。
 
 评审结论：总体架构可以进入原型验证，正式接入前应先确定房间与本机状态的边界、媒体就绪判定、房主缓冲恢复、个人缓存隔离及重连身份。托管模式另需验证服务器会话、风控表现、媒体转发和带宽成本；统一服务器出口不能保证消除风控。先验证同步和异常恢复，再完成播放器控制与缓存改造；托管取源先做单 Provider 实验，通过后再决定是否作为默认模式。
 
@@ -42,7 +42,7 @@
 | `apps/rooms/server/utils/listen-rooms.ts` / `runtime.ts` | 独立 Nitro 房间权威状态与服务单例 |
 | `apps/rooms/server/providers/` | 受控服务端三平台适配；只复用独立加密 / 签名逻辑，不读取浏览器 Cookie API |
 | `apps/rooms/server/utils/hosted-media.ts` | 私有内存凭据、解析合并、成员媒体租约、Range 流与资源释放 |
-| `apps/rooms/server/routes/room-control.ts` / `room-audio.ts` | 房间管理鉴权、CORS、HTTPS 凭据入口及媒体响应；独立于 Web 通用代理 |
+| `apps/rooms/server/routes/room-control.ts` / `room-audio.ts` | 房间管理鉴权、CORS、HTTP / HTTPS 凭据入口及媒体响应；独立于 Web 通用代理 |
 | `apps/rooms/lab/` | 固定音频同步实验、seek / rate 比较及离线分析 |
 | `apps/web/` / `apps/extension/` | 共享播放器的两个入口；Web 生产代理已有独立 Nitro 构建，WXT 后台尚不承载音频 |
 
@@ -71,7 +71,7 @@ WebRTC 仍需要交换信令来建立连接，参见 [MDN WebRTC connectivity](h
 
 当前安装的 Nitro 是 `3.0.260903-beta`，本地类型声明已有 `features.websocket`。官方文档提供 `features.websocket: true` 和从 `nitro` 导入的 `defineWebSocketHandler`，可优先复用，见 [Nitro WebSocket](https://nitro.build/docs/websocket)。当前独立服务与实验均已构建和运行验证，不能直接照搬 Nitro 2 的教程。
 
-房间服务已有独立运行 / 构建入口，与 WXT 分开部署。异地成员需要共同可访问的服务地址，支持 HTTP / WS 和 HTTPS / WSS；公网建议 HTTPS，远程提交托管凭据必须使用 HTTPS，仅运行某个人电脑上的 localhost 不够。
+房间服务已有独立运行 / 构建入口，与 WXT 分开部署。异地成员需要共同可访问的服务地址，支持 HTTP / WS 和 HTTPS / WSS；公网建议 HTTPS，但代码不以此限制托管凭据提交，仅运行某个人电脑上的 localhost 不够。
 
 首版用一个常驻 Node 进程和内存房间即可，重启后房间失效并明确提示用户。上线前确认反向代理允许 WebSocket Upgrade、长连接超时与 TLS；普通短时 HTTP 函数不能默认视为适合房间服务。多实例以后再加房间归属、共享存储及广播；仅加 Redis 发布订阅不能代替房间指令的统一排序。
 

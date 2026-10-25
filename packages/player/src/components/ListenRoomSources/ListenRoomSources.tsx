@@ -1,8 +1,7 @@
 import type { HostedPlatform } from '@m-part/listen-core/protocol'
 import { createSignal, For, Show } from 'solid-js'
 import { clsx } from 'cn/lite'
-import { manageRoomSource, roomServer, roomView, usePersonalRoomSource } from '~/composables/listen-room'
-import { canSubmitRoomCredential } from '~/utils/room-http'
+import { manageRoomSource, roomView, usePersonalRoomSource } from '~/composables/listen-room'
 
 /** Credentials stay only in this input until the host explicitly submits them. */
 export default function ListenRoomSources() {
@@ -51,10 +50,9 @@ export default function ListenRoomSources() {
               </select>
             </label>
             <label class="block">{selected().name}登录 Cookie
-              <input type="password" class="input mt-2 w-full" value={cookie()} onInput={event => setCookie(event.currentTarget.value)} maxlength="4096" autocomplete="off" spellcheck={false} placeholder={selected().placeholder} disabled={disabled() || !canSubmitRoomCredential(roomServer())} />
+              <input type="password" class="input mt-2 w-full" value={cookie()} onInput={event => setCookie(event.currentTarget.value)} maxlength="4096" autocomplete="off" spellcheck={false} placeholder={selected().placeholder} disabled={disabled()} />
             </label>
-            <Show when={!canSubmitRoomCredential(roomServer())}><p class="text-xs text-muted-foreground">提交账号需要 HTTPS；当前 HTTP 连接仍可使用各自取源或服务器匿名托管。本机回环地址可用 HTTP 调试。</p></Show>
-            <button type="submit" class="btn px-3 h-8" disabled={disabled() || !cookie().trim() || !canSubmitRoomCredential(roomServer())}>{roomView().sourceBusy ? '正在处理…' : '绑定所选平台账号'}</button>
+            <button type="submit" class="btn px-3 h-8" disabled={disabled() || !cookie().trim()}>{roomView().sourceBusy ? '正在处理…' : '绑定所选平台账号'}</button>
           </form>
         </Show>
       </div>
