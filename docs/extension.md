@@ -18,6 +18,17 @@
 
 `apps/extension/web-ext.config.ts` 开了 `keepProfileChanges`：WXT 默认用一次性 Chrome 配置启动，没有日常登录态；要在 dev 窗口里验证 cookie，得在那个窗口登录一次。
 
+## 本地签名密钥与固定 ID
+
+2026-10-25 已使用 Node.js 内置 `node:crypto` 在本机生成 RSA-2048 密钥，私钥使用 PKCS#8 PEM，公钥使用 SPKI；已重新导入并完成签名 / 验签检查，无需安装 OpenSSL。文件均放在被 Git 忽略的 `apps/extension/.keys/`，目录权限为 700、文件权限为 600：
+
+- `m-part.pem`：Chrome 打包 CRX 时选择的私钥文件，每次复用同一份；保留本地备份，不放进扩展产物或提交到仓库。
+- `m-part.public.pem`：对应的公钥 PEM。
+- `manifest-key.txt`：单行 Base64 公钥，可填入 `apps/extension/wxt.config.ts` 的 `manifest.key`，随后重新构建。
+- `extension-id.txt`：该公钥对应的扩展 ID：`cjkjimmicmbpjjbopadpdfgpgmgobddl`。
+
+这些文件只在生成它们的本机存在，重新克隆仓库不会自动获得私钥。使用 `manifest.key` 固定已解压扩展 ID 的方式见 [Chrome 官方说明](https://developer.chrome.com/docs/extensions/reference/manifest/key)；不要直接修改 `.output/` 下会被构建覆盖的 manifest。本次生成文件本身不改变现有扩展 ID，配置公钥或使用对应私钥签署 CRX 后生效。
+
 ## 入口
 
 - `apps/extension/entrypoints/app/index.html` → 产物 `/app.html`，由 `packages/player/src/main.tsx` 驱动
