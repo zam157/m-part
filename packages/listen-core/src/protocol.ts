@@ -1,7 +1,7 @@
 import * as v from 'valibot'
 
 /** Only public track metadata crosses the wire; source URLs and cookies never do. */
-export const LISTEN_PROTOCOL = 6
+export const LISTEN_PROTOCOL = 7
 export const LAB_TRACK = { id: 'calibration-v1', duration: 90 } as const
 export const HEARTBEAT_MS = 5_000
 export const CONNECTION_TIMEOUT_MS = 12_000
@@ -50,20 +50,23 @@ const roomAccount = v.strictObject({
   ownerId: v.optional(shortText), label: v.optional(text),
 })
 export type RoomAccount = v.InferOutput<typeof roomAccount>
+const sourceMode = v.picklist(['independent', 'hosted'])
 
 export const roomSource = v.strictObject({
-  mode: v.picklist(['independent', 'hosted']), version: revision,
+  mode: sourceMode, version: revision,
   provider: v.optional(hostedPlatform),
   credential: v.picklist(['none', 'ready', 'invalid']),
   ownerId: v.optional(shortText), label: v.optional(text), error: v.optional(text),
   accounts: v.optional(v.partial(v.strictObject({ netease: roomAccount, qq: roomAccount, bili: roomAccount }))),
+  modes: v.optional(v.partial(v.strictObject({ netease: sourceMode, qq: sourceMode, bili: sourceMode }))),
 })
 export type RoomSource = v.InferOutput<typeof roomSource>
 
 /** Current-track status is derived from its platform; accounts never select a track. */
 export function currentRoomSource(source: RoomSource, provider?: HostedPlatform): RoomSource {
   const account = provider ? source.accounts?.[provider] : undefined
-  return { ...source, provider, credential: account?.credential ?? 'none', label: account?.label, ownerId: account?.ownerId }
+  const mode = provider ? source.modes?.[provider] ?? (source.modes ? 'independent' : source.mode) : 'independent'
+  return { ...source, mode, provider, credential: account?.credential ?? 'none', label: account?.label, ownerId: account?.ownerId }
 }
 
 /** Credentials only travel in authenticated HTTP requests, never in room messages. */
@@ -71,7 +74,7 @@ const roomRequest = { roomId: shortText }
 const roomMutation = { ...roomRequest, expectedRevision: revision }
 export const roomControl = v.variant('action', [
   v.strictObject({ ...roomMutation, action: v.literal('credential'), provider: v.optional(hostedPlatform), cookie: v.pipe(v.string(), v.minLength(1), v.maxLength(4096)) }),
-  v.strictObject({ ...roomMutation, action: v.literal('source'), mode: v.picklist(['independent', 'hosted']) }),
+  v.strictObject({ ...roomMutation, action: v.literal('source'), provider: hostedPlatform, mode: sourceMode }),
   v.strictObject({ ...roomMutation, action: v.literal('revoke'), provider: hostedPlatform }),
   v.strictObject({ ...roomMutation, action: v.literal('retry-source') }),
   v.strictObject({ ...roomRequest, action: v.literal('ticket'), queueItemId: shortText, playbackId: shortText, sourceVersion: revision }),

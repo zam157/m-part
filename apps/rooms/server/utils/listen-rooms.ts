@@ -390,7 +390,7 @@ export class ListenRooms {
           state: {
             protocol: LISTEN_PROTOCOL, roomId: randomUUID(), code, revision: 0, playbackId: randomUUID(), track: { ...LAB_TRACK },
             kind: message.kind ?? 'lab', queue: [], currentIndex: null, playMode: 'order',
-            source: { mode: 'independent', version: 0, credential: 'none', accounts: {} },
+            source: { mode: 'independent', version: 0, credential: 'none', accounts: {}, modes: {} },
             status: 'paused', wantsToPlay: false, pauseReason: 'user', positionAtAnchor: 0, anchorServerTime: this.now(), rate: 1, hostId: '', members: [], activityVersion: 0, history: [],
           }, members: [], retired: [], createdAt: this.now(), order: [],
         }

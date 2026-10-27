@@ -145,7 +145,7 @@ describe('room chat and operation history', () => {
     send(host, { type: 'command', commandId: id, expectedRevision: revision, action: 'next' })
     command(member, 'pause')
     expect(state().history).toHaveLength(count)
-    rooms.updateSource(welcome(host).token, state().roomId, state().revision, { credential: 'ready', label: 'Safe label', mode: 'hosted' })
+    rooms.updateSource(welcome(host).token, state().roomId, state().revision, { credential: 'ready', label: 'Safe label', modes: { netease: 'hosted' } })
     rooms.sourceFailed(state().roomId, state().source!.version, 'https://private.example/signed?token=private')
     expect(JSON.stringify(state().history)).not.toContain('private.example')
     expect(state().history.at(-1)?.text).toBe('房间托管音源不可用，已暂停播放')

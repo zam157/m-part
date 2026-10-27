@@ -97,8 +97,9 @@ export class HostedMedia {
         if (!latest.isHost || latest.generation !== auth.generation || latest.snapshot.revision !== request.expectedRevision) throw new HostedSourceError('房间状态已更新，请重新操作')
         const source = latest.snapshot.source!
         const accounts = { ...source.accounts, [platform]: { credential: cookie ? 'ready' as const : 'none' as const, version: (source.accounts?.[platform]?.version ?? 0) + 1, ...(cookie ? { ownerId: auth.memberId, label } : {}) } }
-        const affectsPlayback = source.mode === 'hosted' && source.provider === platform
-        this.rooms.updateSource(token, request.roomId, request.expectedRevision, { accounts, ...(affectsPlayback ? { error: undefined } : {}) }, () => {
+        const modes = { ...source.modes, [platform]: cookie ? 'hosted' as const : 'independent' as const }
+        const affectsPlayback = source.provider === platform && (source.mode === 'hosted' || modes[platform] === 'hosted')
+        this.rooms.updateSource(token, request.roomId, request.expectedRevision, { accounts, modes, ...(affectsPlayback ? { error: undefined } : {}) }, () => {
           const sessions = { ...this.credentials.get(request.roomId) }
           if (cookie) sessions[platform] = { provider: platform, cookie, label: label!, ownerId: auth.memberId }
           else delete sessions[platform]
@@ -108,9 +109,15 @@ export class HostedMedia {
       }
       finally { if (this.pending.get(key) === controller) this.pending.delete(key) }
     }
+    else if (request.action === 'source') {
+      const source = auth.snapshot.source!
+      const previous = source.modes?.[request.provider] ?? 'independent'
+      const affectsPlayback = source.provider === request.provider && previous !== request.mode
+      const name = { netease: '网易云', qq: 'QQ 音乐', bili: 'BiliBili' }[request.provider]
+      this.rooms.updateSource(token, request.roomId, request.expectedRevision, { modes: { ...source.modes, [request.provider]: request.mode }, ...(affectsPlayback ? { error: undefined } : {}) }, undefined, { affectsPlayback, operation: `将${name}切换为${request.mode === 'hosted' ? '服务器取源' : '各自取源'}` })
+    }
     else {
-      const mode = request.action === 'source' ? request.mode : auth.snapshot.source?.mode ?? 'independent'
-      this.rooms.updateSource(token, request.roomId, request.expectedRevision, { mode, error: undefined })
+      this.rooms.updateSource(token, request.roomId, request.expectedRevision, { error: undefined })
     }
     return { ok: true, snapshot: this.rooms.authorize(token, request.roomId).snapshot }
   }

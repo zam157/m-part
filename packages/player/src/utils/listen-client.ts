@@ -218,12 +218,13 @@ export class ListenClient {
 
   async manageSource(action: 'credential' | 'revoke' | 'source' | 'retry-source', value?: string, provider?: HostedPlatform) {
     if (!this.identity || !this.snapshot || this.connection !== 'connected' || !this.isHost) { this.error = '连接恢复后由房主管理房间音源'; this.changed(); return false }
+    if (action === 'source' && !provider) { this.error = '请选择要设置的音源'; this.changed(); return false }
     if (this.sourceBusy || this.busy) { this.error = '请等待当前房间操作完成'; this.changed(); return false }
     const controller = new AbortController()
     this.management = controller; this.sourceBusy = true; this.error = ''; this.changed()
     const base = { roomId: this.identity.roomId, expectedRevision: this.snapshot.revision }
     const request: RoomControl = action === 'credential' ? { ...base, action, provider: provider ?? 'netease', cookie: value ?? '' }
-      : action === 'source' ? { ...base, action, mode: value === 'hosted' ? 'hosted' : 'independent' }
+      : action === 'source' ? { ...base, action, provider: provider!, mode: value === 'hosted' ? 'hosted' : 'independent' }
         : action === 'revoke' ? { ...base, action, provider: provider ?? this.snapshot.source?.provider ?? 'netease' } : { ...base, action }
     try {
       const response = await sendRoomControl(this.identity.server, this.identity.token, request, controller.signal)

@@ -25,7 +25,7 @@ const state = (p = host) => (p.messages.findLast(m => m.type === 'snapshot' || m
 const token = (p = host) => (p.messages.find(m => m.type === 'welcome') as Extract<ServerMessage, { type: 'welcome' }>).token
 const signal = () => new AbortController().signal
 const mutation = (action: 'revoke' | 'retry-source'): RoomControl => action === 'revoke' ? { action, provider: 'netease', roomId: state().roomId, expectedRevision: state().revision } : { action, roomId: state().roomId, expectedRevision: state().revision }
-async function enableHosted() { await media.control(token(), { action: 'source', mode: 'hosted', roomId: state().roomId, expectedRevision: state().revision }, signal()) }
+async function enableHosted(platform = state().source?.provider ?? 'netease') { await media.control(token(), { action: 'source', provider: platform, mode: 'hosted', roomId: state().roomId, expectedRevision: state().revision }, signal()) }
 async function bind() { await media.control(token(), { action: 'credential', cookie, roomId: state().roomId, expectedRevision: state().revision }, signal()); await enableHosted() }
 async function ticket(p = host) {
   const current = state(p)
@@ -122,19 +122,19 @@ describe('hosted room credentials and media leases', () => {
     expect((await audio(b)).status).toBe(401)
   })
 
-  it('revocation invalidates credential media and prepares anonymous playback without changing the mode', async () => {
+  it('revocation invalidates credential media and returns the platform to independent playback', async () => {
     await bind()
     const lease = await ticket(member)
     await media.control(token(), mutation('revoke'), signal())
-    expect(state()).toMatchObject({ status: 'preparing', wantsToPlay: true, source: { mode: 'hosted', credential: 'none' } })
+    expect(state()).toMatchObject({ status: 'preparing', wantsToPlay: true, source: { mode: 'independent', credential: 'none' } })
     expect((await audio(lease)).status).toBe(401)
-    await ticket(); expect(provider.resolve).toHaveBeenLastCalledWith('', track.id, expect.any(AbortSignal))
+    await expect(ticket()).rejects.toThrow('音源已更新')
   })
 
   it.each(['switch', 'track', 'end', 'reconnect'] as const)('invalidates old tickets after %s', async (action) => {
     await bind()
     const lease = await ticket(member)
-    if (action === 'switch') await media.control(token(), { action: 'source', mode: 'independent', roomId: state().roomId, expectedRevision: state().revision }, signal())
+    if (action === 'switch') await media.control(token(), { action: 'source', provider: 'netease', mode: 'independent', roomId: state().roomId, expectedRevision: state().revision }, signal())
     if (action === 'track') rooms.receive(host, { type: 'command', commandId: 'next', expectedRevision: state().revision, action: 'next' })
     if (action === 'end') rooms.receive(host, { type: 'leave' })
     if (action === 'reconnect') rooms.receive(peer('new-member'), { type: 'resume', protocol: LISTEN_PROTOCOL, token: token(member) })
@@ -341,7 +341,7 @@ describe('room HTTP authentication and credential transport', () => {
     const response = await handler()(request({ action: 'credential', cookie, roomId: state().roomId, expectedRevision: state().revision }))
     expect(response.status).toBe(200)
     expect(provider.validate).toHaveBeenCalledOnce()
-    expect(state().source).toMatchObject({ mode: 'independent', credential: 'ready' })
+    expect(state().source).toMatchObject({ mode: 'hosted', credential: 'ready' })
     await enableHosted()
     const current = state()
     const leased = await handler()(request({ action: 'ticket', roomId: current.roomId, queueItemId: current.queue[0]!.queueItemId, playbackId: current.playbackId, sourceVersion: current.source!.version }))
@@ -382,8 +382,8 @@ describe('platform-specific room sessions', () => {
     for (const message of member.messages) expect(v.safeParse(serverMessage, message).success).toBe(true)
   })
 
-  it('uses anonymous QQ playback in a mixed queue without sending the NetEase account', async () => {
-    await bind()
+  it('uses anonymous QQ playback when explicitly enabled without sending the NetEase account', async () => {
+    await bind(); await enableHosted('qq')
     rooms.receive(host, { type: 'command', commandId: 'mixed', expectedRevision: state().revision, action: 'queue', tracks: [{ ...track, provider: 'qq', id: '003rJSwm3TechU' }] })
     await ticket()
     expect(provider.resolve).toHaveBeenLastCalledWith('', '003rJSwm3TechU', expect.any(AbortSignal))
@@ -435,9 +435,47 @@ describe('optional per-platform room credentials', () => {
     }
     media = new HostedMedia(rooms, adapters, fetcher, () => now); media.sync(state())
   })
+  it('uses the bound platform on the server and leaves unbound platforms independent by default', async () => {
+    await bindAccount('netease')
+    expect(state().source).toMatchObject({ mode: 'hosted', modes: { netease: 'hosted' }, accounts: { netease: { credential: 'ready' } } })
+    await ticket()
+    expect(adapters.netease.resolve).toHaveBeenLastCalledWith('netease-private', '123', expect.any(AbortSignal))
+    choose('qq')
+    expect(state().source).toMatchObject({ provider: 'qq', mode: 'independent', credential: 'none' })
+    await expect(ticket()).rejects.toThrow('音源已更新')
+    expect(adapters.qq.resolve).not.toHaveBeenCalled()
+    choose('bili')
+    expect(state().source).toMatchObject({ provider: 'bili', mode: 'independent', credential: 'none' })
+    choose('netease'); await ticket()
+    expect(state().source?.mode).toBe('hosted')
+  })
+  it('changes an inactive platform without interrupting the current stream and supports explicit anonymous hosting', async () => {
+    await bindAccount('netease')
+    const lease = await ticket(member)
+    const revision = state().revision; const version = state().source!.version
+    await enableHosted('qq')
+    expect(state().revision).toBe(revision)
+    expect(state().source?.version).toBe(version)
+    expect((await audio(lease)).status).toBe(200)
+    choose('qq'); await ticket()
+    expect(adapters.qq.resolve).toHaveBeenCalledWith('', expect.any(String), expect.any(AbortSignal))
+    expect(state().source).toMatchObject({ provider: 'qq', mode: 'hosted', modes: { netease: 'hosted', qq: 'hosted' } })
+    await media.control(token(), { action: 'source', provider: 'qq', mode: 'independent', roomId: state().roomId, expectedRevision: state().revision }, signal())
+    expect(state().source?.mode).toBe('independent')
+    expect(state().source?.modes?.netease).toBe('hosted')
+  })
+  it('does not interrupt independent playback when the current platform account is revoked', async () => {
+    await bindAccount('netease')
+    await media.control(token(), { action: 'source', provider: 'netease', mode: 'independent', roomId: state().roomId, expectedRevision: state().revision }, signal())
+    const revision = state().revision; const version = state().source!.version
+    await media.control(token(), { action: 'revoke', provider: 'netease', roomId: state().roomId, expectedRevision: revision }, signal())
+    expect(state().revision).toBe(revision)
+    expect(state().source?.version).toBe(version)
+    expect(state().source).toMatchObject({ mode: 'independent', credential: 'none', modes: { netease: 'independent' } })
+  })
   it('allows every platform to resolve anonymously with no accounts at all', async () => {
-    await enableHosted()
     for (const platform of platforms) {
+      await enableHosted(platform)
       choose(platform); await ticket()
       expect(adapters[platform].resolve).toHaveBeenCalledWith('', expect.any(String), expect.any(AbortSignal))
       expect(adapters[platform].validate).not.toHaveBeenCalled()
@@ -446,7 +484,7 @@ describe('optional per-platform room credentials', () => {
   })
   it('keeps all three accounts, picks only the matching cookie and scopes revocation', async () => {
     for (const platform of platforms) await bindAccount(platform)
-    expect(state().source?.mode).toBe('independent')
+    expect(state().source?.mode).toBe('hosted')
     await enableHosted()
     for (const platform of platforms) {
       choose(platform); await ticket()
@@ -459,7 +497,9 @@ describe('optional per-platform room credentials', () => {
     expect((await audio(lease)).status).toBe(200)
     expect(state().source?.accounts).toMatchObject({ netease: { credential: 'none' }, qq: { credential: 'ready' }, bili: { credential: 'ready' } })
     expect(JSON.stringify(state())).not.toContain('-private')
-    choose('netease'); await ticket()
+    choose('netease')
+    expect(state().source?.mode).toBe('independent')
+    await enableHosted(); await ticket()
     expect(adapters.netease.resolve).toHaveBeenLastCalledWith('', '123', expect.any(AbortSignal))
   })
   it('replacing the current platform aborts its old stream and uses the new cookie', async () => {
@@ -499,7 +539,7 @@ describe('optional per-platform room credentials', () => {
     let fail!: (error: Error) => void
     adapters.netease.resolve.mockImplementationOnce(() => new Promise((_, reject) => { fail = reject }))
     const old = ticket(); const assertion = expect(old).rejects.toThrow()
-    choose('qq'); await ticket()
+    await enableHosted('qq'); choose('qq'); await ticket()
     fail(new HostedSourceError('old failure', true)); await assertion
     expect(state().source).toMatchObject({ provider: 'qq', credential: 'none', accounts: { netease: { credential: 'ready' } } })
     expect(state().source?.error).toBeUndefined()

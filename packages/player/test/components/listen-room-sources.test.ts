@@ -71,14 +71,17 @@ it('selects each platform explicitly and clears credentials when switching platf
 })
 
 it('enables hosted mode without cookies and manages each account separately', () => {
-  const enable = Array.from(container.querySelectorAll('button')).find(b => b.textContent === '全员使用服务器音源')!
+  const enable = container.querySelector<HTMLButtonElement>('[aria-label="网易云取源方式"] button:nth-child(2)')!
   expect(enable.disabled).toBe(false); enable.click(); flush()
-  expect(manage).toHaveBeenCalledWith('source', 'hosted')
+  expect(manage).toHaveBeenCalledWith('source', 'hosted', 'netease')
+  const qqEnable = container.querySelector<HTMLButtonElement>('[aria-label="QQ 音乐取源方式"] button:nth-child(2)')!
+  qqEnable.click(); flush()
+  expect(manage).toHaveBeenLastCalledWith('source', 'hosted', 'qq')
   setRoomView(v => ({ ...v, snapshot: { source: { mode: 'hosted', version: 1, provider: 'qq', credential: 'none', accounts: { netease: { credential: 'ready', version: 1, label: '网易云账号 · 尾号 1234' }, bili: { credential: 'ready', version: 1, label: 'BiliBili 账号 · 尾号 5678' } } } } as RoomSnapshot })); flush()
   expect(container.textContent).toContain('QQ 音乐匿名托管')
   expect(container.querySelector('[data-platform=netease]')!.textContent).toContain('1234')
   expect(container.querySelector('[data-platform=bili]')!.textContent).toContain('5678')
-  container.querySelector<HTMLButtonElement>('[data-platform=netease] button')!.click(); flush()
+  container.querySelector<HTMLButtonElement>('[data-platform=netease] > button')!.click(); flush()
   expect(manage).toHaveBeenLastCalledWith('revoke', undefined, 'netease')
   setRoomView(v => ({ ...v, isHost: false })); flush()
   expect(container.querySelectorAll('[aria-label="各平台房间账号"] button')).toHaveLength(0)

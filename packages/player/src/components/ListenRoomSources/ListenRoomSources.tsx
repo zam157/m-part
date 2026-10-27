@@ -20,13 +20,19 @@ export default function ListenRoomSources() {
   }
   return (
     <details class="rounded-xl border border-border p-4">
-      <summary class="cursor-pointer text-sm font-medium">房间音源 · {hosted() ? '服务器托管' : '各自取源'}</summary>
+      <summary class="cursor-pointer text-sm font-medium">房间音源 · 按平台设置</summary>
       <div class="mt-4 space-y-4 text-sm">
         <p class="text-muted-foreground">本机正在使用：{hosted() && !roomView().personalSource ? currentLabel() : '个人音源'}。切换后会重新准备并追赶房间进度，主动暂离时保持暂停。</p>
         <ul class="space-y-2" aria-label="各平台房间账号">
           <For each={platforms}>{item => (
             <li class="rounded-lg border border-border p-3 flex flex-wrap gap-2 items-center justify-between" data-platform={item.id}>
-              <div class="min-w-0"><span class="font-medium">{item.name}</span><p class="text-xs text-muted-foreground mt-1 break-words">{source()?.accounts?.[item.id]?.credential === 'ready' ? source()?.accounts?.[item.id]?.label : source()?.accounts?.[item.id]?.credential === 'invalid' ? '账号已失效，可重新绑定或匿名重试' : '未绑定账号，使用匿名取源'}</p></div>
+              <div class="min-w-0"><span class="font-medium">{item.name}</span><p class="text-xs text-muted-foreground mt-1 break-words">{source()?.accounts?.[item.id]?.credential === 'ready' ? source()?.accounts?.[item.id]?.label : source()?.accounts?.[item.id]?.credential === 'invalid' ? '账号已失效，请重新绑定或切换各自取源' : '未绑定账号'} · {source()?.modes?.[item.id] === 'hosted' ? '服务器取源' : '各自取源'}</p></div>
+              <Show when={roomView().isHost}>
+                <div class="flex gap-2 flex-wrap" role="group" aria-label={`${item.name}取源方式`}>
+                  <button class={clsx('border-btn h-8 px-2 text-xs', source()?.modes?.[item.id] !== 'hosted' && 'bg-muted')} aria-pressed={source()?.modes?.[item.id] !== 'hosted' ? 'true' : 'false'} disabled={disabled() || source()?.modes?.[item.id] !== 'hosted'} onClick={() => void manageRoomSource('source', 'independent', item.id)}>各自取源</button>
+                  <button class={clsx('border-btn h-8 px-2 text-xs', source()?.modes?.[item.id] === 'hosted' && 'bg-muted')} aria-pressed={source()?.modes?.[item.id] === 'hosted' ? 'true' : 'false'} disabled={disabled() || source()?.modes?.[item.id] === 'hosted'} onClick={() => void manageRoomSource('source', 'hosted', item.id)}>服务器取源</button>
+                </div>
+              </Show>
               <Show when={roomView().isHost && source()?.accounts?.[item.id]?.credential && source()?.accounts?.[item.id]?.credential !== 'none'}>
                 <button class="ghost-btn h-8 px-2 text-xs" disabled={disabled()} onClick={() => void manageRoomSource('revoke', undefined, item.id)}>撤销{item.name}账号</button>
               </Show>
@@ -38,12 +44,10 @@ export default function ListenRoomSources() {
         </Show>
         <Show when={roomView().isHost}>
           <div class="flex gap-2 flex-wrap" role="group" aria-label="房间取源模式">
-            <button class={clsx('border-btn h-8 px-3', !hosted() && 'bg-muted')} aria-pressed={!hosted() ? 'true' : 'false'} disabled={disabled() || !hosted()} onClick={() => void manageRoomSource('source', 'independent')}>全员各自取源</button>
-            <button class={clsx('border-btn h-8 px-3', hosted() && 'bg-muted')} aria-pressed={hosted() ? 'true' : 'false'} disabled={disabled() || hosted()} onClick={() => void manageRoomSource('source', 'hosted')}>全员使用服务器音源</button>
             <Show when={hosted()}><button class="border-btn h-8 px-3" disabled={disabled()} onClick={() => void manageRoomSource('retry-source')}>重试房间音源</button></Show>
           </div>
           <form class="space-y-3 rounded-lg bg-muted/50 p-3" onSubmit={event => { event.preventDefault(); void bind() }}>
-            <p class="text-xs text-muted-foreground">服务器托管无需绑定账号，未绑定的平台按匿名权限取源。仅向你填写的服务器提交所选平台会话，不会自动读取浏览器 Cookie，不会发送给其他成员。三个平台的账号分别保存；绑定和撤销只影响对应平台，不会自动切换房间取源方式。凭据仅在服务内存保留，撤销、结束房间或服务重启后清除。</p>
+            <p class="text-xs text-muted-foreground">各平台默认各自取源；绑定账号后该平台自动使用服务器取源，也可单独选择服务器匿名取源。仅向你填写的服务器提交所选平台会话，不会自动读取浏览器 Cookie，不会发送给其他成员。凭据仅在服务内存保留，撤销、结束房间或服务重启后清除。</p>
             <label class="block">账号平台
               <select class="input mt-2 w-full" value={platform()} disabled={disabled()} onChange={event => { setCookie(''); setPlatform(event.currentTarget.value as HostedPlatform) }}>
                 <For each={platforms}>{item => <option value={item.id}>{item.name}</option>}</For>

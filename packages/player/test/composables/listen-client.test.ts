@@ -260,6 +260,16 @@ it.each(['netease', 'qq', 'bili'] as const)('sends explicit %s credential select
   expect(JSON.stringify(persist.mock.calls)).not.toContain('private-session')
 })
 
+it('sends a platform-specific source setting without changing the other platforms', async () => {
+  await connect('host')
+  roomRequest.mockResolvedValueOnce({ ok: true })
+  expect(await client.manageSource('source', 'hosted', 'qq')).toBe(true)
+  expect(roomRequest).toHaveBeenLastCalledWith('http://localhost:3410', 'secret', expect.objectContaining({ action: 'source', provider: 'qq', mode: 'hosted' }), expect.any(AbortSignal))
+  roomRequest.mockClear()
+  expect(await client.manageSource('source', 'hosted')).toBe(false)
+  expect(roomRequest).not.toHaveBeenCalled()
+})
+
 describe('administrator controls and room activity', () => {
   const members: RoomSnapshot['members'] = [{ id: 'host', name: 'Host', role: 'host', generation: 1, online: true, status: 'ready' }, { id: 'member', name: 'Admin', role: 'admin', generation: 1, online: true, status: 'ready' }]
   it('another platform account update does not reload or pause current anonymous audio', async () => {
