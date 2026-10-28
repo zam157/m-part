@@ -21,6 +21,7 @@ function emptyLibrary(source: ProviderName): LibraryState {
 }
 
 export const [playlistSource, setPlaylistSource] = createSignal<ProviderName>('bili')
+export const [playlistView, setPlaylistView] = createSignal<'local' | 'platform'>('local')
 const [playlistLibrary, setPlaylistLibrary] = createSignal<LibraryState>(emptyLibrary('bili'))
 export { playlistLibrary }
 

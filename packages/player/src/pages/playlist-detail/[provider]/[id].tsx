@@ -6,6 +6,7 @@ import MusicContextMenu from '~/components/MusicContextMenu/MusicContextMenu'
 import PlatformLogin from '~/components/PlatformLogin/PlatformLogin'
 import { createPlaylistTracks } from '~/composables/playlist-tracks'
 import { addToPlayQueue, setPlayQueue } from '~/composables/player'
+import { setPlaylistView } from '~/composables/playlists'
 
 export default function PlaylistDetailPage() {
   const params = useParams<{ provider: string, id: string }>()
@@ -52,7 +53,7 @@ function PlaylistDetailView(props: { source: ProviderName, id: string }) {
 
   return (
     <div class="flex-1 min-w-0 overflow-auto px-9 py-8 max-[760px]:px-4.5 max-[760px]:py-6">
-      <button class="ghost-btn px-2 mb-5" onClick={() => navigate(metadata.fromSearch ? '/search' : '/playlists')}><span class="i-lucide:arrow-left text-4" />{metadata.fromSearch ? '返回搜索' : '我的歌单'}</button>
+      <button class="ghost-btn px-2 mb-5" onClick={() => { if (!metadata.fromSearch) setPlaylistView('platform'); navigate(metadata.fromSearch ? '/search' : '/playlists') }}><span class="i-lucide:arrow-left text-4" />{metadata.fromSearch ? '返回搜索' : '我的歌单'}</button>
       <header class="flex items-center gap-5 mb-6">
         <Show when={metadata.cover} fallback={<div class="size-24 shrink-0 rounded-lg bg-muted grid place-items-center"><span class="i-lucide:library text-9 text-muted-foreground" /></div>}>
           <img src={metadata.cover} alt="" referrerpolicy="no-referrer" class="size-24 shrink-0 rounded-lg object-cover" />

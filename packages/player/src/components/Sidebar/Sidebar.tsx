@@ -17,7 +17,7 @@ export default function Sidebar() {
   const location = useLocation()
   const compactQuery = window.matchMedia('(max-width: 760px)')
   const [collapsed, setCollapsed] = createSignal(compactQuery.matches)
-  const isActive = (route: string) => location.pathname === route || location.pathname.startsWith('/playlist-detail/') && route === (new URLSearchParams(location.search).get('from') === 'search' ? '/search' : '/playlists')
+  const isActive = (route: string) => location.pathname === route || location.pathname.startsWith('/local-playlist/') && route === '/playlists' || location.pathname.startsWith('/playlist-detail/') && route === (new URLSearchParams(location.search).get('from') === 'search' ? '/search' : '/playlists')
 
   createEffect(() => compactQuery, (query) => {
     const handleResize = (event: MediaQueryListEvent) => setCollapsed(event.matches)

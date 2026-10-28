@@ -34,6 +34,7 @@
 | 组件 | `packages/player/src/components/<Name>/<Name>.tsx`（一个目录一个组件，样式放同目录 `.css`） |
 | 页面 | `packages/player/src/pages/`（文件即路由） |
 | 跨路由保留的状态 | `packages/player/src/composables/*.ts` 的**模块级信号** |
+| 本地歌单 | `composables/local-playlists.ts`、`utils/local-playlist-storage.ts`、`LocalPlaylists/`、`LocalPlaylistDialog/` 与 `/local-playlist/:id`；仅保存曲目资料，IndexedDB 事务成功后再更新状态 → [歌单说明](./docs/playlists.md#本地歌单) |
 | 一起听 / 播放控制 | `packages/player/src/composables/player-context.ts`（所有用户操作入口）、`listen-room.ts`、`packages/player/src/utils/listen-client.ts`；协议与服务见 [一起听说明](./docs/listen-together-usage.md) |
 | 一起听聊天 / 操作历史 | `packages/player/src/components/ListenRoomHistory/`；服务端 `listen-rooms.ts` 记录与截断，聊天 / 授权不修改播放版本 |
 | 托管一起听 / 媒体票据 | `apps/rooms/server/utils/hosted-media.ts`、`apps/rooms/server/providers/`、`room-control` / `room-audio` 路由；客户端 `ListenRoomSources/` 与 `utils/room-http.ts` |

@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar/Sidebar'
 import ContextMenuHost from './components/ContextMenu/ContextMenuHost'
 import ListenRoomBar from './components/ListenRoomBar/ListenRoomBar'
 import TrackPartPicker from './components/TrackPartPicker/TrackPartPicker'
+import LocalPlaylistDialog from './components/LocalPlaylistDialog/LocalPlaylistDialog'
 
 export interface AppProps {
   children?: JSX.Element
@@ -51,6 +52,7 @@ export default function App(props: AppProps) {
       <MusicPlayer />
       <ContextMenuHost />
       <TrackPartPicker />
+      <LocalPlaylistDialog />
     </div>
   )
 }
