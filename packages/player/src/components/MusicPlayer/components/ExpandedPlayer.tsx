@@ -94,7 +94,7 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
                 </Show>
               </div>
               <div class="expanded-controls mt-7 max-[900px]:mt-5">
-                <div class="mb-4 min-w-0"><h1 class="text-7 leading-tight font-semibold tracking-tight line-clamp-2 max-[900px]:text-6" innerHTML={currentSong()?.title || '尚未播放'} /><p class="text-base text-muted-foreground truncate mt-2">{currentSong()?.artist || '未知创作者'}</p><Show when={currentSong()?.album}><p class="text-xs text-muted-foreground/75 truncate mt-1">{currentSong()?.album}</p></Show></div>
+                <div class="mb-4 min-w-0"><h1 class="text-7 leading-tight font-semibold tracking-tight line-clamp-2 max-[900px]:text-6">{currentSong()?.title || '尚未播放'}</h1><p class="text-base text-muted-foreground truncate mt-2">{currentSong()?.artist || '未知创作者'}</p><Show when={currentSong()?.album}><p class="text-xs text-muted-foreground/75 truncate mt-1">{currentSong()?.album}</p></Show></div>
                 <PlaybackProgress expanded />
                 <div class="mt-4 mb-5"><PlaybackControls expanded portalMount={dialogRef} /></div>
                 <div class="flex items-center gap-4"><VolumeSlider expanded value={volume()} onValueChange={setVolume} /><Show when={currentSourceInfo()?.qualities?.length}><QualityBtn portalMount={dialogRef} qualities={currentSourceInfo()!.qualities!} onSelect={selectQuality} /></Show></div>

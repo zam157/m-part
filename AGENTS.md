@@ -51,6 +51,8 @@
 4. `packages/build-config/src/vite.ts` 里的 `solid({ solid: { omitQuotes: false } })` 不要删（删了生产环境全部丢样式）；`unocss` 保持 ≥ 66.10
 5. 请求统一走 `packages/music/src/utils/fetch.ts` + Provider，不要在组件里直连第三方接口
 
+- `MusicInfo.title` 是纯文本：BiliBili 搜索高亮标签在 Provider 映射时清除并解码实体；展示标题使用 JSX 文本，不使用 `innerHTML`，避免标题中的尖括号被再次解析。
+
 ## 组件写法速查（细节见 [docs/code-style.md](./docs/code-style.md)）
 
 - 组件体只执行一次；**不解构 props**（用 `props.xxx`，转发用 `splitProps` / `mergeProps`）

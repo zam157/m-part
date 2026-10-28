@@ -141,12 +141,7 @@ export default function SearchPage() {
                     >
                       <div class="flex flex-col gap-2 h-full">
                         <img src={result.coverUrl} alt="cover" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />
-                        <Show
-                          when={result.provider === 'bili'}
-                          fallback={<span class="text-sm/relaxed font-semibold line-clamp-2 h-[calc(2*var(--leading-relaxed)*1em)]">{result.title}</span>}
-                        >
-                          <span class="text-sm/relaxed font-semibold line-clamp-2 h-[calc(2*var(--leading-relaxed)*1em)]" innerHTML={result.title} />
-                        </Show>
+                        <span class="text-sm/relaxed font-semibold line-clamp-2 h-[calc(2*var(--leading-relaxed)*1em)]">{result.title}</span>
                         <span class="text-xs text-muted-foreground shrink-0 truncate">{result.artist}</span>
                       </div>
                     </div>

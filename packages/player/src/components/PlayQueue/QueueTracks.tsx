@@ -61,7 +61,7 @@ export default function QueueTracks(props: { open: boolean, ref?: (api: QueueTra
                   </Show>
                   <Show when={currentIndex() === index()}><span class="absolute inset-0 grid place-items-center bg-black/35 text-white"><span class={clsx('text-5', playing() ? 'i-lucide:audio-lines' : 'i-lucide:play')} /></span></Show>
                 </span>
-                <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium" innerHTML={song.title} /><span class="block truncate text-xs mt-0.5 text-muted-foreground">{song.artist || '未知创作者'}</span></span>
+                <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium">{song.title}</span><span class="block truncate text-xs mt-0.5 text-muted-foreground">{song.artist || '未知创作者'}</span></span>
               </button>
               <span class="text-[11px] tabular-nums text-muted-foreground max-[400px]:hidden">{formatTime(song.duration)}</span>
               <button class="ghost-btn size-8 shrink-0 text-muted-foreground hover:text-destructive" disabled={!canControlRoom()} aria-label={`移除 ${song.title}`} onClick={() => removeFromPlayQueue(index())}><span class="i-lucide:x text-3.5" /></button>

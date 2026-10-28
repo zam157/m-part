@@ -5,6 +5,7 @@ export interface MusicInfo {
   provider: ProviderName
   /** The unique identifier for the music */
   id: string
+  /** Plain text; Providers remove search highlighting and decode HTML entities before returning it. */
   title: string
   description?: string
   src?: string

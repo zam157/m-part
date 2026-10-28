@@ -34,11 +34,11 @@ export function selectBiliPage(video: BiliVideo, cid?: number): BiliPage {
 
 export function biliPartTrack(music: MusicInfo, video: BiliVideo, page: BiliPage, count: number): MusicInfo {
   const { bvid } = parseBiliTrackId(music.id)
-  const text = (value: string) => value.replace(/<[^>]*>/g, '').replace(/[<>]/g, '')
-  const title = text(video.title ?? music.title)
+  // Video detail titles and page names are already plain text, including literal angle brackets.
+  const title = video.title ?? music.title
   return {
     provider: 'bili', id: `${bvid}:${page.cid}`,
-    title: (count > 1 ? `P${page.page} · ${text(page.part)} — ${title}` : title).slice(0, 300),
+    title: (count > 1 ? `P${page.page} · ${page.part} — ${title}` : title).slice(0, 300),
     duration: page.duration, coverUrl: music.coverUrl, artist: video.owner?.name ?? music.artist,
     album: music.album, description: music.description,
   }

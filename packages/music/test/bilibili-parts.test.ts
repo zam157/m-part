@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { biliPages, parseBiliTrackId, selectBiliPage } from '../src/utils/providers/bilibili-parts'
+import { biliPages, biliPartTrack, parseBiliTrackId, selectBiliPage } from '../src/utils/providers/bilibili-parts'
 import { generateWbiSignInfo } from '../src/utils/providers/bilibili-wbi'
 const { request } = vi.hoisted(() => ({ request: vi.fn() }))
 vi.mock('../src/utils/fetch', () => ({ tRequest: request }))
@@ -24,6 +24,9 @@ describe('BiliBili individual pages', () => {
     expect(provider.isTrackPart(music)).toBe(false)
     expect(provider.isTrackPart({ ...music, id: `${music.id}:456` })).toBe(true)
     expect(provider.isTrackPart({ ...music, id: 'invalid:456' })).toBe(false)
+  })
+  it('preserves literal brackets and ampersands in plain titles returned by the detail API', () => {
+    expect(biliPartTrack(music, { ...video, title: '<夜> & 梦' }, { ...pages[0]!, part: 'A < B > C' }, 2).title).toBe('P1 · A < B > C — <夜> & 梦')
   })
   it('returns stable CID identities and each page duration instead of container totals', async () => {
     const tracks = await provider.getTrackParts(music)

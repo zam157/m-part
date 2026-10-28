@@ -17,7 +17,8 @@
     "./proxy-headers": "./src/proxy-headers.ts"
   },
   "dependencies": {
-    "crypto-es": "catalog:shared"
+    "crypto-es": "catalog:shared",
+    "entities": "catalog:shared"
   },
   "devDependencies": {
     "typescript": "catalog:dev",

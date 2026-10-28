@@ -1,5 +1,6 @@
 import type { AlbumInfo, ArtistInfo, MusicInfo, MusicQuality, PlaylistInfo } from '../../types/music-info'
 import type { Provider } from '../../types/provider'
+import { decodeHTML } from 'entities/decode'
 import type { TRequestErrorTuple } from '../fetch'
 import { generateWbiSignInfo } from './bilibili-wbi'
 import { biliPages, biliPartTrack, parseBiliTrackId, selectBiliPage } from './bilibili-parts'
@@ -531,7 +532,8 @@ function formateSearchResult(data: SearchItem[], type: BiliSearchType) {
     return (data as VideoSearchItem[]).map(i => ({
       provider: 'bili',
       id: i.bvid,
-      title: i.title,
+      // Remove API highlighting before decoding, preserving escaped literal markup in titles.
+      title: decodeHTML(i.title.replace(/<\/?em\b[^>]*>/gi, '')),
       artist: i.author,
       duration: i.duration ? parseDuration(i.duration) : 0,
       coverUrl: toHttpsUrl(i.pic),
