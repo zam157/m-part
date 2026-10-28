@@ -12,9 +12,13 @@ export default function TrackPartPicker() {
   const filtered = () => (trackParts()?.tracks ?? []).filter(track => track.title.toLocaleLowerCase().includes(query().trim().toLocaleLowerCase()))
   const chosen = () => (trackParts()?.tracks ?? []).filter(track => selected().has(track.id))
   const disabled = () => !canControlRoom() || !!trackParts()?.loading
-  createEffect(() => trackParts()?.requestId, (id) => {
+  createEffect(() => trackParts()?.requestId, () => {
     setQuery(''); setSelected(new Set<string>())
-    if (id !== undefined && !dialog.open) dialog.showModal()
+  })
+  createEffect(() => ({ id: trackParts()?.requestId, loading: trackParts()?.loading }), ({ id, loading }) => {
+    // Wait for the result: a single part resolves directly without opening a modal.
+    // Keep an already open dialog visible while retrying a failed request.
+    if (id !== undefined && !loading && !dialog.open) dialog.showModal()
     if (id === undefined && dialog.open) dialog.close()
   })
   onCleanup(cancelTrackParts)
