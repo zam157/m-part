@@ -65,12 +65,6 @@ declare module "virtual:file-routes" {
       $$route?: undefined;
     },
     {
-      path: "/playground";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./pages/playground")>;
-      $$route?: undefined;
-    },
-    {
       path: "/playlist-detail/:provider/:id";
       page: true;
       $component: FileRouteLazyRef<typeof import("./pages/playlist-detail/[provider]/[id]")>;
@@ -130,14 +124,6 @@ declare module "virtual:file-routes" {
       id: "/playlists";
       page: true;
       $component: FileRouteLazyRef<typeof import("./pages/playlists")>;
-      $$route?: undefined;
-      children?: undefined;
-    },
-    {
-      path: "/playground";
-      id: "/playground";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./pages/playground")>;
       $$route?: undefined;
       children?: undefined;
     },

@@ -75,11 +75,6 @@ export default function Sidebar() {
             </button>
           )}
         </Tooltip>
-        <Tooltip content="实验室" disabled={!collapsed()} placement="right">
-          {triggerProps => (
-            <button {...triggerProps} class="sidebar-item text-muted-foreground" aria-label="实验室" onClick={() => navigate('/playground')}><span class="i-lucide:flask-conical text-4 shrink-0" /><span class="sidebar-label">实验室</span></button>
-          )}
-        </Tooltip>
       </div>
     </aside>
   )
