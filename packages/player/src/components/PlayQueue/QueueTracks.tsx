@@ -4,6 +4,7 @@ import { createEffect, For, Show, untrack } from 'solid-js'
 import ContextMenu from '~/components/ContextMenu/ContextMenu'
 import { currentIndex, playing, playQueue, removeFromPlayQueue, setCurrentIndex, setPlaying, openTrackParts } from '~/composables/player'
 import { canControlRoom } from '~/composables/player-context'
+import { setLocalPlaylistDialog } from '~/composables/local-playlists'
 import { formatTime } from '~/components/MusicPlayer/components/player-controls'
 
 export interface QueueTracksApi {
@@ -40,6 +41,11 @@ export default function QueueTracks(props: { open: boolean, ref?: (api: QueueTra
       <Show when={playQueue().length} fallback={<p class="empty text-sm text-muted-foreground">队列还是空的</p>}>
         <div class="grid grid-cols-1 gap-1"><For each={playQueue()}>{(song, index) => (
           <ContextMenu label="队列歌曲操作" getItems={() => [{
+            id: 'add-local-playlist',
+            label: '添加到本地歌单',
+            icon: 'i-lucide:library',
+            onSelect: () => setLocalPlaylistDialog({ kind: 'add', music: song }),
+          }, {
             id: 'remove-from-queue',
             label: '从队列中移除',
             icon: 'i-lucide:trash-2',
