@@ -77,7 +77,7 @@ export default function ContextMenuHost() {
         role="menu"
         aria-label={activeContextMenu()?.label ?? '操作菜单'}
         tabindex={-1}
-        class="fixed [inset:auto] m-0 z-50 w-48 max-w-[calc(100vw-16px)] max-h-[calc(100dvh-16px)] overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none"
+        class="fixed [inset:auto] m-0 z-50 w-max min-w-32 max-w-[calc(100vw-16px)] max-h-[calc(100dvh-16px)] overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none"
         onKeyDown={handleKeyDown}
         onContextMenu={event => event.preventDefault()}
         onToggle={(event) => {
