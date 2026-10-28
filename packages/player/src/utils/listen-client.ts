@@ -4,6 +4,7 @@ import * as v from 'valibot'
 import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, HEARTBEAT_MS, LISTEN_PROTOCOL, clientMessage, roomSnapshot, roomTicket, serverMessage } from '@m-part/listen-core/protocol'
 import { ListenClock, roomPosition, shouldSeek } from '@m-part/listen-core/clock'
 import { prepareMedia, startMedia } from '@m-part/listen-core/browser/media'
+import { uniqueTracks } from '@m-part/listen-core/queue'
 import { needsTrackParts } from './track-parts'
 import { sendRoomControl } from './room-http'
 
@@ -187,6 +188,7 @@ export class ListenClient {
   }
 
   control(action: RoomPlayerAction) {
+    if (action.type === 'queue' || action.type === 'append-many') action = { ...action, tracks: uniqueTracks(action.tracks) }
     if ((action.type === 'queue' || action.type === 'append-many') && this.canControl && action.tracks.length > 1_000) {
       this.error = '房间队列最多支持 1000 首，请缩减后重试'; this.changed(); return
     }

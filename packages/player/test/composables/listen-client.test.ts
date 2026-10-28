@@ -121,10 +121,18 @@ describe('product room controller', () => {
   })
   it('rejects oversized queues locally without breaking the room connection', async () => {
     await connect('host')
-    client.control({ type: 'queue', tracks: Array.from({ length: 1_001 }, () => track) })
+    client.control({ type: 'queue', tracks: Array.from({ length: 1_001 }, (_, index) => ({ ...track, id: String(index) })) })
     expect(client.error).toContain('1000')
     expect(client.connection).toBe('connected')
     expect(socket.sent.some(m => m.type === 'command')).toBe(false)
+  })
+  it('deduplicates queue requests before checking capacity or sending them to the server', async () => {
+    await connect('host')
+    client.control({ type: 'queue', tracks: Array.from({ length: 1_001 }, () => track) })
+    expect(client.error).toBe('')
+    const command = socket.sent.find(message => message.type === 'command')
+    expect(command).toMatchObject({ action: 'queue', tracks: [expect.objectContaining({ provider: track.provider, id: track.id })] })
+    expect(command?.type === 'command' && command.tracks).toHaveLength(1)
   })
   it('bounds silent outages even if the first response has monotonic timestamp zero', async () => {
     await connect()

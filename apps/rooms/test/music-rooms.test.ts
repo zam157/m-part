@@ -35,6 +35,12 @@ describe('real music room queue authority', () => {
     ready()
     expect(state()).toMatchObject({ status: 'scheduled', track: { duration: 120 } })
   })
+  it('deduplicates an initial queue without changing which song the host selected', () => {
+    const other = peer('duplicate-host')
+    send(other, { type: 'create', protocol: LISTEN_PROTOCOL, kind: 'music', name: 'Host', tracks: [song('1'), song('2'), song('1'), song('3')], index: 3, position: 15 })
+    expect(state(other).queue.map(t => t.id)).toEqual(['1', '2', '3'])
+    expect(state(other)).toMatchObject({ currentIndex: 2, positionAtAnchor: 15 })
+  })
   it('adds distinct CIDs atomically and deduplicates only the same part without interrupting current playback', () => {
     ready()
     const before = state()
@@ -57,6 +63,16 @@ describe('real music room queue authority', () => {
     command('append-many', { tracks: Array.from({ length: 1000 }, (_, index) => song(`new-${index}`)) })
     expect(state().queue).toEqual(original)
     expect(host.messages.at(-1)).toMatchObject({ type: 'error', code: 'invalid' })
+  })
+  it('inserts a playlist repeatedly by identity while preserving current playback and room item IDs', () => {
+    ready()
+    const before = state()
+    const currentId = before.queue[before.currentIndex!]!.queueItemId
+    for (let i = 0; i < 3; i++) command('append-many', { tracks: [song('3'), song('2'), song('4'), song('3')], placement: 'next', autoplay: false })
+    expect(state().queue.map(t => t.id)).toEqual(['1', '2', '3', '4'])
+    expect(state().queue[state().currentIndex!]!.queueItemId).toBe(currentId)
+    expect(state().queue.find(t => t.id === '3')!.queueItemId).toBe(before.queue[2]!.queueItemId)
+    expect(state()).toMatchObject({ playbackId: before.playbackId, status: before.status, positionAtAnchor: before.positionAtAnchor })
   })
   it('shares no source, credentials or HTML injected into public song titles', () => {
     command('append', { track: { ...song('new'), title: '<img src=x onerror=evil()>Hello' } })

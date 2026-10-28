@@ -5,8 +5,9 @@ import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
 import MusicContextMenu from '~/components/MusicContextMenu/MusicContextMenu'
 import PlatformLogin from '~/components/PlatformLogin/PlatformLogin'
 import { createPlaylistTracks } from '~/composables/playlist-tracks'
-import { addToPlayQueue, setPlayQueue } from '~/composables/player'
+import { addToPlayQueue, addTracksToPlayQueue, setPlayQueue } from '~/composables/player'
 import { setPlaylistView } from '~/composables/playlists'
+import { canControlRoom, playerContextVersion } from '~/composables/player-context'
 
 export default function PlaylistDetailPage() {
   const params = useParams<{ provider: string, id: string }>()
@@ -31,20 +32,23 @@ function PlaylistDetailView(props: { source: ProviderName, id: string }) {
   const state = tracks.state
   let disposed = false
   let playingAll = false
-  let retryPlayAll = false
+  let retryAction: 'play' | 'next' | undefined
   onCleanup(() => { disposed = true; tracks.dispose() })
   void tracks.load()
 
-  async function playPlaylist() {
-    if (playingAll)
+  async function applyPlaylist(action: 'play' | 'next') {
+    if (playingAll || !canControlRoom())
       return
     playingAll = true
-    retryPlayAll = true
+    retryAction = action
+    const scope = playerContextVersion()
     try {
       const items = await tracks.loadAll()
-      // 完整读取成功后才替换队列；失败或离开页面不改变当前播放。
-      if (!disposed && items?.length)
-        await setPlayQueue(items)
+      // Only commit the full playlist if its page and playback context still own this action.
+      if (!disposed && scope === playerContextVersion() && canControlRoom() && items?.length) {
+        if (action === 'play') await setPlayQueue(items)
+        else await addTracksToPlayQueue(items, 'next')
+      }
     }
     finally {
       playingAll = false
@@ -61,12 +65,13 @@ function PlaylistDetailView(props: { source: ProviderName, id: string }) {
         <div class="min-w-0"><h1 class="text-6 font-semibold break-words">{metadata.title}</h1><p class="page-description">{metadata.creator}</p><span class="text-xs text-muted-foreground">已加载 {state().items.length} 首</span></div>
       </header>
       <div class="flex gap-3 mb-5 flex-wrap">
-        <button class="btn h-9 px-3" disabled={tracks.loadingAll() || state().loading || state().loginRequired || !state().items.length && !state().hasMore} onClick={playPlaylist}><span class={tracks.loadingAll() ? 'i-lucide:loader-circle text-4 animate-spin' : 'i-lucide:play text-4'} />一键播放</button>
-        <button class="border-btn h-9 px-3" disabled={state().loading || tracks.loadingAll()} onClick={() => { retryPlayAll = false; void tracks.load(true) }}>刷新曲目</button>
+        <button class="btn h-9 px-3" disabled={!canControlRoom() || tracks.loadingAll() || state().loading || state().loginRequired || !state().items.length && !state().hasMore} onClick={() => void applyPlaylist('play')}><span class={tracks.loadingAll() ? 'i-lucide:loader-circle text-4 animate-spin' : 'i-lucide:play text-4'} />一键播放</button>
+        <button class="border-btn h-9 px-3" disabled={!canControlRoom() || tracks.loadingAll() || state().loading || state().loginRequired || !state().items.length && !state().hasMore} onClick={() => void applyPlaylist('next')}><span class="i-lucide:list-plus text-4" />添加至播放列表</button>
+        <button class="border-btn h-9 px-3" disabled={state().loading || tracks.loadingAll()} onClick={() => { retryAction = undefined; void tracks.load(true) }}>刷新曲目</button>
       </div>
       <Show when={tracks.loadingAll()}><p class="text-sm text-muted-foreground mb-4" role="status">正在读取整个歌单，已读取 {state().items.length} 首…</p></Show>
       <Switch>
-        <Match when={state().error}><ErrorMessage message={state().error ?? ''} onRetry={() => retryPlayAll ? playPlaylist() : tracks.load()} /></Match>
+        <Match when={state().error}><ErrorMessage message={state().error ?? ''} onRetry={() => retryAction ? applyPlaylist(retryAction) : tracks.load()} /></Match>
         <Match when={state().loginRequired}><PlatformLogin source={props.source} onRefresh={() => tracks.load(true)} /></Match>
         <Match when={state().loading && !state().items.length}><div class="empty min-h-50" role="status"><span class="i-lucide:loader-circle text-7 animate-spin" /><span>正在读取曲目…</span></div></Match>
         <Match when={state().items.length}>
@@ -87,7 +92,7 @@ function PlaylistDetailView(props: { source: ProviderName, id: string }) {
         <Match when={!state().loading}><div class="empty min-h-50 text-muted-foreground">暂无可播放曲目</div></Match>
       </Switch>
       <Show when={state().hasMore && !state().error && !state().loginRequired}>
-        <div class="flex justify-center mt-5"><button class="border-btn px-4 h-9" disabled={state().loading || tracks.loadingAll()} onClick={() => { retryPlayAll = false; void tracks.load() }}>{state().loading ? '正在加载…' : '加载更多歌曲'}</button></div>
+        <div class="flex justify-center mt-5"><button class="border-btn px-4 h-9" disabled={state().loading || tracks.loadingAll()} onClick={() => { retryAction = undefined; void tracks.load() }}>{state().loading ? '正在加载…' : '加载更多歌曲'}</button></div>
       </Show>
     </div>
   )

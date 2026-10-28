@@ -1,6 +1,7 @@
 import type { MusicInfo, MusicQuality, SourceInfo } from '@m-part/music/types/music-info'
 import type { ProviderName } from '@m-part/music/types/provider'
 import { TARGET_EXTENSION } from '@m-part/music/constants'
+import { insertQueueTracks, remapQueueOrder, trackKey, uniqueTracks } from '@m-part/listen-core/queue'
 import { tRequest } from '@m-part/music/fetch'
 import { errorMessage } from '../utils/index'
 import { providers } from '@m-part/music/providers'
@@ -306,7 +307,13 @@ async function playSource(music: MusicInfo | undefined, src: string | null, prov
           return
         setCurrentSourceInfo(sourceInfo)
         if (sourceInfo.track && !isRoomPlayer()) {
-          setPlayQueueState(items => items.map(item => item.provider === music.provider && item.id === music.id ? sourceInfo.track! : item))
+          const resolved = playQueue().map(item => item.provider === music.provider && item.id === music.id ? sourceInfo.track! : item)
+          const index = currentIndex()
+          const current = index === null ? undefined : resolved[index]
+          const queue = uniqueTracks(resolved, current)
+          setPlayQueueState(queue)
+          setCurrentIndexState(current ? queue.indexOf(current) : null)
+          if (playMode() === 'random') setRandomPlayQueueState(remapQueueOrder(resolved, queue, randomPlayQueue()))
         }
         // TODO: 记住上次使用的音质，优先选择上次使用的音质, 目前先默认选择第一个音质
         const defaultQuality = sourceInfo.qualities?.[0]
@@ -539,6 +546,7 @@ function applyRestoredSeek() {
  * 覆盖播放列表
  */
 export async function setPlayQueue(newPlayQueue: MusicInfo[]) {
+  newPlayQueue = uniqueTracks(newPlayQueue)
   if (dispatchRoomPlayer({ type: 'queue', tracks: newPlayQueue })) return
   resetPlayer()
   setPlayQueueState(newPlayQueue)
@@ -557,61 +565,14 @@ export async function setPlayQueue(newPlayQueue: MusicInfo[]) {
 export async function addToPlayQueue(item: MusicInfo) {
   if (needsTrackParts(item)) { await selectPartsIfNeeded(item, 'play'); return }
   if (dispatchRoomPlayer({ type: 'append', track: item })) return
-  // 避免重复添加同一首歌
-  const list = playQueue()
-  const existingIndex = list.findIndex(m => m.provider === item.provider && m.id === item.id)
-  if (existingIndex !== -1) {
-    await setCurrentIndex(existingIndex)
-    await setPlaying(true)
-    return
-  }
-
-  setPlayQueueState([...list, item])
-  if (playMode() === 'random') {
-    const random = randomPlayQueue() ?? []
-    // 随机插入新歌曲在随机列表中的位置
-    const insertPos = Math.floor(Math.random() * (random.length + 1))
-    setRandomPlayQueueState([
-      ...random.slice(0, insertPos),
-      list.length,
-      ...random.slice(insertPos),
-    ])
-  }
-  await startPlaying(item, list.length)
-  await setPlaying(true)
+  await applyQueueTracks([item], 'play')
 }
 
 /** 将歌曲放到当前曲目之后，保留当前播放；空队列直接播放。 */
 export async function addNextToPlayQueue(item: MusicInfo) {
   if (needsTrackParts(item)) { await selectPartsIfNeeded(item, 'next'); return }
   if (dispatchRoomPlayer({ type: 'add-next', track: item })) return
-  const list = playQueue()
-  const current = currentIndex()
-  if (current === null || !list[current]) {
-    await addToPlayQueue(item)
-    return
-  }
-  const sameSong = (song: MusicInfo) => song.provider === item.provider && song.id === item.id
-  if (sameSong(list[current]!))
-    return
-
-  const existing = list.find(sameSong)
-  const remaining = list.map((song, index) => ({ song, index })).filter(entry => !sameSong(entry.song))
-  const nextCurrent = remaining.findIndex(entry => entry.index === current)
-  const insertAt = nextCurrent + 1
-  const nextQueue = remaining.map(entry => entry.song)
-  nextQueue.splice(insertAt, 0, existing ?? item)
-  setPlayQueueState(nextQueue)
-  setCurrentIndexState(nextCurrent)
-
-  if (playMode() === 'random') {
-    // 队列重排后重映射索引，并在实际随机播放顺序里同样放到下一首。
-    const indexMap = new Map(remaining.map((entry, index) => [entry.index, index >= insertAt ? index + 1 : index]))
-    const random = randomPlayQueue() ?? createRandomOrder(list.length) ?? []
-    const order = random.flatMap(index => indexMap.has(index) ? [indexMap.get(index)!] : [])
-    order.splice(order.indexOf(nextCurrent) + 1, 0, insertAt)
-    setRandomPlayQueueState(order)
-  }
+  await applyQueueTracks([item], 'next', true)
 }
 
 /** All part entry points resolve before dispatching either local or room operations. */
@@ -624,30 +585,41 @@ async function selectPartsIfNeeded(item: MusicInfo, action: PartAction, force = 
 export async function openTrackParts(item: MusicInfo) { await selectPartsIfNeeded(item, 'play', true) }
 
 export async function addTracksToPlayQueue(items: MusicInfo[], action: PartAction) {
+  items = uniqueTracks(items)
   if (!items.length || !canControlRoom()) return
   if (dispatchRoomPlayer({ type: 'append-many', tracks: items, placement: action === 'next' ? 'next' : 'end', autoplay: action === 'play' })) return
+  await applyQueueTracks(items, action)
+}
+
+/** All local queue insertion paths share identity-based deduplication and shuffle remapping. */
+async function applyQueueTracks(items: MusicInfo[], action: PartAction, playWhenEmpty = false) {
   const original = playQueue()
-  const current = currentIndex() === null ? undefined : original[currentIndex()!]
-  const seen = new Set<string>()
-  const selected = items.filter(item => { const key = `${item.provider}:${item.id}`; if (seen.has(key)) return false; seen.add(key); return true })
-    .map(item => original.find(old => old.provider === item.provider && old.id === item.id) ?? item)
-  let queue = [...original]
-  if (action === 'next' && current) {
-    queue = queue.filter(item => !selected.includes(item) || item === current)
-    queue.splice(queue.indexOf(current) + 1, 0, ...selected.filter(item => item !== current))
+  const previousIndex = currentIndex()
+  const current = previousIndex === null ? undefined : original[previousIndex]
+  const placement = action === 'next' ? 'next' : 'end'
+  const result = insertQueueTracks(original, items, previousIndex, placement)
+  const { queue, selected } = result
+  if (!selected.length) return
+  if (queue.length !== original.length || queue.some((item, index) => item !== original[index])) setPlayQueueState(queue)
+  if (playMode() === 'random') {
+    let order = remapQueueOrder(original, queue, randomPlayQueue())
+    if (placement === 'next' && current) {
+      const targets = new Set(selected.filter(item => trackKey(item) !== trackKey(current)).map(item => queue.indexOf(item)))
+      order = order.filter(index => !targets.has(index))
+      order.splice(order.indexOf(result.currentIndex!) + 1, 0, ...targets)
+    }
+    setRandomPlayQueueState(order)
   }
-  else queue.push(...selected.filter(item => !queue.includes(item)))
-  setPlayQueueState(queue)
-  if (playMode() === 'random') setRandomPlayQueueState(createRandomOrder(queue.length))
   if (action === 'play') {
     await startPlaying(selected[0], queue.indexOf(selected[0]!))
     await setPlaying(true)
   }
   else if (!current) {
-    await startPlaying(queue[0], 0)
-    await setPlaying(false)
+    const first = playWhenEmpty ? selected[0]! : queue[0]!
+    await startPlaying(first, queue.indexOf(first))
+    await setPlaying(playWhenEmpty)
   }
-  else setCurrentIndexState(queue.indexOf(current))
+  else setCurrentIndexState(result.currentIndex)
 }
 
 /**

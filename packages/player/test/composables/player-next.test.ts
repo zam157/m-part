@@ -43,6 +43,28 @@ describe('随机切歌', () => {
 })
 
 describe('添加到下一首', () => {
+  it('deduplicates restored queues and cloned playlist entries on repeated insertion', async () => {
+    player.restorePlayerSession({ queue: { items: [songs[0]!, songs[1]!, { ...songs[1]! }, songs[2]!], playMode: 'order', randomOrder: null } })
+    flush()
+    player.audio.currentTime = 37
+    vi.mocked(player.audio.pause).mockClear(); vi.mocked(player.audio.play).mockClear(); vi.mocked(player.audio.load).mockClear()
+    for (let i = 0; i < 3; i++) { await player.addTracksToPlayQueue([{ ...songs[1]! }, { ...songs[3]! }, { ...songs[1]! }], 'next'); flush() }
+    expect(ids()).toEqual(['a', 'b', 'd', 'c'])
+    expect(player.currentSong()?.id).toBe('a')
+    expect(player.audio.currentTime).toBe(37)
+    expect(player.audio.pause).not.toHaveBeenCalled(); expect(player.audio.play).not.toHaveBeenCalled(); expect(player.audio.load).not.toHaveBeenCalled()
+  })
+  it('deduplicates queue replacement by identity while preserving distinct providers', async () => {
+    await player.setPlayQueue([songs[0]!, { ...songs[0]! }, { ...songs[0]!, provider: 'qq' }]); flush()
+    expect(player.playQueue().map(song => `${song.provider}:${song.id}`)).toEqual(['bili:a', 'qq:a'])
+  })
+  it('puts a playlist after the current song in shuffle order without reshuffling the remainder', async () => {
+    player.restorePlayerSession({ queue: { items: songs, playMode: 'random', randomOrder: [2, 0, 3, 1] }, position: { song: { provider: 'bili', id: 'c' }, time: 25 } }); flush()
+    await player.addTracksToPlayQueue([{ ...songs[3]! }, { ...songs[0]! }, { ...songs[3]!, id: 'new' }], 'next'); flush()
+    expect(ids()).toEqual(['b', 'c', 'd', 'a', 'new'])
+    expect(player.randomPlayQueue()!.map(index => player.playQueue()[index]!.id)).toEqual(['c', 'd', 'a', 'new', 'b'])
+    expect(player.currentSong()?.id).toBe('c')
+  })
   it('batches selected parts without interrupting the current audio and keeps each CID separate', async () => {
     await player.setPlayQueue(songs.slice(0, 2)); flush()
     const parts = [123, 456].map(cid => ({ ...songs[0]!, id: `BV1234567890:${cid}`, title: `Part ${cid}` }))

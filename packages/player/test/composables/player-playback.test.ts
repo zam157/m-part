@@ -62,6 +62,15 @@ describe('播放链路', () => {
 
   afterEach(() => vi.restoreAllMocks())
 
+  it('collapses duplicate entries when a provider resolves a legacy ID to an already queued track', async () => {
+    const resolved = { ...song, id: `${song.id}:123`, title: '规范曲目' }
+    sourceInfoMock.mockResolvedValueOnce({ ...SOURCE_INFO, track: resolved })
+    await setPlayQueue([song, resolved])
+    flush()
+    expect(playQueue()).toEqual([resolved])
+    expect(currentIndex()).toBe(0)
+  })
+
   it('直接使用第一个音质 URL，不通过 fetch 等待完整音频', async () => {
     await setPlayQueue([song])
     flush()

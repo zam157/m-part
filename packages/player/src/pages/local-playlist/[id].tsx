@@ -4,7 +4,7 @@ import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
 import MusicContextMenu from '~/components/MusicContextMenu/MusicContextMenu'
 import { localPlaylists, setLocalPlaylistDialog } from '~/composables/local-playlists'
 import { setPlaylistView } from '~/composables/playlists'
-import { addToPlayQueue, setPlayQueue } from '~/composables/player'
+import { addToPlayQueue, addTracksToPlayQueue, setPlayQueue } from '~/composables/player'
 import { canControlRoom } from '~/composables/player-context'
 import { formatTime } from '~/components/MusicPlayer/components/player-controls'
 import { errorMessage } from '~/utils/index'
@@ -39,6 +39,7 @@ export default function LocalPlaylistPage() {
           </header>
           <div class="flex gap-3 mb-5 flex-wrap">
             <button class="btn h-9 px-3" disabled={!playlist()?.tracks.length || !canControlRoom() || state().loading} onClick={() => { const tracks = playlist()?.tracks; if (tracks?.length) void setPlayQueue(tracks) }}><span class="i-lucide:play text-4" />一键播放</button>
+            <button class="border-btn h-9 px-3" disabled={!playlist()?.tracks.length || !canControlRoom() || state().loading} onClick={() => { const tracks = playlist()?.tracks; if (tracks?.length) void addTracksToPlayQueue(tracks, 'next') }}><span class="i-lucide:list-plus text-4" />添加至播放列表</button>
             <button class="border-btn h-9 px-3" disabled={state().loading} onClick={() => { const value = playlist(); if (value) setLocalPlaylistDialog({ kind: 'rename', id: value.id, title: value.title }) }}>重命名</button>
             <button class="ghost-btn h-9 px-3 text-destructive" disabled={state().loading} onClick={() => { const value = playlist(); if (value) setLocalPlaylistDialog({ kind: 'delete', id: value.id, title: value.title }) }}>删除歌单</button>
           </div>

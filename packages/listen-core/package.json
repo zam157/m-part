@@ -10,6 +10,7 @@
   "exports": {
     "./protocol": "./src/protocol.ts",
     "./clock": "./src/clock.ts",
+    "./queue": "./src/queue.ts",
     "./browser/media": "./src/browser/media.ts"
   },
   "dependencies": {

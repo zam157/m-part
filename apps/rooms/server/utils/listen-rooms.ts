@@ -2,6 +2,7 @@ import type { ClientMessage, RoomHistoryEntry, MemberStatus, RoomSnapshot, RoomS
 import { randomBytes, randomInt, randomUUID } from 'node:crypto'
 import { CONNECTION_TIMEOUT_MS, DISCONNECT_GRACE_MS, LAB_TRACK, LISTEN_PROTOCOL, ROOM_HISTORY_LIMIT, START_LEAD_MS, currentRoomSource } from '@m-part/listen-core/protocol'
 import { roomPosition } from '@m-part/listen-core/clock'
+import { insertQueueTracks, uniqueTracks } from '@m-part/listen-core/queue'
 
 export interface RoomConnection {
   id: string
@@ -109,23 +110,13 @@ export class ListenRooms {
     const makeTrack = (t: NonNullable<typeof message.track>) => ({ ...t, queueItemId: randomUUID() })
     if (message.action === 'queue') {
       if (!message.tracks) return '缺少播放队列'
-      const seen = new Set<string>()
-      state.queue = message.tracks.filter(t => { const key = `${t.provider}:${t.id}`; if (seen.has(key)) return false; seen.add(key); return true }).map(makeTrack)
+      state.queue = uniqueTracks(message.tracks).map(makeTrack)
       room.order = []
       this.select(room, state.queue.length ? 0 : null)
     }
     else if (message.action === 'append-many') {
       if (!message.tracks?.length) return '请选择要加入的曲目'
-      const seen = new Set<string>()
-      const selected = message.tracks.filter(t => { const key = `${t.provider}:${t.id}`; if (seen.has(key)) return false; seen.add(key); return true })
-        .map(t => state.queue.find(old => old.provider === t.provider && old.id === t.id) ?? makeTrack(t))
-      const ids = new Set(selected.map(t => t.queueItemId))
-      let queue = [...state.queue]
-      if (message.placement === 'next' && current) {
-        queue = queue.filter(t => !ids.has(t.queueItemId) || t.queueItemId === current.queueItemId)
-        queue.splice(queue.findIndex(t => t.queueItemId === current.queueItemId) + 1, 0, ...selected.filter(t => t.queueItemId !== current.queueItemId))
-      }
-      else queue.push(...selected.filter(t => !queue.some(old => old.queueItemId === t.queueItemId)))
+      const { queue, selected } = insertQueueTracks(state.queue, message.tracks.map(makeTrack), state.currentIndex, message.placement ?? 'end')
       if (queue.length > 1_000) return '房间队列最多 1000 首'
       state.queue = queue
       room.order = []
@@ -144,18 +135,15 @@ export class ListenRooms {
     }
     else if (message.action === 'append' || message.action === 'add-next') {
       if (!message.track) return '缺少曲目资料'
-      const existing = state.queue.find(t => t.provider === message.track!.provider && t.id === message.track!.id)
-      if (!existing && state.queue.length >= 1_000) return '房间队列最多 1000 首'
-      const target = existing ?? makeTrack(message.track)
+      const { queue, selected, currentIndex } = insertQueueTracks(state.queue, [makeTrack(message.track)], state.currentIndex, message.action === 'add-next' ? 'next' : 'end')
+      if (queue.length > 1_000) return '房间队列最多 1000 首'
+      const target = selected[0]!
       if (message.action === 'append' || !current) {
-        if (!existing) state.queue = [...state.queue, target]
+        state.queue = queue
         this.select(room, state.queue.findIndex(t => t.queueItemId === target.queueItemId))
       }
       else if (target.queueItemId !== current.queueItemId) {
-        const list = state.queue.filter(t => t.queueItemId !== target.queueItemId)
-        const index = list.findIndex(t => t.queueItemId === current.queueItemId)
-        list.splice(index + 1, 0, target)
-        this.change(room, { queue: list, currentIndex: index })
+        this.change(room, { queue, currentIndex })
         room.order = []
       }
     }
@@ -395,8 +383,10 @@ export class ListenRooms {
           }, members: [], retired: [], createdAt: this.now(), order: [],
         }
         if (message.kind === 'music') {
-          room.state.queue = (message.tracks ?? []).map(t => ({ ...t, queueItemId: randomUUID() }))
-          this.select(room, room.state.queue.length ? Math.min(message.index ?? 0, room.state.queue.length - 1) : null, message.autoplay ?? false)
+          const initial = message.tracks ?? []
+          const prepared = insertQueueTracks(initial, [], initial.length ? Math.min(message.index ?? 0, initial.length - 1) : null, 'end')
+          room.state.queue = prepared.queue.map(t => ({ ...t, queueItemId: randomUUID() }))
+          this.select(room, prepared.currentIndex, message.autoplay ?? false)
           room.state.positionAtAnchor = Math.min(message.position ?? 0, room.state.track.duration)
         }
         this.rooms.set(code, room)
