@@ -5,6 +5,7 @@ import ContextMenu from '~/components/ContextMenu/ContextMenu'
 import { currentIndex, playing, playQueue, removeFromPlayQueue, setCurrentIndex, setPlaying, openTrackParts } from '~/composables/player'
 import { canControlRoom } from '~/composables/player-context'
 import { setLocalPlaylistDialog } from '~/composables/local-playlists'
+import { downloadMusic, downloading } from '~/composables/download'
 import { formatTime } from '~/components/MusicPlayer/components/player-controls'
 
 export interface QueueTracksApi {
@@ -45,6 +46,12 @@ export default function QueueTracks(props: { open: boolean, ref?: (api: QueueTra
             label: '添加到本地歌单',
             icon: 'i-lucide:library',
             onSelect: () => setLocalPlaylistDialog({ kind: 'add', music: song }),
+          }, {
+            id: 'download',
+            label: downloading() ? '正在下载…' : '下载歌曲',
+            icon: 'i-lucide:download',
+            disabled: downloading(),
+            onSelect: () => { void downloadMusic(song) },
           }, {
             id: 'remove-from-queue',
             label: '从队列中移除',

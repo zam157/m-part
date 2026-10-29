@@ -6,6 +6,7 @@ vi.mock('@m-part/music/providers', () => ({ providers: { bili: { getTrackParts: 
 import TrackPartPicker from '~/components/TrackPartPicker/TrackPartPicker'
 import { trackParts, cancelTrackParts, chooseTrackParts } from '~/composables/track-parts'
 import { providers } from '@m-part/music/providers'
+import { setRoomPlayerHandler } from '~/composables/player-context'
 const video = { provider: 'bili' as const, id: 'BV1234567890', title: '视频', duration: 300, coverUrl: '' }
 const tracks = [123, 456].map((cid, index) => ({ ...video, id: `${video.id}:${cid}`, title: `P${index + 1} 分 P`, duration: 120 + index * 60 }))
 let dispose: () => void
@@ -23,6 +24,19 @@ beforeEach(() => {
 afterEach(() => { cancelTrackParts(); flush(); dispose(); container.remove(); vi.restoreAllMocks() })
 const button = (text: string) => [...container.querySelectorAll('button')].find(button => button.textContent === text)!
 describe('provider track part selection', () => {
+  it('lets a read-only room member download selected parts without queue controls', async () => {
+    const leave = setRoomPlayerHandler(vi.fn()); flush()
+    try {
+      const pending = chooseTrackParts(video, 'download')
+      await tick()
+      expect(button('加入队列')).toBeUndefined()
+      expect(button('全选').disabled).toBe(false)
+      button('全选').click(); flush()
+      button('下载所选').click(); flush()
+      expect(await pending).toEqual({ tracks, action: 'download' })
+    }
+    finally { leave(); flush() }
+  })
   it.each([undefined, '章节'])('uses another provider and its label %s without Bili IDs', async (label) => {
     providers.qq.trackPartsLabel = label
     const music = { ...video, provider: 'qq' as const, id: 'collection/root' }

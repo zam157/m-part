@@ -9,7 +9,7 @@ import { createMemo, createRoot, createSignal } from 'solid-js'
 import type { PlayerCache } from '~/utils/player-storage'
 import { canControlRoom, dispatchRoomPlayer, isRoomPlayer, playerContextVersion } from './player-context'
 import { chooseTrackParts } from './track-parts'
-import type { PartAction } from './track-parts'
+import type { PlaybackPartAction as PartAction } from './track-parts'
 import { needsTrackParts, supportsTrackParts } from '~/utils/track-parts'
 
 // #region types
@@ -580,7 +580,7 @@ async function selectPartsIfNeeded(item: MusicInfo, action: PartAction, force = 
   if (!supportsTrackParts(item) || !canControlRoom()) return
   const scope = playerContextVersion()
   const selection = await chooseTrackParts(item, action, force)
-  if (selection && scope === playerContextVersion() && canControlRoom()) await addTracksToPlayQueue(selection.tracks, selection.action)
+  if (selection && selection.action !== 'download' && scope === playerContextVersion() && canControlRoom()) await addTracksToPlayQueue(selection.tracks, selection.action)
 }
 export async function openTrackParts(item: MusicInfo) { await selectPartsIfNeeded(item, 'play', true) }
 

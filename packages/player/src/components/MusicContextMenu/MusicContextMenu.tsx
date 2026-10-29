@@ -5,6 +5,7 @@ import type { JSX } from '@solidjs/web'
 import ContextMenu from '~/components/ContextMenu/ContextMenu'
 import { addNextToPlayQueue, currentSong, openTrackParts } from '~/composables/player'
 import { setLocalPlaylistDialog } from '~/composables/local-playlists'
+import { downloadMusic, downloading } from '~/composables/download'
 
 export default function MusicContextMenu(props: { music: MusicInfo, disabled?: boolean, children: (props: ContextMenuTriggerProps) => JSX.Element }) {
   return (
@@ -20,6 +21,12 @@ export default function MusicContextMenu(props: { music: MusicInfo, disabled?: b
       icon: 'i-lucide:library',
       disabled: props.disabled,
       onSelect: () => setLocalPlaylistDialog({ kind: 'add', music: props.music }),
+    }, {
+      id: 'download',
+      label: downloading() ? '正在下载…' : '下载歌曲',
+      icon: 'i-lucide:download',
+      disabled: downloading(),
+      onSelect: () => { void downloadMusic(props.music) },
     }, ...(supportsTrackParts(props.music) ? [{ id: 'select-parts', label: `选择${getTrackPartsLabel(props.music)}`, icon: 'i-lucide:list-video', disabled: props.disabled, onSelect: () => { void openTrackParts(props.music) } }] : [])]}>
       {trigger => props.children(trigger)}
     </ContextMenu>

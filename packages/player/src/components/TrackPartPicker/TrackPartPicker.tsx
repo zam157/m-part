@@ -11,7 +11,8 @@ export default function TrackPartPicker() {
   const label = () => getTrackPartsLabel(trackParts()?.music)
   const filtered = () => (trackParts()?.tracks ?? []).filter(track => track.title.toLocaleLowerCase().includes(query().trim().toLocaleLowerCase()))
   const chosen = () => (trackParts()?.tracks ?? []).filter(track => selected().has(track.id))
-  const disabled = () => !canControlRoom() || !!trackParts()?.loading
+  const isDownload = () => trackParts()?.action === 'download'
+  const disabled = () => (!isDownload() && !canControlRoom()) || !!trackParts()?.loading
   createEffect(() => trackParts()?.requestId, () => {
     setQuery(''); setSelected(new Set<string>())
   })
@@ -49,7 +50,7 @@ export default function TrackPartPicker() {
             <For each={filtered()}>{track => (
               <div class="flex gap-3 items-center rounded-lg p-2 hover:bg-muted min-h-14 content-visibility-auto">
                 <input type="checkbox" class="size-4 shrink-0" aria-label={`选择 ${track.title}`} checked={selected().has(track.id)} disabled={disabled()} onChange={() => toggle(track.id)} />
-                <button class="min-w-0 flex-1 text-left rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring" disabled={disabled()} aria-label={`${trackParts()?.action === 'next' ? '下一首' : '播放'} ${track.title}`} onClick={() => confirmTrackParts([track], trackParts()?.action ?? 'play')}>
+                <button class="min-w-0 flex-1 text-left rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring" disabled={disabled()} aria-label={`${isDownload() ? '下载' : trackParts()?.action === 'next' ? '下一首' : '播放'} ${track.title}`} onClick={() => confirmTrackParts([track], trackParts()?.action ?? 'play')}>
                   <span class="block text-sm line-clamp-2 break-words">{track.title}</span><span class="text-xs text-muted-foreground">{formatTime(track.duration)}</span>
                 </button>
               </div>
@@ -58,9 +59,9 @@ export default function TrackPartPicker() {
           </div>
           <footer class="border-t border-border p-4 mt-3 flex gap-2 items-center flex-wrap shrink-0">
             <span class="text-xs text-muted-foreground mr-auto">已选 {chosen().length} / {trackParts()?.tracks.length} 项</span>
-            <button class="border-btn h-9 px-3" disabled={disabled() || !chosen().length} onClick={() => confirmTrackParts(chosen(), 'append')}>加入队列</button>
-            <button class="btn h-9 px-3" disabled={disabled() || !chosen().length} onClick={() => confirmTrackParts(chosen(), trackParts()?.action ?? 'play')}>{trackParts()?.action === 'next' ? '设为下一首' : '播放所选'}</button>
-            <Show when={!canControlRoom()}><p class="text-xs text-muted-foreground w-full">房主或管理员恢复控制权限后才能添加所选曲目。</p></Show>
+            <Show when={!isDownload()}><button class="border-btn h-9 px-3" disabled={disabled() || !chosen().length} onClick={() => confirmTrackParts(chosen(), 'append')}>加入队列</button></Show>
+            <button class="btn h-9 px-3" disabled={disabled() || !chosen().length} onClick={() => confirmTrackParts(chosen(), trackParts()?.action ?? 'play')}>{isDownload() ? '下载所选' : trackParts()?.action === 'next' ? '设为下一首' : '播放所选'}</button>
+            <Show when={!isDownload() && !canControlRoom()}><p class="text-xs text-muted-foreground w-full">房主或管理员恢复控制权限后才能添加所选曲目。</p></Show>
           </footer>
         </Show>
       </div>

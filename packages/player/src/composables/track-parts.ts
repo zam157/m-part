@@ -4,7 +4,8 @@ import { createSignal } from 'solid-js'
 import { errorMessage } from '~/utils/index'
 import { supportsTrackParts } from '~/utils/track-parts'
 
-export type PartAction = 'play' | 'append' | 'next'
+export type PlaybackPartAction = 'play' | 'append' | 'next'
+export type PartAction = PlaybackPartAction | 'download'
 interface Selection { tracks: MusicInfo[], action: PartAction }
 export const [trackParts, setTrackParts] = createSignal<{
   requestId: number, music: MusicInfo, action: PartAction, loading: boolean, tracks: MusicInfo[], error: string,
@@ -49,6 +50,7 @@ export function chooseTrackParts(music: MusicInfo, action: PartAction = 'play', 
 export function confirmTrackParts(tracks: MusicInfo[], action: PartAction) {
   const request = pending
   if (!request || !tracks.length) return
+  if ((request.action === 'download') !== (action === 'download')) return
   pending = undefined
   setTrackParts(null)
   request.resolve({ tracks, action })

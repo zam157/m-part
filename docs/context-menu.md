@@ -1,6 +1,6 @@
 # 右键菜单与添加到下一首
 
-歌曲右键菜单接入首页推荐、搜索结果、歌手单曲、专辑曲目、歌单详情和播放队列，两个音源共用同一套实现。外观沿用 [shadcn Context Menu](https://ui.shadcn.com/docs/components/context-menu) 的主题色、圆角、边框、间距与焦点样式。
+歌曲右键菜单接入首页推荐、搜索结果、歌手单曲、专辑曲目、歌单详情和播放队列，各音源共用同一套实现。外观沿用 [shadcn Context Menu](https://ui.shadcn.com/docs/components/context-menu) 的主题色、圆角、边框、间距与焦点样式。
 
 ## 组件使用
 
@@ -15,7 +15,7 @@
 </ContextMenu>
 ```
 
-将 `trigger` 展开到实际目标上；同名事件要自行组合，避免覆盖。`getItems` 在打开时读取，支持 `disabled`、`destructive`、`separatorBefore`、`shortcut`；`shortcut` 只显示提示，不注册快捷键。列表和推荐中的歌曲使用 `MusicContextMenu`，传入 `music` 即可复用“添加到下一首”。播放队列中的歌曲直接使用 `ContextMenu`，只提供“从队列中移除”；原侧栏与展开页浮窗共用此行为。
+将 `trigger` 展开到实际目标上；同名事件要自行组合，避免覆盖。`getItems` 在打开时读取，支持 `disabled`、`destructive`、`separatorBefore`、`shortcut`；`shortcut` 只显示提示，不注册快捷键。列表和推荐中的歌曲使用 `MusicContextMenu`，提供“添加到下一首”“添加到本地歌单”“下载歌曲”及能力启用的分段选择。播放队列直接使用 `ContextMenu`，提供添加到本地歌单、下载、移除及分段选择；侧栏与展开页浮窗共用此行为。下载仅操作本机，规则见 [歌曲下载](./downloads.md)。
 
 右键使用指针坐标，Shift+F10 / ContextMenu 键使用目标底部坐标，自动限制在视口内；这里使用显式坐标定位，不依赖 Popover 隐式锚点。方向键、Home / End 跳过禁用项；Enter / Space 执行；Escape / Tab 关闭并恢复来源焦点。点击外部、页面滚动、窗口缩放或来源卸载会关闭；菜单内部滚动不关闭。
 

@@ -8,6 +8,7 @@ import {
   currentSong, currentSourceInfo, dismissPlaybackError, playbackError, setShowPlayQueue, setVolume, showPlayQueue, volume, openTrackParts,
 } from '~/composables/player'
 import { canControlRoom } from '~/composables/player-context'
+import { cancelDownload, dismissDownloadNotice, downloadMusic, downloadNotice } from '~/composables/download'
 import ExpandedPlayer from './components/ExpandedPlayer'
 import PlaybackControls from './components/PlaybackControls'
 import PlaybackProgress from './components/PlaybackProgress'
@@ -29,6 +30,12 @@ export default function MusicPlayer() {
     // 音源加载失败会同时写入播放器和房间，关闭时一起清除，避免旧错误再次弹出。
     dismissPlaybackError()
     dismissRoomError()
+  }
+  function noticeAction() {
+    const notice = downloadNotice()
+    if (notice?.kind === 'pending') return { label: '取消', onClick: cancelDownload }
+    if (notice?.kind === 'error') return { label: '重试', onClick: () => { void downloadMusic(notice.music) } }
+    return !notice && canRetry() ? { label: '重试', onClick: retryPlayback } : undefined
   }
 
   return (
@@ -71,11 +78,12 @@ export default function MusicPlayer() {
       </div>
       <ExpandedPlayer show={showExpanded()} onShowChange={setShowExpanded} ref={element => { expandedDialog = element }} />
       <AlertPopover
-        title={roomError() && !roomPlaybackFailed() ? '一起听提示' : '播放失败'}
-        message={roomError() || playbackError()}
-        variant="destructive"
-        onDismiss={dismissError}
-        action={canRetry() ? { label: '重试', onClick: retryPlayback } : undefined}
+        title={downloadNotice() ? downloadNotice()?.kind === 'error' ? '下载失败' : downloadNotice()?.kind === 'pending' ? '正在下载' : '下载已准备' : roomError() && !roomPlaybackFailed() ? '一起听提示' : '播放失败'}
+        message={downloadNotice()?.message ?? roomError() ?? playbackError()}
+        variant={downloadNotice() && downloadNotice()?.kind !== 'error' ? 'default' : 'destructive'}
+        duration={downloadNotice()?.kind === 'pending' ? 0 : 6000}
+        onDismiss={() => downloadNotice() ? dismissDownloadNotice() : dismissError()}
+        action={noticeAction()}
         portalMount={showExpanded() ? expandedDialog : undefined}
       />
     </footer>
