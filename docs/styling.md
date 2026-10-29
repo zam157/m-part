@@ -75,6 +75,12 @@ grid-cols-[repeat(auto-fill,minmax(clamp(300px,15vw,360px),1fr))]
 
 搜索栏是 `w-full max-w-2xl` + `h-10`，左缘与下方结果网格对齐。`btn-group` 里各段都是 `h-full`，改高度只改外层即可。`Select` 触发器文字用 `text-sm`，与输入框同一尺度（曾经是 `text-xs`：12px 的标签配 14px 的输入框，看着别扭）。
 
+## 侧栏收放
+
+侧栏宽度和内边距使用 200ms 过渡，`sidebar-item` 的宽度、横向 margin 同步过渡，始终保持从左排列，避免切换 `justify-center` / `mx-auto` 时图标跳位。`sidebar-label` 保留布局、禁止收缩和换行，通过透明度与 4px 位移过渡：收起用 100ms 淡出，展开延迟 60ms 后淡入。Logo、导航、队列数量和底部文案共用此规则；不要恢复 `display:none` / `hidden`，否则文字会在宽度动画开始时突然消失。按钮裁切溢出内容，所有过渡响应 `prefers-reduced-motion`。
+
+UnoCSS Wind4 的 `transition-[opacity,transform]` 会把独立的 `translate` / `scale` / `rotate` 也展开进过渡属性，无需再添加 `translate` token。修改共享 UnoCSS 配置后，开发服务可能仍持有旧配置，需要重启 WXT，再检查实际计算样式和生产产物；只刷新页面不足以确认配置更新。
+
 ## 浮层（Popover）
 
 - 定位优先用**隐式锚点**：`popovertarget` + `id` 已经把触发器和浮层关联起来，在 `popover.css` 里写 `position-anchor: auto` + `anchor()` / `anchor-center` 即可，不需要动态 `anchor-name`

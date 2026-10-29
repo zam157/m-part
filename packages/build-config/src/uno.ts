@@ -26,8 +26,8 @@ export function createUnoConfig(publicDir = path.resolve(process.cwd(), 'public'
     shortcuts: [
       ['page-title', 'text-7 leading-[1.4] font-[650] tracking-[-1px]'],
       ['page-description', 'text-[13px] text-muted-foreground mt-[7px]'],
-      ['sidebar-item', 'flex w-full items-center gap-3 min-h-10 py-2.5 px-3 rounded-[7px] text-[13px] text-left transition-colors duration-150 hover:bg-accent group-data-[collapsed=true]/sidebar:size-10 group-data-[collapsed=true]/sidebar:mx-auto group-data-[collapsed=true]/sidebar:justify-center'],
-      ['sidebar-label', 'whitespace-nowrap group-data-[collapsed=true]/sidebar:hidden'],
+      ['sidebar-item', 'flex w-full mx-0 items-center gap-3 min-h-10 py-2.5 px-3 overflow-hidden rounded-[7px] text-[13px] text-left transition-[width,margin,background-color,color] duration-200 ease-[ease] hover:bg-accent group-data-[collapsed=true]/sidebar:w-10 group-data-[collapsed=true]/sidebar:mx-1 motion-reduce:transition-none'],
+      ['sidebar-label', 'shrink-0 whitespace-nowrap opacity-100 translate-x-0 transition-[opacity,transform] duration-100 delay-60 ease-out group-data-[collapsed=true]/sidebar:opacity-0 group-data-[collapsed=true]/sidebar:-translate-x-1 group-data-[collapsed=true]/sidebar:delay-0 motion-reduce:transition-none'],
       ['popover-surface', 'mb-2 p-2.5 rounded-lg bg-popover text-popover-foreground ring-1 shadow-md ring-foreground/10 outline-hidden'],
       [
         'btn',

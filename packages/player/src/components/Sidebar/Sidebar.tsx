@@ -47,7 +47,7 @@ export default function Sidebar() {
         <Tooltip content="播放队列" disabled={!collapsed()} placement="right">
           {triggerProps => (
             <button {...triggerProps} class={clsx('sidebar-item', showPlayQueue() && 'bg-accent')} aria-label="播放队列" aria-controls="play-queue" aria-expanded={showPlayQueue() ? 'true' : 'false'} onClick={() => setShowPlayQueue(!showPlayQueue())}>
-              <span class="i-lucide:list-music text-4 shrink-0" /><span class="sidebar-label">播放队列</span><span class="ml-auto text-[11px] tabular-nums text-muted-foreground group-data-[collapsed=true]/sidebar:hidden">{playQueue().length}</span>
+              <span class="i-lucide:list-music text-4 shrink-0" /><span class="sidebar-label">播放队列</span><span class="sidebar-label ml-auto text-[11px] tabular-nums text-muted-foreground">{playQueue().length}</span>
             </button>
           )}
         </Tooltip>
