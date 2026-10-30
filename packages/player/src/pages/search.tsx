@@ -1,3 +1,4 @@
+import ProviderImage from '~/components/ProviderImage/ProviderImage'
 import type { AlbumInfo, ArtistInfo, PlaylistInfo } from '@m-part/music/types/music-info'
 import { useNavigate } from '@solidjs/router'
 import { For, Match, Show, Switch } from 'solid-js'
@@ -122,7 +123,7 @@ export default function SearchPage() {
                 {result => (
                   <button class="card gap-2 p-2 text-left hover:bg-muted transition-colors" aria-label={`打开歌单 ${result.title}`} onClick={() => handlePlaylistCardClick(result)}>
                     <Show when={result.coverUrl} fallback={<div class="w-full aspect-ratio-video bg-muted rounded-md grid place-items-center"><span class="i-lucide:library text-8 text-muted-foreground" /></div>}>
-                      <img src={result.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />
+                      <ProviderImage provider={result.provider} usage="card" src={result.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />
                     </Show>
                     <span class="text-sm/relaxed font-semibold line-clamp-2 h-[calc(2*var(--leading-relaxed)*1em)]">{result.title}</span>
                     <span class="text-xs text-muted-foreground truncate w-full">{result.creator || '未知创建者'} · {result.totalTracks} 首</span>
@@ -140,7 +141,7 @@ export default function SearchPage() {
                       onClick={() => addToPlayQueue(result)}
                     >
                       <div class="flex flex-col gap-2 h-full">
-                        <img src={result.coverUrl} alt="cover" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />
+                        <ProviderImage provider={result.provider} usage="card" src={result.coverUrl} alt="cover" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />
                         <span class="text-sm/relaxed font-semibold line-clamp-2 h-[calc(2*var(--leading-relaxed)*1em)]">{result.title}</span>
                         <span class="text-xs text-muted-foreground shrink-0 truncate">{result.artist}</span>
                       </div>
@@ -158,7 +159,7 @@ export default function SearchPage() {
                     onClick={() => handleArtistCardClick(result)}
                   >
                     <div class="flex flex-col gap-2 h-full">
-                      <img src={result.coverUrl} alt="cover" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />
+                      <ProviderImage provider={result.provider} usage="card" src={result.coverUrl} alt="cover" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />
                       <span class="text-sm/relaxed font-semibold line-clamp-2 h-[calc(var(--leading-relaxed)*1em)]">{result.name}</span>
                       <span class="text-xs text-muted-foreground shrink-0 truncate">{result.description}</span>
                     </div>
@@ -172,7 +173,7 @@ export default function SearchPage() {
                 {result => (
                   <div class="card gap-2 p-2 cursor-default hover:bg-muted transition-colors" onClick={() => handleAlbumCardClick(result)}>
                     <div class="flex flex-col gap-2 h-full">
-                      <img src={result.coverUrl} alt="cover" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />
+                      <ProviderImage provider={result.provider} usage="card" src={result.coverUrl} alt="cover" referrerpolicy="no-referrer" class="w-full aspect-ratio-video rounded-md object-cover shrink-0" />
                       <span class="text-sm/relaxed font-semibold line-clamp-2 h-[calc(2*var(--leading-relaxed)*1em)]">{result.title}</span>
                       <span class="text-xs text-muted-foreground shrink-0 truncate">{result.artist}</span>
                     </div>

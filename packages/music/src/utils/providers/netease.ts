@@ -1,4 +1,5 @@
 import type { AlbumInfo, ArtistInfo, MusicInfo, PlaylistInfo, SourceInfo } from '../../types/music-info'
+import { neteaseImageUrl } from '../provider-images'
 import type { Pagination, Provider } from '../../types/provider'
 import { tRequest } from '../fetch'
 import { toHttpsUrl } from '../url'
@@ -212,6 +213,7 @@ async function search(keyword: string, page: number, type: 1 | 10 | 100 | 1000) 
 
 const NeteaseProvider: Provider = {
   name: 'netease',
+  getImageUrl: neteaseImageUrl,
   async getLyrics(id, options) {
     const result = await request<LyricsResponse>('/api/song/lyric/v1', { id, cp: false, tv: 0, lv: 0, rv: 0, kv: 0, yv: 0, ytv: 0, yrv: 0 }, options?.signal)
     return {

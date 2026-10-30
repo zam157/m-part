@@ -1,3 +1,4 @@
+import ProviderImage from '~/components/ProviderImage/ProviderImage'
 import { useNavigate, useParams } from '@solidjs/router'
 import { createEffect, createSignal, For, Match, Show, Switch } from 'solid-js'
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
@@ -33,7 +34,7 @@ export default function LocalPlaylistPage() {
         <Match when={playlist()}>
           <header class="flex items-center gap-5 mb-6">
             <Show when={playlist()?.tracks[0]?.coverUrl} fallback={<div class="size-24 shrink-0 rounded-lg bg-muted grid place-items-center"><span class="i-lucide:library text-9 text-muted-foreground" /></div>}>
-              <img src={playlist()?.tracks[0]?.coverUrl} alt="" referrerpolicy="no-referrer" class="size-24 shrink-0 rounded-lg object-cover" />
+              <ProviderImage provider={playlist()?.tracks[0]?.provider} usage="detail" src={playlist()?.tracks[0]?.coverUrl} alt="" referrerpolicy="no-referrer" class="size-24 shrink-0 rounded-lg object-cover" />
             </Show>
             <div class="min-w-0"><h1 class="text-6 font-semibold break-words">{playlist()?.title}</h1><p class="page-description">本地歌单 · {playlist()?.tracks.length} 首</p></div>
           </header>
@@ -51,7 +52,7 @@ export default function LocalPlaylistPage() {
                   <MusicContextMenu music={music}>{trigger => (
                     <button {...trigger} class="ghost-btn h-auto min-h-16 p-2 justify-start text-left flex-1 min-w-0" disabled={!canControlRoom()} aria-label={`播放 ${music.title}`} onClick={() => void addToPlayQueue(music)}>
                       <Show when={music.coverUrl} fallback={<span class="size-12 shrink-0 bg-muted rounded-md grid place-items-center"><span class="i-lucide:music text-5" /></span>}>
-                        <img src={music.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="size-12 shrink-0 rounded-md object-cover" />
+                        <ProviderImage provider={music.provider} usage="list" src={music.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="size-12 shrink-0 rounded-md object-cover" />
                       </Show>
                       <span class="flex flex-col min-w-0 flex-1 gap-1"><span class="text-sm font-medium truncate">{music.title}</span><span class="text-xs text-muted-foreground truncate">{music.artist}</span></span>
                       <span class="text-xs text-muted-foreground shrink-0">{formatTime(music.duration)}</span>

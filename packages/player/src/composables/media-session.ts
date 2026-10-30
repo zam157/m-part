@@ -1,12 +1,12 @@
 import type { MusicInfo } from '@m-part/music/types/music-info'
-import { toHttpsUrl } from '@m-part/music/url'
+import { imageUrl } from '@m-part/music/image'
 import { createEffect, createRoot } from 'solid-js'
 import { audio, currentSong, prevNext, setCurrentTime, setPlaying } from './player'
 import { isRoomPlayer } from './player-context'
 
 function artwork(music: MusicInfo): MediaImage[] {
   try {
-    const url = new URL(toHttpsUrl(music.coverUrl))
+    const url = new URL(imageUrl(music.provider, music.coverUrl, 'media-session'))
     return url.protocol === 'https:' ? [{ src: url.href }] : []
   }
   catch {

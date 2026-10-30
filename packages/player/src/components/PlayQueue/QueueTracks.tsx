@@ -1,3 +1,4 @@
+import ProviderImage from '~/components/ProviderImage/ProviderImage'
 import { getTrackPartsLabel, supportsTrackParts } from '~/utils/track-parts'
 import { clsx } from 'cn/lite'
 import { createEffect, For, Show, untrack } from 'solid-js'
@@ -64,7 +65,7 @@ export default function QueueTracks(props: { open: boolean, ref?: (api: QueueTra
               <button class="flex flex-1 min-w-0 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring" disabled={!canControlRoom() && currentIndex() !== index()} aria-label={`播放 ${song.title}`} onClick={() => play(index())}>
                 <span class="relative size-9 shrink-0 overflow-hidden rounded-md bg-muted grid place-items-center">
                   <Show when={song.coverUrl} fallback={<span class="i-lucide:music-2 text-5 text-muted-foreground" />}>
-                    <img src={song.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="size-full object-cover" />
+                    <ProviderImage provider={song.provider} usage="queue" src={song.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="size-full object-cover" />
                   </Show>
                   <Show when={currentIndex() === index()}><span class="absolute inset-0 grid place-items-center bg-black/35 text-white"><span class={clsx('text-5', playing() ? 'i-lucide:audio-lines' : 'i-lucide:play')} /></span></Show>
                 </span>

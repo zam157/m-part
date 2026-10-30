@@ -14,6 +14,7 @@
     "./fetch": "./src/utils/fetch.ts",
     "./constants": "./src/utils/constants.ts",
     "./url": "./src/utils/url.ts",
+    "./image": "./src/utils/image.ts",
     "./proxy-headers": "./src/proxy-headers.ts"
   },
   "dependencies": {

@@ -1,3 +1,4 @@
+import ProviderImage from '~/components/ProviderImage/ProviderImage'
 import type { PlaylistInfo } from '@m-part/music/types/music-info'
 import { useNavigate } from '@solidjs/router'
 import { createEffect, For, Match, Show, Switch } from 'solid-js'
@@ -47,7 +48,7 @@ export default function PlaylistsPage() {
               <For each={library().items}>{playlist => (
                 <button class="card p-3 gap-2 text-left hover:bg-muted transition-colors" aria-label={`打开歌单 ${playlist.title}`} onClick={() => openPlaylist(playlist)}>
                   <Show when={playlist.coverUrl} fallback={<div class="w-full aspect-square rounded-md bg-muted grid place-items-center"><span class="i-lucide:library text-10 text-muted-foreground" /></div>}>
-                    <img src={playlist.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full aspect-square rounded-md object-cover" />
+                    <ProviderImage provider={playlist.provider} usage="collection" src={playlist.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full aspect-square rounded-md object-cover" />
                   </Show>
                   <span class="text-sm font-semibold line-clamp-2 min-h-10">{playlist.title}</span>
                   <span class="text-xs text-muted-foreground">{playlist.owned ? '我创建的' : '我收藏的'} · {playlist.totalTracks} 首</span>

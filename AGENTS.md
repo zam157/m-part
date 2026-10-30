@@ -41,6 +41,7 @@
 | 一起听聊天 / 操作历史 | `packages/player/src/components/ListenRoomHistory/`；服务端 `listen-rooms.ts` 记录与截断，聊天 / 授权不修改播放版本 |
 | 托管一起听 / 媒体票据 | `apps/rooms/server/utils/hosted-media.ts`、`apps/rooms/server/providers/`、`room-control` / `room-audio` 路由；客户端 `ListenRoomSources/` 与 `utils/room-http.ts` |
 | 取数实现（Provider） | `packages/music/src/utils/providers/` |
+| 图片缩放 | Provider `getImageUrl`、`@m-part/music/image`、`ProviderImage/`；按用途生成缩略图与 1x / 2x 候选，存储与协议中的 `coverUrl` 保留源地址 → [图片说明](./docs/images.md) |
 | 请求出口（含扩展策略） | `packages/music/src/utils/fetch.ts` |
 | 扩展入口 / manifest / DNR 规则 | `apps/extension/entrypoints/`、`apps/extension/wxt.config.ts`、`apps/extension/public/rules/` |
 | 构建别名与插件链（两套构建共用） | `packages/build-config/src/vite.ts` |

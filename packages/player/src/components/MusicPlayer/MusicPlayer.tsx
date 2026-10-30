@@ -1,3 +1,4 @@
+import ProviderImage from '~/components/ProviderImage/ProviderImage'
 import { getTrackPartsLabel, supportsTrackParts } from '~/utils/track-parts'
 import { clsx } from 'cn/lite'
 import { createMemo, createSignal, Show } from 'solid-js'
@@ -46,7 +47,7 @@ export default function MusicPlayer() {
         <div role="group" aria-label="当前歌曲" class="flex min-w-0 items-center gap-3 rounded-lg bg-muted/55 p-2 max-[760px]:col-span-2 max-[760px]:row-start-1">
           <button class="group/cover relative size-12 shrink-0 overflow-hidden rounded-md bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring" disabled={!hasSong()} aria-label="展开播放器" aria-controls="expanded-player" aria-expanded={showExpanded() ? 'true' : 'false'} onClick={() => setShowExpanded(true)}>
             <Show when={currentSong()?.coverUrl} fallback={<span class="i-lucide:music-2 text-6 text-muted-foreground" />}>
-              <img src={currentSong()!.coverUrl} alt="当前歌曲封面" referrerpolicy="no-referrer" class="size-full object-cover" />
+              <ProviderImage provider={currentSong()?.provider} usage="player" src={currentSong()!.coverUrl} alt="当前歌曲封面" referrerpolicy="no-referrer" class="size-full object-cover" />
             </Show>
             <span class="absolute inset-0 grid place-items-center bg-black/35 text-white opacity-0 transition-opacity group-hover/cover:opacity-100 group-focus-visible/cover:opacity-100"><span class="i-lucide:chevrons-up text-5" /></span>
           </button>

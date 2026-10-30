@@ -1,3 +1,4 @@
+import ProviderImage from '~/components/ProviderImage/ProviderImage'
 import { useNavigate } from '@solidjs/router'
 import { createEffect, For, Match, Show, Switch } from 'solid-js'
 import ErrorMessage from '~/components/ErrorMessage/ErrorMessage'
@@ -21,7 +22,7 @@ export default function LocalPlaylists() {
             <For each={state().items}>{playlist => (
               <button class="card p-3 gap-2 text-left hover:bg-muted transition-colors" aria-label={`打开本地歌单 ${playlist.title}`} onClick={() => navigate(`/local-playlist/${encodeURIComponent(playlist.id)}`)}>
                 <Show when={playlist.tracks[0]?.coverUrl} fallback={<div class="w-full aspect-square rounded-md bg-muted grid place-items-center"><span class="i-lucide:library text-10 text-muted-foreground" /></div>}>
-                  <img src={playlist.tracks[0]?.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full aspect-square rounded-md object-cover" />
+                  <ProviderImage provider={playlist.tracks[0]?.provider} usage="collection" src={playlist.tracks[0]?.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full aspect-square rounded-md object-cover" />
                 </Show>
                 <span class="text-sm font-semibold line-clamp-2 min-h-10 break-words">{playlist.title}</span>
                 <span class="text-xs text-muted-foreground">本地歌单 · {playlist.tracks.length} 首</span>

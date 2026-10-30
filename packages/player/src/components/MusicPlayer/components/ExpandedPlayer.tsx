@@ -1,3 +1,4 @@
+import ProviderImage from '~/components/ProviderImage/ProviderImage'
 import { Portal } from '@solidjs/web'
 import { clsx } from 'cn/lite'
 import { createEffect, createSignal, onCleanup, Show, untrack } from 'solid-js'
@@ -73,7 +74,7 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
         onKeyDown={handleKeyDown}
       >
         <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-          <Show when={currentSong()?.coverUrl}><img src={currentSong()!.coverUrl} alt="" referrerpolicy="no-referrer" class="size-full object-cover blur-3xl scale-125 opacity-10" /></Show>
+          <Show when={currentSong()?.coverUrl}><ProviderImage provider={currentSong()?.provider} usage="background" src={currentSong()!.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="size-full object-cover blur-3xl scale-125 opacity-10" /></Show>
           <div class="absolute inset-0 bg-background/80" />
         </div>
         <header class="relative z-1 shrink-0 h-18 px-8 flex items-center justify-between gap-2 border-b border-border/60 max-[900px]:h-15 max-[900px]:px-4">
@@ -90,7 +91,7 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
             <section aria-label="正在播放的歌曲" class={clsx('expanded-now-playing w-full max-w-110 mx-auto min-w-0', showLyrics() && 'max-[900px]:order-2')}>
               <div class={clsx('expanded-artwork aspect-square w-[min(44dvh,100%)] max-w-110 mx-auto overflow-hidden rounded-2xl border border-foreground/5 bg-muted shadow-[0_24px_70px_-20px_#0005] grid place-items-center max-[900px]:w-[min(38dvh,100%)]', showLyrics() && 'max-[900px]:hidden')}>
                 <Show when={currentSong()?.coverUrl} fallback={<span class="i-lucide:music-2 text-16 text-muted-foreground/40" />}>
-                  <img src={currentSong()!.coverUrl} alt="当前歌曲封面" referrerpolicy="no-referrer" class="size-full object-cover" />
+                  <ProviderImage provider={currentSong()?.provider} usage="expanded" src={currentSong()!.coverUrl} alt="当前歌曲封面" loading="lazy" referrerpolicy="no-referrer" class="size-full object-cover" />
                 </Show>
               </div>
               <div class="expanded-controls mt-7 max-[900px]:mt-5">

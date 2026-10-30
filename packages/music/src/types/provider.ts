@@ -3,6 +3,15 @@ import type { AlbumInfo, ArtistInfo, MusicInfo, PlaylistInfo, SourceInfo } from 
 export type ProviderName = 'bili' | 'netease' | 'qq'
 export type SearchType = 'music' | 'album' | 'artist' | 'playlist'
 
+export type ImageUsage = 'queue' | 'player' | 'list' | 'card' | 'collection' | 'detail' | 'expanded' | 'background' | 'media-session'
+export interface ImageOptions {
+  usage: ImageUsage
+  /** Requested physical pixels, including the requested pixel density. */
+  width: number
+  height: number
+  fit: 'cover' | 'contain'
+}
+
 export interface Pagination {
   page: number
   pageSize: number
@@ -40,6 +49,8 @@ export interface LyricsInfo {
 
 export interface Provider {
   name: ProviderName
+  /** Pure CDN URL transformation. Keep unsupported URLs unchanged; never mutate stored cover URLs. */
+  getImageUrl?: (url: string, options: ImageOptions) => string
   /** Resolve a container or an existing part into same-provider playable tracks, in source order with unique stable IDs. Return one track for a single-part item. */
   getTrackParts?: (music: MusicInfo, options?: { signal?: AbortSignal }) => Promise<MusicInfo[]>
   /** Identify resolved parts locally so normal playback can skip another lookup. Omit to resolve every explicit add. */

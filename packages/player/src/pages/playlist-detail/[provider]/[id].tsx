@@ -1,3 +1,4 @@
+import ProviderImage from '~/components/ProviderImage/ProviderImage'
 import type { ProviderName } from '@m-part/music/types/provider'
 import { useNavigate, useParams, useSearchParams } from '@solidjs/router'
 import { For, Match, onCleanup, Show, Switch, untrack } from 'solid-js'
@@ -60,7 +61,7 @@ function PlaylistDetailView(props: { source: ProviderName, id: string }) {
       <button class="ghost-btn px-2 mb-5" onClick={() => { if (!metadata.fromSearch) setPlaylistView('platform'); navigate(metadata.fromSearch ? '/search' : '/playlists') }}><span class="i-lucide:arrow-left text-4" />{metadata.fromSearch ? '返回搜索' : '我的歌单'}</button>
       <header class="flex items-center gap-5 mb-6">
         <Show when={metadata.cover} fallback={<div class="size-24 shrink-0 rounded-lg bg-muted grid place-items-center"><span class="i-lucide:library text-9 text-muted-foreground" /></div>}>
-          <img src={metadata.cover} alt="" referrerpolicy="no-referrer" class="size-24 shrink-0 rounded-lg object-cover" />
+          <ProviderImage provider={props.source} usage="detail" src={metadata.cover} alt="" referrerpolicy="no-referrer" class="size-24 shrink-0 rounded-lg object-cover" />
         </Show>
         <div class="min-w-0"><h1 class="text-6 font-semibold break-words">{metadata.title}</h1><p class="page-description">{metadata.creator}</p><span class="text-xs text-muted-foreground">已加载 {state().items.length} 首</span></div>
       </header>
@@ -80,7 +81,7 @@ function PlaylistDetailView(props: { source: ProviderName, id: string }) {
               <MusicContextMenu music={music} disabled={tracks.loadingAll()}>{trigger => (
                 <button {...trigger} class="ghost-btn h-auto min-h-16 p-2 justify-start text-left w-full" disabled={tracks.loadingAll()} aria-label={`播放 ${music.title}`} onClick={() => addToPlayQueue(music)}>
                   <Show when={music.coverUrl} fallback={<span class="size-12 shrink-0 bg-muted rounded-md grid place-items-center"><span class="i-lucide:music text-5" /></span>}>
-                    <img src={music.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="size-12 shrink-0 rounded-md object-cover" />
+                    <ProviderImage provider={music.provider} usage="list" src={music.coverUrl} alt="" loading="lazy" referrerpolicy="no-referrer" class="size-12 shrink-0 rounded-md object-cover" />
                   </Show>
                   <span class="flex flex-col min-w-0 flex-1 gap-1"><span class="text-sm font-medium truncate">{music.title}</span><span class="text-xs text-muted-foreground truncate">{music.artist}</span></span>
                   <span class="i-lucide:play text-4 shrink-0 mx-2" />

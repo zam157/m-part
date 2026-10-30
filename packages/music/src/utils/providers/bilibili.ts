@@ -8,6 +8,7 @@ import type { BiliVideo } from './bilibili-parts'
 import { TARGET_EXTENSION, USE_GM_FETCH, USE_PROXY } from '../constants'
 import { tRequest } from '../fetch'
 import { toHttpsUrl } from '../url'
+import { biliImageUrl } from '../provider-images'
 import { LoginRequiredError } from './login-required'
 
 // #region types
@@ -737,6 +738,7 @@ async function fetchSeriesArchives(id: string | number, page: number, mid: numbe
 
 const biliProvider = {
   name: 'bili',
+  getImageUrl: biliImageUrl,
   async getCurrentUser() {
     const result = await tRequest<BiliResponse<{ isLogin: boolean, mid: number, uname: string, face: string }>>(`${API_HOST}/x/web-interface/nav`, { headers: COMMON_HEADERS })
     if (!result[0])

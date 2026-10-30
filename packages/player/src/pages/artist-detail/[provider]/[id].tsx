@@ -1,3 +1,4 @@
+import ProviderImage from '~/components/ProviderImage/ProviderImage'
 import type { AlbumInfo, ArtistInfo, MusicInfo } from '@m-part/music/types/music-info'
 import type { Pagination as PaginationType, ProviderName } from '@m-part/music/types/provider'
 import { errorMessage } from '../../../utils/index'
@@ -189,7 +190,8 @@ function ArtistDetailView(props: ArtistDetailViewProps) {
             when={!infoLoading()}
             fallback={<div class="skeleton h-full aspect-square object-cover rounded" />}
           >
-            <img
+            <ProviderImage
+              provider={props.provider} usage="detail"
               src={artistInfo()?.coverUrl}
               referrerpolicy="no-referrer"
               alt="Artist Avatar"
@@ -256,7 +258,8 @@ function ArtistDetailView(props: ArtistDetailViewProps) {
                 {work => (
                   <MusicContextMenu music={work}>{trigger => (
                     <div {...trigger} class="ghost-btn flex items-center gap-2 p-1.5 h-12">
-                      <img
+                      <ProviderImage
+                        provider={work.provider} usage="list"
                         src={work.coverUrl}
                         referrerpolicy="no-referrer"
                         alt="Work Cover"
@@ -322,7 +325,8 @@ function ArtistDetailView(props: ArtistDetailViewProps) {
                       class="ghost-btn flex items-center gap-2 p-1.5 h-12"
                       onClick={() => handleAlbumClick(album)}
                     >
-                      <img
+                      <ProviderImage
+                        provider={album.provider} usage="list"
                         src={album.coverUrl}
                         referrerpolicy="no-referrer"
                         alt="Album Cover"

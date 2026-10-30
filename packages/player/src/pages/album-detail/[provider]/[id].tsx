@@ -1,3 +1,4 @@
+import ProviderImage from '~/components/ProviderImage/ProviderImage'
 import type { MusicInfo } from '@m-part/music/types/music-info'
 import type { Pagination as PaginationType, ProviderName } from '@m-part/music/types/provider'
 import { errorMessage } from '../../../utils/index'
@@ -99,7 +100,8 @@ function AlbumDetailView(props: AlbumDetailViewProps) {
       {/* Album Info */}
       <div class="grow-0 h-32 shrink-0 flex items-center gap-4">
         <Show when={query.cover}>
-          <img
+          <ProviderImage
+            provider={props.provider} usage="detail"
             src={query.cover}
             referrerpolicy="no-referrer"
             alt="Album Cover"
@@ -176,7 +178,8 @@ function AlbumDetailView(props: AlbumDetailViewProps) {
                     class="ghost-btn flex items-center gap-2 p-1.5 h-12"
                     onClick={() => handlePlay(work)}
                   >
-                    <img
+                    <ProviderImage
+                      provider={work.provider} usage="list"
                       src={work.coverUrl}
                       referrerpolicy="no-referrer"
                       alt="Track Cover"
