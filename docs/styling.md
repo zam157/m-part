@@ -92,6 +92,7 @@ UnoCSS Wind4 的 `transition-[opacity,transform]` 会把独立的 `translate` / 
 - `MusicPlayer` 始终挂载，空队列与播放状态使用同一套布局，避免首次播放时切换外壳。桌面参照 Apple Music 的横向分区：左侧播放控制，中间封面、歌曲信息与进度，右侧音量、音质和队列；中间列最大 460px，两侧等宽以保持居中。
 - `App.tsx` 定义 `--player-height`：桌面 88px，760px 及以下 128px。窄屏上方为歌曲与进度，下方为播放控制和设置；`PlayQueue` 的移动浮层底边也引用这个变量，调整高度时必须一起保留，不能退回固定的 `bottom-21`。
 - 桌面音量使用原生横向 range；1100px 及以下收进点击展开的 Popover。`music-player.css` 只保留原生 range 的浏览器伪元素，其他布局仍用 UnoCSS。shadcn 的 `--foreground` 是裸 OKLCH 通道，原生 CSS 里用 `oklch(var(--foreground))` 才是合法颜色。
+- 展开播放器的音量 / 音质行固定 36px 高，音质按钮始终保留 36×36px 槽位；仅槽位内部按音源可用性显示按钮。不要让整个槽位跟随 `currentSourceInfo` 挂载 / 卸载，否则加载或重试时行高与音量条宽度变化，会带动居中排列的封面和控制区跳动。
 - 进度条持续显示已播放与剩余时间；拖动时预览、释放时跳转，取消手势不提交；方向键按五秒调整，Home / End 跳到首尾。手势中间值使用普通变量，避免 Solid 2 写入暂存导致单击跳转失效。
 
 ## 两条不能动的构建约定
