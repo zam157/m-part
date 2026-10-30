@@ -2,6 +2,8 @@
   /* 原生 dialog 提供焦点约束和背景 inert；保留 display/overlay 直到退场完成。 */
   .expanded-player {
     display: none;
+    /* display 在退场结束后才隐藏，布局方向也必须在这段时间保持不变。 */
+    flex-direction: column;
     opacity: 0;
     transform: translateY(12vh) scale(0.97);
     transform-origin: 50% 100%;
@@ -10,7 +12,6 @@
 
   .expanded-player[open] {
     display: flex;
-    flex-direction: column;
     opacity: 1;
     transform: none;
   }

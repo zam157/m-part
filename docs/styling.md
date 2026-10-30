@@ -93,6 +93,7 @@ UnoCSS Wind4 的 `transition-[opacity,transform]` 会把独立的 `translate` / 
 - `App.tsx` 定义 `--player-height`：桌面 88px，760px 及以下 128px。窄屏上方为歌曲与进度，下方为播放控制和设置；`PlayQueue` 的移动浮层底边也引用这个变量，调整高度时必须一起保留，不能退回固定的 `bottom-21`。
 - 桌面音量使用原生横向 range；1100px 及以下收进点击展开的 Popover。`music-player.css` 只保留原生 range 的浏览器伪元素，其他布局仍用 UnoCSS。shadcn 的 `--foreground` 是裸 OKLCH 通道，原生 CSS 里用 `oklch(var(--foreground))` 才是合法颜色。
 - 展开播放器的音量 / 音质行固定 36px 高，音质按钮始终保留 36×36px 槽位；仅槽位内部按音源可用性显示按钮。不要让整个槽位跟随 `currentSourceInfo` 挂载 / 卸载，否则加载或重试时行高与音量条宽度变化，会带动居中排列的封面和控制区跳动。
+- 展开播放器使用原生 dialog 的 `display` / `overlay` 离散退场过渡，关闭后仍会保留一段可见时间。`flex-direction: column` 等结构布局必须放在基础规则，不能只放在 `[open]` 下；否则 `[open]` 移除时立即回到横向布局，而弹层尚未退场，封面和控制区就会先跳位。只让透明度和 transform 等视觉属性随开关状态过渡。
 - 进度条持续显示已播放与剩余时间；拖动时预览、释放时跳转，取消手势不提交；方向键按五秒调整，Home / End 跳到首尾。手势中间值使用普通变量，避免 Solid 2 写入暂存导致单击跳转失效。
 
 ## 两条不能动的构建约定
