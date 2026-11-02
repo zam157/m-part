@@ -4,6 +4,13 @@ import { clientCookieProxy } from '../server/utils/client-cookie-proxy'
 const payload = { url: 'https://music.163.com/weapi/test', method: 'POST', cookie: 'MUSIC_U=manual', body: 'params=encoded', headers: { 'content-type': 'application/x-www-form-urlencoded' } }
 const request = (data: unknown = payload, origin = 'http://localhost:3333') => new Request('http://localhost:3333/api/provider-request', { method: 'POST', headers: { 'content-type': 'application/json', origin, cookie: 'web_app_cookie=private' }, body: JSON.stringify(data) })
 
+it('forwards Cookie values containing commas unchanged', async () => {
+  const upstream = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ code: 200 }))
+  const cookie = 'foo=1,2,3; bar=abc'
+  expect((await clientCookieProxy(request({ ...payload, cookie }), upstream)).status).toBe(200)
+  expect(new Headers(upstream.mock.calls[0]![1]?.headers).get('cookie')).toBe(cookie)
+})
+
 it('forwards only the explicitly supplied music cookie and controlled headers, without retaining upstream Set-Cookie', async () => {
   const upstream = vi.fn<typeof fetch>().mockResolvedValue(new Response('{"code":200}', { headers: { 'content-type': 'application/json', 'set-cookie': 'upstream=private', 'x-internal': 'private' } }))
   const response = await clientCookieProxy(request({ ...payload, headers: { ...payload.headers, host: 'evil.example', authorization: 'not-forwarded' } }), upstream)

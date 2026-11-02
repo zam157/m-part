@@ -18,6 +18,14 @@ describe('client Cookie settings', () => {
     expect(clientCookieValue('MUSIC_U=a', '__csrf')).toBe('')
     expect(normalizeClientCookie('  ')).toBe('')
   })
+  it('preserves commas in Cookie values through parsing, storage and extension rules', async () => {
+    const cookie = 'foo=1,2,3; bar=abc'
+    expect(normalizeClientCookie(cookie)).toBe(cookie)
+    expect(clientCookieValue(cookie, 'foo')).toBe('1,2,3')
+    await setClientCookie('bili', cookie)
+    expect(getClientCookie('bili')).toBe(cookie)
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ addRules: [expect.objectContaining({ action: { type: 'modifyHeaders', requestHeaders: [{ header: 'cookie', operation: 'set', value: cookie }] } })] }))
+  })
   it.each(['bad', '=value', 'key=one\r\nother=value', 'key=hello world', 'key=中文', `key=${'x'.repeat(16_384)}`])('rejects malformed headers without persisting them', async value => {
     await expect(setClientCookie('bili', value)).rejects.toThrow('Cookie 格式无效')
     expect(getClientCookie('bili')).toBe('')

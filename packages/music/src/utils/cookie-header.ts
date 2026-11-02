@@ -7,7 +7,7 @@ export function normalizeClientCookie(value: string) {
     if (!item.trim()) continue
     const index = item.indexOf('=')
     const name = item.slice(0, index).trim(), content = item.slice(index + 1).trim()
-    if (index < 1 || !/^[!#$%&'*+.^_`|~\w-]+$/.test(name) || /[\s,;]/.test(content)) throw new Error('Cookie 格式无效，应为 name=value; name2=value2')
+    if (index < 1 || !/^[!#$%&'*+.^_`|~\w-]+$/.test(name) || /[\s;]/.test(content)) throw new Error('Cookie 格式无效，应为 name=value; name2=value2')
     if (!pairs.has(name)) pairs.set(name, content)
   }
   if (!pairs.size) throw new Error('Cookie 格式无效')
