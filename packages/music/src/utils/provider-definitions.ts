@@ -18,7 +18,13 @@ export function websiteCookieUrls(cookie: ProviderCookieConfig): readonly string
   return cookie.session?.urls ?? [cookie.loginUrl]
 }
 
-/** Extension Cookie permissions follow Provider declarations, including login and API hosts. */
-export function websiteCookiePermissions(): string[] {
-  return [...new Set(getCookieProviders().filter(item => item.cookie.session).flatMap(item => websiteCookieUrls(item.cookie).map(url => `${new URL(url).origin}/*`)))]
+/** Chrome filters Cookies by their own domain and Secure flag, not just the query URL. */
+export function websiteCookiePermissions(cookie?: ProviderCookieConfig): string[] {
+  const configs = cookie ? [cookie] : getCookieProviders().map(item => item.cookie)
+  const hosts = configs.filter(config => config.session).flatMap(config => [
+    ...websiteCookieUrls(config).map(url => new URL(url).hostname),
+    ...config.session!.domains,
+  ])
+  // Both schemes are needed for Secure and non-Secure Cookies. Keep hosts exact.
+  return [...new Set(hosts.map(host => `*://${host}/*`))]
 }

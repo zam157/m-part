@@ -8,7 +8,7 @@ export const qqDefinition = {
     loginUrl: 'https://y.qq.com/',
     requestOrigin: 'https://y.qq.com',
     ruleId: 11003,
-    session: { names: ['qqmusic_uin', 'uin', 'wxuin', 'qqmusic_key', 'qm_keyst', 'p_skey', 'skey', 'eas_sid', 'login_type', 'tmeLoginType'], required: [['qqmusic_uin', 'uin', 'wxuin'], ['qqmusic_key', 'qm_keyst', 'p_skey', 'skey']], loginIndicators: ['qqmusic_key', 'qm_keyst', 'p_skey', 'skey'], urls: ['https://y.qq.com/', 'https://u.y.qq.com/cgi-bin/musicu.fcg', 'https://c.y.qq.com/'] },
+    session: { names: ['qqmusic_uin', 'uin', 'wxuin', 'qqmusic_key', 'qm_keyst', 'p_skey', 'skey', 'eas_sid', 'login_type', 'tmeLoginType'], required: [['qqmusic_uin', 'uin', 'wxuin'], ['qqmusic_key', 'qm_keyst', 'p_skey', 'skey']], loginIndicators: ['qqmusic_key', 'qm_keyst', 'p_skey', 'skey'], urls: ['https://y.qq.com/', 'https://u.y.qq.com/cgi-bin/musicu.fcg', 'https://c.y.qq.com/'], domains: ['qq.com'] },
     targets: [
       { origin: 'https://c.y.qq.com', path: '/soso/' },
       { origin: 'https://c.y.qq.com', path: '/qzone/' },

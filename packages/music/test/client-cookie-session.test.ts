@@ -80,6 +80,22 @@ it('reports missing website host permissions instead of silently exporting an an
   await expect(getClientSessionCookie('bili')).rejects.toThrow('允许访问音源网站')
   expect(getAll).not.toHaveBeenCalled()
 })
+it.each(['bili', 'qq'] as const)('reports a missing parent Cookie domain permission even when query hosts are allowed: %s', async (provider) => {
+  const parent = provider === 'bili' ? 'bilibili.com' : 'qq.com'
+  const contains = vi.fn(async ({ origins }: { origins: string[] }) => origins.every(origin => new URL(origin.replace('*://', 'https://')).hostname !== parent))
+  // Chrome filters out parent-domain Cookies without throwing, even for an allowed query URL.
+  const getAll = vi.fn(async () => [])
+  vi.stubGlobal('chrome', { cookies: { getAll }, permissions: { contains } })
+  await expect(getClientSessionCookie(provider)).rejects.toThrow('允许访问音源网站')
+  expect(getAll).not.toHaveBeenCalled()
+})
+it('requires HTTP Cookie-domain permission too, because non-Secure Cookies are checked against HTTP', async () => {
+  const getAll = vi.fn(async () => [])
+  const contains = vi.fn(async ({ origins }: { origins: string[] }) => origins.every(origin => origin.startsWith('https://')))
+  vi.stubGlobal('chrome', { cookies: { getAll }, permissions: { contains } })
+  await expect(getClientSessionCookie('netease')).rejects.toThrow('允许访问音源网站')
+  expect(getAll).not.toHaveBeenCalled()
+})
 it('reports Cookie API failures without exposing the original error or treating them as logout', async () => {
   vi.stubGlobal('chrome', { cookies: { getAll: vi.fn(async () => { throw new Error('SESSDATA=private-error') }) } })
   await expect(getClientSessionCookie('bili')).rejects.toThrow('无法完整读取网站登录 Cookie')

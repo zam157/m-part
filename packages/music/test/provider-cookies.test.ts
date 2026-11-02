@@ -12,10 +12,20 @@ it('shares each registered Provider declaration with transport and reserves stab
   expect(new Set(entries.map(entry => entry.cookie.ruleId)).size).toBe(entries.length)
   expect(Object.fromEntries(entries.map(entry => [entry.name, entry.cookie.ruleId]))).toMatchObject({ bili: 11001, netease: 11002, qq: 11003 })
 })
-it('declares Cookie permissions for both login websites and API scopes', () => {
+it('declares Cookie permissions for query hosts and parent Cookie domains on both schemes', () => {
   const origins = websiteCookiePermissions()
-  expect(origins).toEqual(expect.arrayContaining(['https://www.bilibili.com/*', 'https://api.bilibili.com/*', 'https://music.163.com/*', 'https://y.qq.com/*', 'https://u.y.qq.com/*', 'https://c.y.qq.com/*']))
+  expect(origins).toEqual(expect.arrayContaining(['*://www.bilibili.com/*', '*://api.bilibili.com/*', '*://bilibili.com/*', '*://music.163.com/*', '*://y.qq.com/*', '*://u.y.qq.com/*', '*://c.y.qq.com/*', '*://qq.com/*']))
+  // Exact declared hosts are sufficient; do not grant access to every subdomain.
+  expect(origins.some(origin => origin.includes('://*.'))).toBe(false)
   expect(new Set(origins).size).toBe(origins.length)
+})
+it('derives per-provider Cookie permissions from metadata and honors an absent session capability', () => {
+  const cookie = {
+    ...providerDefinitions.bili.cookie!,
+    session: { names: ['session'], required: [['session']], urls: ['https://api.audio.example.test/session'], domains: ['audio.example.test'] },
+  } as const
+  expect(websiteCookiePermissions(cookie)).toEqual(['*://api.audio.example.test/*', '*://audio.example.test/*'])
+  expect(websiteCookiePermissions({ ...cookie, session: undefined })).toEqual([])
 })
 
 it.each([

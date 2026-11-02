@@ -47,7 +47,7 @@
 
 - 默认 `credentials: 'include'`：登录态靠它自动携带
 - 「音源设置」选择手动 Cookie 时，该平台 API 改用 `credentials: 'omit'`，通过仅限本扩展发起请求的 DNR 会话规则替换 Cookie；切换网站模式后恢复网站凭据，保留手动值。「清除 Cookie」只删除本地手动值，不改变模式或修改网站 Cookie。完整边界见 [客户端 Cookie](./client-cookies.md)。
-- 房主使用网站 Cookie 托管时，读取地址由 Provider 的 `cookie.session.urls` 声明，扩展配置自动加入对应主机权限。不要只读网站根路径，API 路径上的 Cookie 可能被漏掉；不要把权限不足或读取失败当成已退出登录。更新这些声明或 manifest 后需重载扩展。
+- 房主使用网站 Cookie 托管时，读取地址由 Provider 的 `cookie.session.urls` 声明，Cookie 所属域由 `session.domains` 声明；扩展配置与读取前检查共用生成的权限，覆盖查询主机、父域及 HTTP / HTTPS。Chrome 按 Cookie 所属域和 Secure 标记过滤结果，仅允许 `www` / API 的 HTTPS 地址可能仍读不到父域 Cookie。不要只读网站根路径，API 路径上的 Cookie 可能被漏掉；不要把权限不足或读取失败当成已退出登录。更新这些声明或 manifest 后需重载扩展。
 - 剥掉 fetch 规范禁止 / 浏览器自管的请求头：`cookie`、`referer`、`origin`、`user-agent`、`accept-encoding`、`connection`、`content-length`、`host`
 - `referer` / `origin` 由 `apps/extension/public/rules/bilibili.json` 的 DNR `modifyHeaders` 注入：`api.bilibili.com` → `www`；`x/space/*`、`x/polymer/*`、`x/series/*` → `space.bilibili.com`；`bilivideo.*` → 播放用 referer
 

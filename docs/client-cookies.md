@@ -21,7 +21,9 @@ Cookie 是 `ProviderDefinition.cookie` 的可选能力，完整 `Provider` 继�
 
 `ProviderCookieConfig` 包含 `label`、`placeholder`、`loginUrl`、Web 转发的 `requestOrigin`、稳定且全局唯一的扩展 `ruleId`，以及非空的 `targets`。每个 target 使用固定 HTTPS `origin` 与 `path` 前缀；单一接口加 `exact: true`。请求分类、Web 允许列表和扩展 DNR 正则从同一组 targets 生成，不能分别维护域名正则；不要包含媒体 CDN、图片或任意代理地址。已有 rule ID 11001 / 11002 / 11003 必须保留，升级后才能替换或清除旧会话规则。
 
-托管导出使用 `cookie.session` 的字段允许列表、必需字段组和 `urls`（按优先级排列的会话读取地址，缺省为 `loginUrl`）。可用 `loginIndicators` 区分登录凭据与游客标识（例如 QQ 的 UIN 本身不代表已登录）。网站模式按真实 API 路径及登录页分别读取 Cookie，选择第一套完整会话；不将不同 URL 的不完整账号字段拼接成一个账号。扩展的 `host_permissions` 自动包含这些地址的主机，避免只允许 API 主机却漏掉登录网站；[Chrome Cookie API 要求相应主机权限](https://developer.chrome.com/docs/extensions/reference/api/cookies)。修改地址声明后重新加载扩展以更新权限。
+托管导出使用 `cookie.session` 的字段允许列表、必需字段组和 `urls`（按优先级排列的会话读取地址，缺省为 `loginUrl`）。`domains` 必须声明 Cookie 实际所属域，不带前导点，例如 BiliBili 的 `bilibili.com`、QQ 的 `qq.com`、网易云的 `music.163.com`。可用 `loginIndicators` 区分登录凭据与游客标识（例如 QQ 的 UIN 本身不代表已登录）。网站模式按真实 API 路径及登录页分别读取 Cookie，选择第一套完整会话；不将不同 URL 的不完整账号字段拼接成一个账号。
+
+扩展的 `host_permissions` 和读取前权限检查共用 `websiteCookiePermissions`：同时包含查询地址主机和 Cookie 所属域，使用 `*://精确主机/*` 覆盖 HTTP / HTTPS，不直接授予所有子域权限。Chrome 会根据 Cookie 自身的域与 Secure 标记检查访问权限；即使已允许 `https://www.bilibili.com/*` 与 API 主机，缺少 `bilibili.com` 权限时父域 Cookie 仍会被静默过滤；非 Secure Cookie 的检查地址使用 HTTP。不能仅检查查询 URL 的 HTTPS 权限后就把空数组视为未登录。详见 [Chrome Cookie API](https://developer.chrome.com/docs/extensions/reference/api/cookies) 与 [Chromium 的 Cookie 权限过滤](https://github.com/chromium/chromium/blob/main/extensions/browser/api/cookies/cookies_helpers.cc)。修改地址或域声明后重新加载扩展以更新权限；声明与检查仍由 Provider 通用能力驱动，不在客户端写平台分支。
 
 网站模式存在完整登录会话时，创建房间直接绑定该网站会话。读取失败、权限不足或检测到登录凭据但字段不完整时明确报错，不当作匿名状态；只有确认没有登录字段才匿名托管。普通 Web 页面无法读取其他网站 Cookie，仍需使用手动 Cookie 才能托管登录会话。
 
@@ -42,3 +44,5 @@ GM 入口在已有 `__tFetch` 传输中显式传递手动 Cookie；它是否支�
 ## 验证范围
 
 自动测试覆盖格式、按平台保存值与模式、切换保留、单独清除、旧设置兼容、规则范围与失败回滚、Cookie / CSRF / QQ token 一致性、账号切换旧响应、Web 转发边界和设置表单。实际 Chrome 扩展使用合成测试 Cookie 验证请求头替换与网站凭据恢复，网站 Cookie 不被改写；Web Nitro 已验证手动请求转发与禁止缓存。合成 Cookie 不代表三个真实登录账号或会员权限已验收。
+
+2026-11-02 父域权限修复：自动用例覆盖查询主机有权限但父域无权限、非 Secure Cookie 所需 HTTP 权限与 Provider 元数据派生权限。用户正在使用的 Chrome profile 中，确认 Bili 网站登录 Cookie 属于 `bilibili.com`，旧扩展查询结果被权限过滤；更新开发扩展后，网站模式成功导出声明内字段，新房间自动绑定真实 Bili 会话，显示账号托管，单 P 音轨正常播放、暂停及刷新恢复。本次未改写网站 Cookie，调试输出仅包含字段名、域和状态；QQ 真实登录会话及公网长期风控仍未验收。

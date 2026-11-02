@@ -3,7 +3,7 @@ import { TARGET_EXTENSION } from './constants'
 import { normalizeClientCookie, clientCookieValue } from './cookie-header'
 export { normalizeClientCookie, clientCookieValue } from './cookie-header'
 import { providerCookieFilter } from './provider-request'
-import { providerDefinitions, getCookieProviders, websiteCookieUrls } from './provider-definitions'
+import { providerDefinitions, getCookieProviders, websiteCookieUrls, websiteCookiePermissions } from './provider-definitions'
 
 export const CLIENT_COOKIE_PREFIX = 'mpart-client-cookie:'
 export const CLIENT_COOKIE_MODE_PREFIX = 'mpart-client-cookie-mode:'
@@ -46,10 +46,13 @@ export async function getClientSessionCookie(provider: ProviderName): Promise<st
     const browser = (globalThis as any).chrome
     const api = browser?.cookies
     if (!api?.getAll) throw new Error('无法读取网站登录 Cookie，请重新加载扩展并检查权限')
+    try {
+      if (browser.permissions?.contains && !await browser.permissions.contains({ permissions: ['cookies'], origins: websiteCookiePermissions(config) })) throw new Error()
+    }
+    catch { throw new Error('无法完整读取网站登录 Cookie，请重新加载扩展并允许访问音源网站') }
     let readFailed = false, partialSession = false
     for (const url of websiteCookieUrls(config)) {
       try {
-        if (browser.permissions?.contains && !await browser.permissions.contains({ permissions: ['cookies'], origins: [`${new URL(url).origin}/*`] })) { readFailed = true; continue }
         const cookies: { name: string, value: string, path: string }[] = await api.getAll({ url })
         const candidate = cookies.filter(item => config.session!.names.includes(item.name)).sort((a, b) => b.path.length - a.path.length).map(item => `${item.name}=${item.value}`).join('; ')
         if (config.session.required.every(group => group.some(name => !!clientCookieValue(candidate, name)))) { cookie = candidate; break }

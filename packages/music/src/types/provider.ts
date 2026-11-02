@@ -28,6 +28,8 @@ export interface ProviderCookieConfig {
     loginIndicators?: readonly string[]
     /** Candidate request URLs, in priority order. Choose one complete session, never mix accounts across URLs. */
     urls?: readonly `https://${string}`[]
+    /** Cookie ownership domains, without a leading dot; include parent domains shared by query hosts. */
+    domains: readonly [string, ...string[]]
   }
 }
 
