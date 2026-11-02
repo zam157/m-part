@@ -34,7 +34,7 @@
 
 登录 cookie 由浏览器 `credentials: 'include'` 携带，不在代码中复制、记录或拼接 Cookie 头。扩展增加 `cookies` 权限，只通过 `chrome.cookies.get` 读取 `music.163.com` 的 `__csrf`，作为 WEAPI 加密参数，不读取或持久化 `MUSIC_U`。这里使用的是现有只读接口，页面提供前往官方站点登录与返回刷新入口；调试时应在实际运行扩展的 Chrome 配置中登录，不能假定 MCP 共享日常浏览器的登录态。
 
-以上为默认的网站会话路径。用户也可在侧栏「音源设置」显式保存手动 Cookie：API Cookie 和 `__csrf` 均优先采用手动会话，不与网站字段混用；清除后恢复默认。保存与传输见 [客户端 Cookie](./client-cookies.md)。
+以上为默认的网站会话路径。用户也可在侧栏「音源设置」保存 Cookie 并选择手动模式：API Cookie 和 `__csrf` 均采用手动会话，不与网站字段混用；切换网站模式保留手动值，清除按钮单独删除本地值。保存与传输见 [客户端 Cookie](./client-cookies.md)。
 
 新增或修改 manifest 权限 / DNR 配置后，等待 WXT 重新构建，再用 MCP `reload_extension` 重载开发扩展。仅刷新 app.html 不会重新加载 manifest。
 

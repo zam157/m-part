@@ -63,7 +63,7 @@
 5. 请求统一走 `packages/music/src/utils/fetch.ts` + Provider，不要在组件里直连第三方接口
 
 - `MusicInfo.title` 是纯文本：BiliBili 搜索高亮标签在 Provider 映射时清除并解码实体；展示标题使用 JSX 文本，不使用 `innerHTML`，避免标题中的尖括号被再次解析。
-- 客户端手动 Cookie 仅在独立的 `mpart-client-cookie:<provider>` 本机设置中保存；禁止混入队列、歌单、房间协议或日志。手动会话和网站会话不能混用认证字段；扩展通过受限会话规则替换 API Cookie，不回写网站 Cookie。不可自动提交到一起听托管。
+- 客户端手动 Cookie 仅在独立的 `mpart-client-cookie:<provider>` 本机设置中保存，来源模式独立存于 `mpart-client-cookie-mode:<provider>`；切换模式保留值，清除值保留模式，手动模式无值时提示填写而不回退网站账号。禁止混入队列、歌单、房间协议或日志。手动会话和网站会话不能混用认证字段；扩展通过受限会话规则替换 API Cookie，不回写网站 Cookie。不可自动提交到一起听托管。
 
 ## 组件写法速查（细节见 [docs/code-style.md](./docs/code-style.md)）
 
