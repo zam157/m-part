@@ -47,6 +47,13 @@
 | 扩展入口 / manifest / DNR 规则 | `apps/extension/entrypoints/`、`apps/extension/wxt.config.ts`、`apps/extension/public/rules/` |
 | 构建别名与插件链（两套构建共用） | `packages/build-config/src/vite.ts` |
 
+## 多音源功能设计原则
+
+- 涉及多音源的客户端功能，优先复用或扩展 **Provider 的通用能力与声明**，由各音源提供实现或配置，客户端根据能力统一渲染和调用。
+- 不要在页面、组件或共享业务逻辑中逐个判断音源名称，硬编码对应的文案、接口、参数或行为。平台专有规则封装在各自 Provider 内；可描述为数据的差异由 Provider 元数据提供。
+- 能力允许按需实现；客户端按能力是否存在决定入口、行为及合理回退，不要求所有音源提供相同功能。即使当前仅一个音源支持，也先判断它是否属于可供其他音源复用的能力。
+- 抽象以实际需求为准，不为假想差异过度设计。新增音源应主要通过注册声明和实现能力接入，避免反复修改通用客户端中的平台分支。设计步骤与已有示例见 [Provider 能力设计](./docs/code-style.md#provider-能力设计)。
+
 ## 五条硬约定（勿回退）
 
 1. **类名合并只用 `cn/lite` 的 `clsx`**：`clsx('a b', cond && 'c d', props.class)`。不要用 `cn` 的 twMerge —— 它会把 UnoCSS 的数字字号（`text-9` 等）当成文字颜色静默吃掉 → [docs/styling.md](./docs/styling.md)
