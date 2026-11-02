@@ -1,5 +1,6 @@
 import type { AlbumInfo, ArtistInfo, MusicInfo, PlaylistInfo, SourceInfo } from '../../types/music-info'
 import { neteaseImageUrl } from '../provider-images'
+import { getClientCookie } from '../client-cookies'
 import type { Pagination, Provider } from '../../types/provider'
 import { tRequest } from '../fetch'
 import { toHttpsUrl } from '../url'
@@ -135,13 +136,15 @@ interface SongUrlResponse extends NeteaseResponse {
 /** 扩展的 cookie 由浏览器携带，Referer/Origin 由 netease DNR 规则设置。 */
 async function request<T extends NeteaseResponse>(path: string, data: Record<string, unknown> = {}, signal?: AbortSignal): Promise<T> {
   signal?.throwIfAborted()
-  const encrypted = encryptWeapi({ ...data, csrf_token: await getNeteaseCsrfToken() })
+  const cookieContext = getClientCookie('netease')
+  const encrypted = encryptWeapi({ ...data, csrf_token: await getNeteaseCsrfToken(cookieContext) })
   signal?.throwIfAborted()
   const result = await tRequest<T>(`${API_HOST}/weapi${path.slice(4)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams(encrypted),
     signal,
+    cookieContext,
   })
   signal?.throwIfAborted()
   if (!result[0])

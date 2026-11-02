@@ -1,11 +1,13 @@
 import { TARGET_EXTENSION } from '../constants'
+import { clientCookieValue, getClientCookie } from '../client-cookies'
 
 interface ExtensionCookies {
   get: (details: { url: string, name: string }) => Promise<{ value: string } | null>
 }
 
-/** 登录 Cookie 仍由 credentials 携带；只读取加密请求所需的 CSRF 参数。 */
-export async function getNeteaseCsrfToken(): Promise<string> {
+/** 从当前选定的整套会话读取 CSRF；手动 Cookie 缺字段时不补读网站账号。 */
+export async function getNeteaseCsrfToken(manual = getClientCookie('netease')): Promise<string> {
+  if (manual) return clientCookieValue(manual, '__csrf')
   const browser = globalThis as typeof globalThis & { chrome?: { cookies?: ExtensionCookies } }
   if (!TARGET_EXTENSION || !browser.chrome?.cookies)
     return ''

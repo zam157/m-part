@@ -46,6 +46,7 @@
 网易云的 WEAPI 加密、权限和请求规则见 [网易云音乐音源](./netease.md)；下面的域名与 DNR 示例针对 BiliBili。
 
 - 默认 `credentials: 'include'`：登录态靠它自动携带
+- 「音源设置」有手动 Cookie 时，该平台 API 改用 `credentials: 'omit'`，通过仅限本扩展发起请求的 DNR 会话规则替换 Cookie；清除后恢复网站凭据，不修改网站 Cookie。完整边界见 [客户端 Cookie](./client-cookies.md)。
 - 剥掉 fetch 规范禁止 / 浏览器自管的请求头：`cookie`、`referer`、`origin`、`user-agent`、`accept-encoding`、`connection`、`content-length`、`host`
 - `referer` / `origin` 由 `apps/extension/public/rules/bilibili.json` 的 DNR `modifyHeaders` 注入：`api.bilibili.com` → `www`；`x/space/*`、`x/polymer/*`、`x/series/*` → `space.bilibili.com`；`bilivideo.*` → 播放用 referer
 

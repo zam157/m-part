@@ -29,6 +29,15 @@ let revision = 0
 let pending: Promise<void> | undefined
 let pendingSource: ProviderName | undefined
 
+export function invalidatePlaylistCredentials(source: ProviderName) {
+  if (pendingSource === source) {
+    ++revision
+    pending = undefined
+    pendingSource = undefined
+  }
+  if (untrack(playlistLibrary).source === source) setPlaylistLibrary(emptyLibrary(source))
+}
+
 export function loadPlaylists(source: ProviderName, options: { refresh?: boolean, more?: boolean } = {}): Promise<void> {
   if (pending && pendingSource === source)
     return pending

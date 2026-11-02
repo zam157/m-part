@@ -21,6 +21,30 @@ beforeEach(async () => {
 })
 
 describe('收藏歌单状态', () => {
+  it('账号设置变更时清空旧收藏，并忽略旧账号迟到的响应', async () => {
+    let finish!: (value: unknown) => void
+    biliLists.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+    const previous = library.loadPlaylists('bili')
+    await vi.waitFor(() => expect(biliLists).toHaveBeenCalled())
+    library.invalidatePlaylistCredentials('bili'); flush()
+    expect(library.playlistLibrary()).toMatchObject({ loaded: false, user: null, items: [] })
+    biliUser.mockResolvedValueOnce({ id: '9', name: '新账号' })
+    await library.loadPlaylists('bili'); flush()
+    finish({ items: [{ ...playlist, title: '旧账号收藏' }], hasMore: false })
+    await previous; flush()
+    expect(library.playlistLibrary().user?.id).toBe('9')
+    expect(library.playlistLibrary().items[0]?.title).toBe('歌单')
+  })
+  it('修改其他音源的 Cookie 不取消当前音源的请求', async () => {
+    let finish!: (value: unknown) => void
+    neteaseLists.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+    const pending = library.loadPlaylists('netease')
+    await vi.waitFor(() => expect(neteaseLists).toHaveBeenCalled())
+    library.invalidatePlaylistCredentials('bili'); flush()
+    finish({ items: [{ ...playlist, provider: 'netease' }], hasMore: false })
+    await pending; flush()
+    expect(library.playlistLibrary()).toMatchObject({ source: 'netease', loaded: true, user: { id: '8' } })
+  })
   it('未登录不继续请求歌单，登录后刷新读取当前账号', async () => {
     biliUser.mockResolvedValueOnce(null)
     await library.loadPlaylists('bili')

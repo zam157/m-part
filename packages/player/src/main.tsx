@@ -8,14 +8,17 @@ import { Router } from './router'
 import { startPlayerPersistence } from './composables/player-persistence'
 import { startMediaSession } from './composables/media-session'
 import { startListenTogether } from './composables/listen-room'
+import { startClientCookieSettings } from './composables/client-cookies'
 
 const playerPersistence = startPlayerPersistence()
 const disposeMediaSession = startMediaSession()
 const disposeListenTogether = startListenTogether()
+const disposeClientCookieSettings = startClientCookieSettings()
 import.meta.hot?.dispose(() => {
   playerPersistence.dispose()
   disposeMediaSession()
   disposeListenTogether()
+  disposeClientCookieSettings()
 })
 
 render(

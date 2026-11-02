@@ -87,6 +87,12 @@ declare module "virtual:file-routes" {
       page: true;
       $component: FileRouteLazyRef<typeof import("./pages/search")>;
       $$route?: undefined;
+    },
+    {
+      path: "/settings";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./pages/settings")>;
+      $$route?: undefined;
     }
   ];
   export default routes;
@@ -122,6 +128,14 @@ declare module "virtual:file-routes" {
       id: "/search";
       page: true;
       $component: FileRouteLazyRef<typeof import("./pages/search")>;
+      $$route?: undefined;
+      children?: undefined;
+    },
+    {
+      path: "/settings";
+      id: "/settings";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./pages/settings")>;
       $$route?: undefined;
       children?: undefined;
     },

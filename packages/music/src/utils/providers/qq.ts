@@ -83,6 +83,7 @@ async function cgi<T extends QQResponse>(path: string, params: Record<string, st
   const login = session ?? await getQQSession()
   signal?.throwIfAborted()
   const result = await tRequest<T>(`${CGI}${path}`, {
+    cookieContext: login.cookieContext,
     searchParams: { format: 'json', inCharset: 'utf8', outCharset: 'utf-8', platform: 'yqq.json', needNewCode: 0, g_tk: login.token, loginUin: login.uin, ...params },
     signal,
   })
@@ -97,6 +98,7 @@ async function rpc<T>(module: string, method: string, param: Record<string, unkn
   const login = options.session ?? await getQQSession()
   options.signal?.throwIfAborted()
   const result = await tRequest<QQResponse & { req_0?: QQResponse & { data: T } }>(RPC, {
+    cookieContext: login.cookieContext,
     method: 'POST', headers: { 'content-type': 'application/json' }, signal: options.signal,
     body: {
       comm: { ct: options.pc ? 19 : 24, cv: options.pc ? 1859 : 0, uin: login.uin, format: 'json', g_tk: login.token, authst: login.key, auth_tkn: login.token },

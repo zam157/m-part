@@ -14,6 +14,19 @@ const biliSong = { provider: 'bili', id: 'bili', title: 'Bili', duration: 1, cov
 const neteaseSong = { ...biliSong, provider: 'netease', id: 'netease' }
 
 describe('切换音源', () => {
+  it('更换当前音源 Cookie 时清除旧结果并忽略在途响应，其他音源不受影响', async () => {
+    await search.handleSearch(1, 'music'); flush()
+    search.invalidateSearchCredentials('netease'); flush()
+    expect(search.musicResults()).toEqual([biliSong])
+    let finish!: (value: unknown) => void
+    biliSearch.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+    const pending = search.handleSearch(1, 'music'); flush()
+    search.invalidateSearchCredentials('bili'); flush()
+    finish([[biliSong], page]); await pending; flush()
+    expect(search.musicResults()).toEqual([])
+    expect(search.hasSearched()).toBe(false)
+    expect(search.searching()).toBe(false)
+  })
   beforeEach(() => {
     search.setSelectedSource('netease')
     flush()

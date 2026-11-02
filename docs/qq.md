@@ -27,6 +27,7 @@ RPC 统一 POST 到 `https://u.y.qq.com/cgi-bin/musicu.fcg`，同时检查顶层
 - 请求全部经过 `packages/music/src/utils/fetch.ts`，扩展默认使用 `credentials: 'include'`；Referer / Origin 由 [apps/extension/public/rules/qq.json](../apps/extension/public/rules/qq.json) 注入。不要在组件请求接口，也不要手动拼 Cookie、Host、User-Agent 等浏览器管理的请求头。
 - `qq-session.ts` 仅从 `https://y.qq.com/` 读取 Cookie：优先 QQ 音乐账号 `qqmusic_uin`，兼容 `uin`、`wxuin`，处理 `o` 和前导零；认证 key 优先 `qqmusic_key`，兼容 `qm_keyst`、`p_skey`、`skey`。用 DJB2 生成 `g_tk` / `auth_tkn`，认证 key 仅放 RPC 请求体，不放 URL。
 - 不缓存、持久化或打印 key，不修改 Cookie；每次操作重新读取。账号与 key 不存在时返回未登录，资料 / 收藏接口的认证错误也转为登录提示；网络错误仍显示失败。歌单分页时发现账号变化会停止读取，避免混入其他账号的数据。
+- 上述为默认网站会话路径。「音源设置」支持用户显式保存手动 Cookie，此时账号、key 和 token 全部从手动会话提取，不补读网站字段；清除后恢复默认。见 [客户端 Cookie](./client-cookies.md)。
 - `apps/extension/wxt.config.ts` 声明 `*.y.qq.com`、`*.qqmusic.qq.com`、实际返回的 `aqqmusic.tc.qq.com` 和封面 `y.gtimg.cn` 权限。修改权限或 DNR 后要重新加载扩展，仅刷新页面不会更新 manifest。
 
 ## 播放、歌词和完整歌单

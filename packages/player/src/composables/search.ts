@@ -184,3 +184,12 @@ function clearResults() {
   setPlaylistResults([])
   setPagination(emptyPagination())
 }
+
+export function invalidateSearchCredentials(source: ProviderName) {
+  if (selectedSource() !== source) return
+  ++searchRevision
+  clearResults()
+  setHasSearched(false)
+  setSearchError(null)
+  setSearching(false)
+}

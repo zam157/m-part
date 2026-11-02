@@ -43,6 +43,7 @@
 | 取数实现（Provider） | `packages/music/src/utils/providers/` |
 | 图片缩放 | Provider `getImageUrl`、`@m-part/music/image`、`ProviderImage/`；按用途生成缩略图与 1x / 2x 候选，存储与协议中的 `coverUrl` 保留源地址 → [图片说明](./docs/images.md) |
 | 请求出口（含扩展策略） | `packages/music/src/utils/fetch.ts` |
+| 客户端 Cookie 设置 | `pages/settings.tsx`、`PlatformCookieForm/`、`@m-part/music/client-cookies`；按平台优先手动会话，否则网站会话。扩展 DNR / Web 固定目标转发见 [客户端 Cookie](./docs/client-cookies.md) |
 | 扩展入口 / manifest / DNR 规则 | `apps/extension/entrypoints/`、`apps/extension/wxt.config.ts`、`apps/extension/public/rules/` |
 | 构建别名与插件链（两套构建共用） | `packages/build-config/src/vite.ts` |
 
@@ -55,6 +56,7 @@
 5. 请求统一走 `packages/music/src/utils/fetch.ts` + Provider，不要在组件里直连第三方接口
 
 - `MusicInfo.title` 是纯文本：BiliBili 搜索高亮标签在 Provider 映射时清除并解码实体；展示标题使用 JSX 文本，不使用 `innerHTML`，避免标题中的尖括号被再次解析。
+- 客户端手动 Cookie 仅在独立的 `mpart-client-cookie:<provider>` 本机设置中保存；禁止混入队列、歌单、房间协议或日志。手动会话和网站会话不能混用认证字段；扩展通过受限会话规则替换 API Cookie，不回写网站 Cookie。不可自动提交到一起听托管。
 
 ## 组件写法速查（细节见 [docs/code-style.md](./docs/code-style.md)）
 

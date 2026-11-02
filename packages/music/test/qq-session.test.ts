@@ -9,7 +9,7 @@ describe('QQ 音乐会话', () => {
     const cookies: Record<string, string> = { uin: 'o00123456', qqmusic_key: 'music-key', skey: 'old-key' }
     const get = vi.fn(async ({ name }: { name: string, url: string }) => cookies[name] ? { value: cookies[name] } : null)
     vi.stubGlobal('chrome', { cookies: { get } })
-    expect(await getQQSession()).toEqual({ uin: '123456', key: 'music-key', token: qqToken('music-key') })
+    expect(await getQQSession()).toEqual({ uin: '123456', key: 'music-key', token: qqToken('music-key'), cookieContext: '' })
     expect(get).toHaveBeenCalledWith({ url: 'https://y.qq.com/', name: 'qqmusic_key' })
     expect(get.mock.calls.every(([details]) => details.url === 'https://y.qq.com/')).toBe(true)
     cookies.qqmusic_key = 'changed-key'
@@ -26,12 +26,12 @@ describe('QQ 音乐会话', () => {
     delete cookies.qqmusic_key
     cookies.wxuin = '888'
     cookies.qm_keyst = 'wx-key'
-    expect(await getQQSession()).toEqual({ uin: '888', key: 'wx-key', token: qqToken('wx-key') })
+    expect(await getQQSession()).toEqual({ uin: '888', key: 'wx-key', token: qqToken('wx-key'), cookieContext: '' })
   })
   it('没有扩展 API 或 Cookie 时匿名请求，不制造登录态', async () => {
     vi.stubGlobal('chrome', undefined)
-    expect(await getQQSession()).toEqual({ uin: '0', key: '', token: 5381 })
+    expect(await getQQSession()).toEqual({ uin: '0', key: '', token: 5381, cookieContext: '' })
     vi.stubGlobal('chrome', { cookies: { get: async () => null } })
-    expect(await getQQSession()).toEqual({ uin: '0', key: '', token: 5381 })
+    expect(await getQQSession()).toEqual({ uin: '0', key: '', token: 5381, cookieContext: '' })
   })
 })
