@@ -46,10 +46,12 @@ export default function ListenRoomSources() {
           )}</For>
         </ul>
         <Show when={hosted()}>
-          <button class="border-btn h-8 px-3" disabled={disabled()} onClick={() => usePersonalRoomSource(!roomView().personalSource)}>{roomView().personalSource ? '本机切回房间音源' : '本机改用个人音源'}</button>
+          <div class="flex flex-wrap gap-2">
+            <button class="border-btn h-8 px-3" disabled={disabled()} onClick={() => usePersonalRoomSource(!roomView().personalSource)}>{roomView().personalSource ? '本机切回房间音源' : '本机改用个人音源'}</button>
+            <Show when={roomView().isHost}><button class="border-btn h-8 px-3" disabled={disabled()} onClick={() => void manageRoomSource('retry-source')}>重试房间音源</button></Show>
+          </div>
         </Show>
         <Show when={roomView().isHost}>
-          <Show when={hosted()}><button class="border-btn h-8 px-3" disabled={disabled()} onClick={() => void manageRoomSource('retry-source')}>重试房间音源</button></Show>
           <dialog ref={dialog} aria-labelledby="room-source-settings-title" class="m-auto w-[min(32rem,calc(100vw-2rem))] max-w-none max-h-[calc(100svh-2rem)] rounded-2xl border border-border bg-background text-foreground p-0 shadow-xl backdrop:bg-black/50" onClose={() => setCookie('')}>
             <div class="p-5 space-y-5">
               <div class="flex items-center justify-between gap-3">
