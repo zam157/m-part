@@ -1,5 +1,6 @@
 import type { AlbumInfo, ArtistInfo, MusicInfo, MusicQuality, PlaylistInfo, SourceInfo } from '../../types/music-info'
 import { qqImageUrl } from '../provider-images'
+import { qqDefinition } from './qq-definition'
 import type { Pagination, Provider } from '../../types/provider'
 import { tRequest } from '../fetch'
 import { toHttpsUrl } from '../url'
@@ -159,7 +160,7 @@ function decodeLyric(value?: string): string {
 }
 
 const QQProvider: Provider = {
-  name: 'qq',
+  ...qqDefinition,
   getImageUrl: qqImageUrl,
   async search(keyword, page) {
     // 现网 desktop 搜歌会返回 2001；旧 CGI 的歌曲分类仍有效，不传 new_json=1。

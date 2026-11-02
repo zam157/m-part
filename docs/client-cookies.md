@@ -13,6 +13,18 @@
 
 实现集中在 `@m-part/music/client-cookies` 与 `utils/fetch.ts`，组件及 Provider 不自行拼 Cookie 请求头。`provider-request.ts` 同时约束客户端与 Web 服务的目的地址，只接受三个平台的固定 HTTPS API 主机与路径；不向封面、音频 CDN 或房间服务器转发手动 Cookie。
 
+## Provider 声明与接入
+
+Cookie 是 `ProviderDefinition.cookie` 的可选能力，完整 `Provider` 继承该声明。每个平台在 `providers/<name>-definition.ts` 定义一份轻量元数据，Provider 实现展开同一份声明；`@m-part/music/provider-definitions` 负责统一注册。设置页与状态监听只遍历已声明 Cookie 能力的平台，不包含各平台名称、输入提示、网站地址或规则分支。
+
+`ProviderCookieConfig` 包含 `label`、`placeholder`、`loginUrl`、Web 转发的 `requestOrigin`、稳定且全局唯一的扩展 `ruleId`，以及非空的 `targets`。每个 target 使用固定 HTTPS `origin` 与 `path` 前缀；单一接口加 `exact: true`。请求分类、Web 允许列表和扩展 DNR 正则从同一组 targets 生成，不能分别维护域名正则；不要包含媒体 CDN、图片或任意代理地址。已有 rule ID 11001 / 11002 / 11003 必须保留，升级后才能替换或清除旧会话规则。
+
+接入新音源时扩展 `ProviderName`，注册其轻量声明与 Provider 实现，并按需要配置扩展 host permissions；提供 `cookie` 即可自动接入设置表单、存储、规则和 Web 转发，不需要修改这些通用消费方。缺省 `cookie` 则不显示设置，也不接受手动会话。CSRF、token 等平台专有认证字段继续由各自 Provider 的会话代码解析。
+
+轻量声明模块只能包含类型与静态元数据，禁止导入 Provider 实现、fetch、客户端存储或浏览器 API。传输层和 Web 服务都要读取这些声明；导入完整 Provider 会导致 `Provider → fetch → Provider` 循环依赖，也会把浏览器代码带入服务端。
+
+## 传输形态
+
 扩展使用 `declarativeNetRequest.updateSessionRules` 的会话规则替换 API Cookie，请求本身采用 `credentials: 'omit'`，不混入网站 Cookie，也不把响应的 `Set-Cookie` 写回网站。规则仅匹配当前扩展发起的 API 请求，不影响用户打开的平台网页。规则会在请求前重建，保存或应用失败会明确报错，不降级使用网站账号。网站 Cookie 始终不被设置或删除。
 
 Web 形态不能直接设置浏览器禁止的 Cookie 头，因此手动 Cookie 请求经过本站 Nitro 的 `POST /api/provider-request`。服务器只转发固定官方 API，禁止跳转，不保存 Cookie，不返回上游 `Set-Cookie`，响应为 `no-store`；错误不包含原始异常或凭据。部署者能够接触经过该服务的凭据，应使用自己信任的部署。需要运行 Web 的 Nitro 服务（例如构建后 `node apps/web/dist/server/index.mjs`）；仅有 Vite 静态开发资源不足以提供此接口。未填写时沿用已有请求方式，纯 Web 仍受 CORS / 第三方 Cookie 策略限制，不能保证复用其他网站登录态。

@@ -3,6 +3,32 @@ import type { AlbumInfo, ArtistInfo, MusicInfo, PlaylistInfo, SourceInfo } from 
 export type ProviderName = 'bili' | 'netease' | 'qq'
 export type SearchType = 'music' | 'album' | 'artist' | 'playlist'
 
+export interface ProviderCookieTarget {
+  /** Fixed HTTPS API origin, without a trailing slash. */
+  origin: `https://${string}`
+  /** API pathname prefix; use exact for a single endpoint. */
+  path: `/${string}`
+  exact?: boolean
+}
+
+export interface ProviderCookieConfig {
+  label: string
+  placeholder: string
+  loginUrl: string
+  /** Origin / Referer used by the Web forwarder. */
+  requestOrigin: `https://${string}`
+  /** Stable, globally unique extension session rule ID. Do not change existing IDs. */
+  ruleId: number
+  targets: readonly [ProviderCookieTarget, ...ProviderCookieTarget[]]
+}
+
+/** Lightweight metadata shared with transport; must not import a Provider implementation. */
+export interface ProviderDefinition {
+  name: ProviderName
+  /** Omit when this provider does not support manually supplied Cookie sessions. */
+  cookie?: ProviderCookieConfig
+}
+
 export type ImageUsage = 'queue' | 'player' | 'list' | 'card' | 'collection' | 'detail' | 'expanded' | 'background' | 'media-session'
 export interface ImageOptions {
   usage: ImageUsage
@@ -47,8 +73,7 @@ export interface LyricsInfo {
   instrumental?: boolean
 }
 
-export interface Provider {
-  name: ProviderName
+export interface Provider extends ProviderDefinition {
   /** Pure CDN URL transformation. Keep unsupported URLs unchanged; never mutate stored cover URLs. */
   getImageUrl?: (url: string, options: ImageOptions) => string
   /** Resolve a container or an existing part into same-provider playable tracks, in source order with unique stable IDs. Return one track for a single-part item. */

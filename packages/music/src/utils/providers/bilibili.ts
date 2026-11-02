@@ -10,6 +10,7 @@ import { tRequest } from '../fetch'
 import { toHttpsUrl } from '../url'
 import { biliImageUrl } from '../provider-images'
 import { LoginRequiredError } from './login-required'
+import { biliDefinition } from './bilibili-definition'
 
 // #region types
 export type BiliSearchType = 'video' | 'bili_user'
@@ -737,7 +738,7 @@ async function fetchSeriesArchives(id: string | number, page: number, mid: numbe
 }
 
 const biliProvider = {
-  name: 'bili',
+  ...biliDefinition,
   getImageUrl: biliImageUrl,
   async getCurrentUser() {
     const result = await tRequest<BiliResponse<{ isLogin: boolean, mid: number, uname: string, face: string }>>(`${API_HOST}/x/web-interface/nav`, { headers: COMMON_HEADERS })

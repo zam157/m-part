@@ -1,5 +1,5 @@
 import { normalizeClientCookie } from '@m-part/music/cookie-header'
-import { providerOrigins, providerRequest } from '@m-part/music/provider-request'
+import { providerRequest } from '@m-part/music/provider-request'
 
 const fail = (status: number, message: string) => Response.json({ message }, { status, headers: { 'cache-control': 'no-store' } })
 
@@ -35,7 +35,7 @@ export async function clientCookieProxy(request: Request, fetcher: typeof fetch 
   try { cookie = typeof payload.cookie === 'string' ? normalizeClientCookie(payload.cookie) : '' }
   catch { return fail(400, 'Cookie 格式无效') }
   if (!cookie) return fail(400, '缺少手动 Cookie')
-  const headers = new Headers({ cookie, origin: providerOrigins[target.provider], referer: `${providerOrigins[target.provider]}/` })
+  const headers = new Headers({ cookie, origin: target.cookie.requestOrigin, referer: `${target.cookie.requestOrigin}/` })
   try {
     if (payload.headers && typeof payload.headers === 'object') {
       for (const [key, value] of Object.entries(payload.headers)) {

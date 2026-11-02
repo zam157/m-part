@@ -3,10 +3,11 @@ import { flush } from 'solid-js'
 import { afterEach, expect, it, vi } from 'vitest'
 const { save } = vi.hoisted(() => ({ save: vi.fn() }))
 vi.mock('~/composables/client-cookies', () => ({ clientCookieStatus: () => ({ configured: { bili: true } }), saveClientCookie: save }))
+import { biliDefinition } from '@m-part/music/providers/bilibili-definition'
 import PlatformCookieForm from '~/components/PlatformCookieForm/PlatformCookieForm'
 let dispose: () => void
 afterEach(() => { dispose?.(); document.body.replaceChildren(); save.mockReset() })
-function mount() { dispose = render(() => createComponent(PlatformCookieForm, { source: 'bili', label: 'BiliBili', placeholder: 'SESSDATA=…', url: 'https://www.bilibili.com/' }), document.body); flush() }
+function mount() { dispose = render(() => createComponent(PlatformCookieForm, { source: 'bili', config: biliDefinition.cookie }), document.body); flush() }
 const button = (text: string) => [...document.querySelectorAll('button')].find(b=>b.textContent === text)!
 it('never pre-fills the stored cookie, prevents duplicate saves, and clears the input after success', async () => {
   let finish!: () => void

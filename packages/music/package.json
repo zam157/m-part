@@ -15,6 +15,7 @@
     "./client-cookies": "./src/utils/client-cookies.ts",
     "./cookie-header": "./src/utils/cookie-header.ts",
     "./provider-request": "./src/utils/provider-request.ts",
+    "./provider-definitions": "./src/utils/provider-definitions.ts",
     "./constants": "./src/utils/constants.ts",
     "./url": "./src/utils/url.ts",
     "./image": "./src/utils/image.ts",

@@ -1,5 +1,7 @@
 import type { ProviderName } from '@m-part/music/types/provider'
 import { useNavigate } from '@solidjs/router'
+import { providerDefinitions } from '@m-part/music/provider-definitions'
+import { Show } from 'solid-js'
 import { clientCookieStatus } from '~/composables/client-cookies'
 
 export const platformOptions = [
@@ -19,7 +21,7 @@ export default function PlatformLogin(props: { source: ProviderName, onRefresh: 
       <div class="flex gap-3 flex-wrap justify-center">
         <a class="btn" href={platform().url} target="_blank" rel="noopener noreferrer">前往{platform().label}</a>
         <button class="border-btn px-3 h-8" onClick={props.onRefresh}>我已登录，刷新</button>
-        <button class="border-btn px-3 h-8" onClick={() => navigate('/settings')}>填写 Cookie</button>
+        <Show when={providerDefinitions[props.source].cookie}><button class="border-btn px-3 h-8" onClick={() => navigate('/settings')}>填写 Cookie</button></Show>
       </div>
     </div>
   )

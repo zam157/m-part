@@ -2,10 +2,10 @@ import type { ProviderName } from '../types/provider'
 import { TARGET_EXTENSION } from './constants'
 import { normalizeClientCookie } from './cookie-header'
 export { normalizeClientCookie, clientCookieValue } from './cookie-header'
-import { providerCookieFilters } from './provider-request'
+import { providerCookieFilter } from './provider-request'
+import { providerDefinitions } from './provider-definitions'
 
 export const CLIENT_COOKIE_PREFIX = 'mpart-client-cookie:'
-const ruleIds = { bili: 11001, netease: 11002, qq: 11003 } as const
 
 export function getClientCookie(provider: ProviderName): string {
   try { return globalThis.localStorage?.getItem(CLIENT_COOKIE_PREFIX + provider) ?? '' }
@@ -23,16 +23,20 @@ interface CookieBrowser {
   declarativeNetRequest?: { updateSessionRules: (options: { removeRuleIds: number[], addRules: CookieRule[] }) => Promise<void> }
 }
 export function clientCookieRule(provider: ProviderName, cookie: string, extensionId: string): CookieRule {
+  const config = providerDefinitions[provider].cookie
+  if (!config) throw new Error('当前音源不支持手动 Cookie')
   return {
-    id: ruleIds[provider], priority: 100,
+    id: config.ruleId, priority: 100,
     action: { type: 'modifyHeaders', requestHeaders: [{ header: 'cookie', operation: 'set', value: cookie }] },
-    condition: { regexFilter: providerCookieFilters[provider], initiatorDomains: [extensionId], resourceTypes: ['xmlhttprequest'] },
+    condition: { regexFilter: providerCookieFilter(config), initiatorDomains: [extensionId], resourceTypes: ['xmlhttprequest'] },
   }
 }
 
 let updates: Promise<unknown> = Promise.resolve()
 /** Session rules are recreated before API requests after a browser / extension restart. */
 export function syncClientCookie(provider: ProviderName, cookie: string): Promise<void> {
+  const config = providerDefinitions[provider].cookie
+  if (!config) return cookie ? Promise.reject(new Error('当前音源不支持手动 Cookie')) : Promise.resolve()
   if (!TARGET_EXTENSION) return Promise.resolve()
   const browser = (globalThis as typeof globalThis & { chrome?: CookieBrowser }).chrome
   if (!browser?.declarativeNetRequest || !browser.runtime?.id) {
@@ -42,7 +46,7 @@ export function syncClientCookie(provider: ProviderName, cookie: string): Promis
     try {
       // Rules are shared across extension tabs; a page-local cache can become stale.
       await browser.declarativeNetRequest!.updateSessionRules({
-        removeRuleIds: [ruleIds[provider]],
+        removeRuleIds: [config.ruleId],
         addRules: cookie ? [clientCookieRule(provider, cookie, browser.runtime!.id!)] : [],
       })
     }
@@ -54,6 +58,7 @@ export function syncClientCookie(provider: ProviderName, cookie: string): Promis
 
 export async function setClientCookie(provider: ProviderName, value: string) {
   const cookie = normalizeClientCookie(value), previous = getClientCookie(provider)
+  if (cookie && !providerDefinitions[provider].cookie) throw new Error('当前音源不支持手动 Cookie')
   function store(next: string) {
     if (next) globalThis.localStorage.setItem(CLIENT_COOKIE_PREFIX + provider, next)
     else globalThis.localStorage.removeItem(CLIENT_COOKIE_PREFIX + provider)

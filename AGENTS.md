@@ -43,7 +43,7 @@
 | 取数实现（Provider） | `packages/music/src/utils/providers/` |
 | 图片缩放 | Provider `getImageUrl`、`@m-part/music/image`、`ProviderImage/`；按用途生成缩略图与 1x / 2x 候选，存储与协议中的 `coverUrl` 保留源地址 → [图片说明](./docs/images.md) |
 | 请求出口（含扩展策略） | `packages/music/src/utils/fetch.ts` |
-| 客户端 Cookie 设置 | `pages/settings.tsx`、`PlatformCookieForm/`、`@m-part/music/client-cookies`；按平台优先手动会话，否则网站会话。扩展 DNR / Web 固定目标转发见 [客户端 Cookie](./docs/client-cookies.md) |
+| 客户端 Cookie 设置 | `ProviderDefinition.cookie` 可选声明（`providers/*-definition.ts`）；设置页、存储、DNR 与 Web 转发共用 `@m-part/music/provider-definitions`，禁止通用层按平台写分支。轻量声明不能导入完整 Provider / fetch → [客户端 Cookie](./docs/client-cookies.md) |
 | 扩展入口 / manifest / DNR 规则 | `apps/extension/entrypoints/`、`apps/extension/wxt.config.ts`、`apps/extension/public/rules/` |
 | 构建别名与插件链（两套构建共用） | `packages/build-config/src/vite.ts` |
 

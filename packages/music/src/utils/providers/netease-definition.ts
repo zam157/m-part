@@ -1,0 +1,13 @@
+import type { ProviderDefinition } from '../../types/provider'
+
+export const neteaseDefinition = {
+  name: 'netease',
+  cookie: {
+    label: '网易云',
+    placeholder: 'MUSIC_U=…; __csrf=…',
+    loginUrl: 'https://music.163.com/',
+    requestOrigin: 'https://music.163.com',
+    ruleId: 11002,
+    targets: [{ origin: 'https://music.163.com', path: '/weapi/' }],
+  },
+} satisfies ProviderDefinition
