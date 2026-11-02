@@ -97,7 +97,7 @@ export class HostedMedia {
         if (!latest.isHost || latest.generation !== auth.generation || latest.snapshot.revision !== request.expectedRevision) throw new HostedSourceError('房间状态已更新，请重新操作')
         const source = latest.snapshot.source!
         const accounts = { ...source.accounts, [platform]: { credential: cookie ? 'ready' as const : 'none' as const, version: (source.accounts?.[platform]?.version ?? 0) + 1, ...(cookie ? { ownerId: auth.memberId, label } : {}) } }
-        const modes = { ...source.modes, [platform]: cookie ? 'hosted' as const : 'independent' as const }
+        const modes = { ...source.modes, [platform]: cookie ? 'hosted' as const : source.modes?.[platform] ?? 'hosted' as const }
         const affectsPlayback = source.provider === platform && (source.mode === 'hosted' || modes[platform] === 'hosted')
         this.rooms.updateSource(token, request.roomId, request.expectedRevision, { accounts, modes, ...(affectsPlayback ? { error: undefined } : {}) }, () => {
           const sessions = { ...this.credentials.get(request.roomId) }

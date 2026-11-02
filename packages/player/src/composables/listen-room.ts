@@ -5,6 +5,9 @@ import type { HostedPlatform, MemberStatus, RoomSnapshot } from '@m-part/listen-
 import { createSignal } from 'solid-js'
 import { TARGET_EXTENSION } from '@m-part/music/constants'
 import { LISTEN_PROTOCOL } from '@m-part/listen-core/protocol'
+import { hostedPlatform } from '@m-part/listen-core/protocol'
+import { currentRoomCredentials } from '~/utils/room-credentials'
+import { CLIENT_SESSION_CHANGED } from './client-cookies'
 import { ListenClient, publicTrack } from '~/utils/listen-client'
 import { normalizeRoomServer } from '~/utils/listen-server'
 import { applyRoomQueue, audio, cancelRoomSource, currentIndex, currentTime, loadRoomSource, playQueue, resetPlayer, restorePlayerSession } from './player'
@@ -14,7 +17,7 @@ import { savePersonalPlayerSession } from './player-persistence'
 const IDENTITY_KEY = 'm-part:listen-room:v1'
 export const [roomServer, setRoomServer] = createSignal(localStorage.getItem('m-part:room-server') || import.meta.env.VITE_ROOM_SERVER_URL || 'http://127.0.0.1:3410')
 export const [roomView, setRoomView] = createSignal<{
-  snapshot?: RoomSnapshot, memberId?: string, connection: string, status: MemberStatus, error: string, away: boolean, inSync: boolean, isHost: boolean, personalSource?: boolean, sourceBusy?: boolean, canControl?: boolean, interactionBusy?: boolean,
+  snapshot?: RoomSnapshot, memberId?: string, connection: string, status: MemberStatus, error: string, away: boolean, inSync: boolean, isHost: boolean, personalSource?: boolean, sourceBusy?: boolean, canControl?: boolean, interactionBusy?: boolean, sourceErrors?: Partial<Record<HostedPlatform, string>>, sourceOverrides?: HostedPlatform[],
 }>({ connection: 'idle', status: 'loading', error: '', away: false, inSync: false, isHost: false })
 export const [joiningRoom, setJoiningRoom] = createSignal(false)
 export { roomPlayerActive }
@@ -32,7 +35,7 @@ function update() {
   if (!client) return
   setRoomControlsWritable(client.connection === 'connected' && client.canControl)
   setRoomView({ snapshot: client.connection === 'idle' ? undefined : client.snapshot, memberId: client.memberId, connection: client.connection, status: client.status,
-    canControl: client.canControl, interactionBusy: client.interactionBusy, error: client.error, away: client.away, personalSource: client.personalSource, sourceBusy: client.sourceBusy, inSync: client.inSync, isHost: client.connection !== 'idle' && client.isHost })
+    canControl: client.canControl, interactionBusy: client.interactionBusy, error: client.error, away: client.away, personalSource: client.personalSource, sourceBusy: client.sourceWorking, sourceErrors: client.hostedCredentialErrors, sourceOverrides: client.hostedCredentialOverrides, inSync: client.inSync, isHost: client.connection !== 'idle' && client.isHost })
 }
 function exit() {
   const released = unregisterRoom?.() ?? !isRoomPlayer()
@@ -51,7 +54,7 @@ async function setup(server: string, resume = false, cancelled = () => false) {
   const version = ++setupVersion
   joining = true; setJoiningRoom(true)
   try {
-    // Request in the click's user gesture; no third-party browser credentials are read.
+    // Request server access in the click's user gesture before room setup.
     if (!resume && TARGET_EXTENSION && globalThis.chrome?.permissions) {
       const url = new URL(server)
       if (!await chrome.permissions.request({ origins: [`${url.protocol}//${url.hostname}/*`] })) throw new Error('未授予房间服务器的访问权限')
@@ -81,7 +84,7 @@ async function setup(server: string, resume = false, cancelled = () => false) {
       load: (track, index, signal, quality, hostedUrl) => loadRoomSource(track, index, signal, quality, hostedUrl),
       cancelLoad: cancelRoomSource,
       empty: resetPlayer,
-    }, update, identity, exit)
+    }, update, identity, exit, currentRoomCredentials)
     unregisterRoom = setRoomPlayerHandler(action => client?.control(action))
     cancelRoomSource()
     localStorage.setItem('m-part:room-server', server)
@@ -113,7 +116,11 @@ export async function joinListenRoom(serverInput: string, name: string, code: st
   }
   catch (error) { setRoomView(v => ({ ...v, error: error instanceof Error ? error.message : String(error) })) }
 }
-export async function manageRoomSource(action: 'credential' | 'revoke' | 'source' | 'retry-source', value?: string, provider?: HostedPlatform) { await client?.manageSource(action, value, provider) }
+export async function manageRoomSource(action: 'credential' | 'revoke' | 'source' | 'retry-source', value?: string, provider?: HostedPlatform) {
+  const ok = await client?.manageSource(action, value, provider)
+  if (ok && action === 'source' && value === 'hosted' && provider) await client?.refreshHostedCredentials([provider])
+}
+export async function syncRoomCredentials(provider?: HostedPlatform) { return await client?.useSettingsCredentials(provider ? [provider] : undefined) ?? false }
 export async function sendRoomChat(text: string) { return await client?.sendChat(text) ?? false }
 export async function setRoomMemberRole(memberId: string, role: 'admin' | 'member') { return await client?.setMemberRole(memberId, role) ?? false }
 export function usePersonalRoomSource(personal: boolean) { client?.usePersonalSource(personal) }
@@ -126,6 +133,11 @@ export function startListenTogether() {
   let disposed = false
   const onRestore = (event: PageTransitionEvent) => { if (event.persisted) location.reload() }
   window.addEventListener('pageshow', onRestore)
+  const credentialsChanged = (event: Event) => {
+    const provider = (event as CustomEvent).detail
+    if (hostedPlatform.options.some(name => name === provider)) void client?.refreshHostedCredentials([provider])
+  }
+  window.addEventListener(CLIENT_SESSION_CHANGED, credentialsChanged)
   void (async () => {
     await Promise.resolve()
     try {
@@ -140,5 +152,5 @@ export function startListenTogether() {
     }
     catch (error) { if (!disposed) { identity(); exit(); setRoomView(v => ({ ...v, error: error instanceof Error ? error.message : String(error) })) } }
   })()
-  return () => { disposed = true; setupVersion++; window.removeEventListener('pageshow', onRestore); client?.dispose(); exit() }
+  return () => { disposed = true; setupVersion++; window.removeEventListener('pageshow', onRestore); window.removeEventListener(CLIENT_SESSION_CHANGED, credentialsChanged); client?.dispose(); exit() }
 }

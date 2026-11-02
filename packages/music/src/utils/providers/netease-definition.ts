@@ -9,5 +9,6 @@ export const neteaseDefinition = {
     requestOrigin: 'https://music.163.com',
     ruleId: 11002,
     targets: [{ origin: 'https://music.163.com', path: '/weapi/' }],
+    session: { names: ['MUSIC_U', '__csrf'], required: [['MUSIC_U']] },
   },
 } satisfies ProviderDefinition

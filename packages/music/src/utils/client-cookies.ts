@@ -1,9 +1,10 @@
 import type { ProviderName } from '../types/provider'
 import { TARGET_EXTENSION } from './constants'
-import { normalizeClientCookie } from './cookie-header'
+import { normalizeClientCookie, clientCookieValue } from './cookie-header'
 export { normalizeClientCookie, clientCookieValue } from './cookie-header'
 import { providerCookieFilter } from './provider-request'
 import { providerDefinitions } from './provider-definitions'
+import { getCookieProviders } from './provider-definitions'
 
 export const CLIENT_COOKIE_PREFIX = 'mpart-client-cookie:'
 export const CLIENT_COOKIE_MODE_PREFIX = 'mpart-client-cookie-mode:'
@@ -31,6 +32,54 @@ export function getClientCookie(provider: ProviderName): string {
   const cookie = getStoredClientCookie(provider)
   if (!cookie) throw new Error('尚未保存手动 Cookie，请先填写并保存，或切换为网站 Cookie')
   return cookie
+}
+
+/** Explicit host operation: export only declared login fields from the active session. */
+export async function getClientSessionCookie(provider: ProviderName): Promise<string> {
+  const config = providerDefinitions[provider].cookie
+  if (!config?.session) return ''
+  const mode = getClientCookieMode(provider)
+  const selected = getStoredClientCookie(provider)
+  let cookie = ''
+  if (mode === 'manual') cookie = getClientCookie(provider)
+  else {
+    const api = (globalThis as any).chrome?.cookies
+    if (!TARGET_EXTENSION || !api?.getAll) return ''
+    try {
+      const cookies: { name: string, value: string, path: string }[] = await api.getAll({ url: config.loginUrl })
+      cookie = cookies.filter(item => config.session!.names.includes(item.name)).sort((a, b) => b.path.length - a.path.length).map(item => `${item.name}=${item.value}`).join('; ')
+    }
+    catch { throw new Error('无法读取网站登录 Cookie，请检查扩展权限或改用手动 Cookie') }
+  }
+  if (mode !== getClientCookieMode(provider) || (mode === 'manual' && selected !== getStoredClientCookie(provider))) throw new Error('音源 Cookie 已更新，请重试当前操作')
+  const fields = config.session.names.map(name => [name, clientCookieValue(cookie, name)] as const).filter(([, value]) => value)
+  if (!config.session.required.every(group => group.some(name => fields.some(([field]) => field === name)))) {
+    if (mode === 'manual') throw new Error('手动 Cookie 缺少登录字段，请在音源设置中更新')
+    return ''
+  }
+  const result = normalizeClientCookie(fields.map(([name, value]) => `${name}=${value}`).join('; '))
+  if (result.length > 4096) throw new Error('登录 Cookie 过长，无法用于房间托管')
+  return result
+}
+
+/** Observes names/domains only; never expose Cookie values in change notifications. */
+export function watchWebsiteSessionCookies(changed: (provider: ProviderName) => void) {
+  const events = (globalThis as any).chrome?.cookies?.onChanged
+  if (!TARGET_EXTENSION || !events) return () => {}
+  const pending = new Set<ProviderName>()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const listener = ({ cookie }: { cookie: { name: string, domain: string } }) => {
+    for (const { name, cookie: config } of getCookieProviders()) {
+      const host = new URL(config.loginUrl).hostname, domain = cookie.domain.replace(/^\./, '')
+      if (getClientCookieMode(name) === 'website' && config.session?.names.includes(cookie.name) && (host === domain || host.endsWith(`.${domain}`))) pending.add(name)
+    }
+    if (!pending.size) return
+    clearTimeout(timer)
+    // Chrome emits remove + add for an overwrite; do not briefly export an anonymous session.
+    timer = setTimeout(() => { for (const provider of pending) if (getClientCookieMode(provider) === 'website') changed(provider); pending.clear() }, 100)
+  }
+  events.addListener(listener)
+  return () => { clearTimeout(timer); pending.clear(); events.removeListener(listener) }
 }
 
 export interface CookieRule {

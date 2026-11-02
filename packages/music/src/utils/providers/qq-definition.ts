@@ -8,6 +8,7 @@ export const qqDefinition = {
     loginUrl: 'https://y.qq.com/',
     requestOrigin: 'https://y.qq.com',
     ruleId: 11003,
+    session: { names: ['qqmusic_uin', 'uin', 'wxuin', 'qqmusic_key', 'qm_keyst', 'p_skey', 'skey', 'eas_sid', 'login_type', 'tmeLoginType'], required: [['qqmusic_uin', 'uin', 'wxuin'], ['qqmusic_key', 'qm_keyst', 'p_skey', 'skey']] },
     targets: [
       { origin: 'https://c.y.qq.com', path: '/soso/' },
       { origin: 'https://c.y.qq.com', path: '/qzone/' },

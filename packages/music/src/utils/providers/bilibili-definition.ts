@@ -9,5 +9,6 @@ export const biliDefinition = {
     requestOrigin: 'https://www.bilibili.com',
     ruleId: 11001,
     targets: [{ origin: 'https://api.bilibili.com', path: '/x/' }],
+    session: { names: ['SESSDATA', 'bili_jct', 'DedeUserID', 'DedeUserID__ckMd5', 'buvid3', 'buvid4'], required: [['SESSDATA']] },
   },
 } satisfies ProviderDefinition

@@ -25,7 +25,7 @@ export default function ListenPage() {
   return (
     <div class="flex-1 min-w-0 min-h-0 overflow-auto p-6 max-[760px]:p-4">
       <div class="max-w-220 mx-auto space-y-6">
-        <header><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm mt-2">在同一个房间听同一首歌。房主与管理员控制播放和队列，可各自取源，也可使用网易云、QQ 音乐或 BiliBili 的服务器匿名 / 账号托管音源。</p></header>
+        <header><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm mt-2">在同一个房间听同一首歌。房主与管理员控制播放和队列，各平台默认服务器托管，也可切换各自取源。</p></header>
         <Show when={roomPlayerActive()} fallback={(
           <section class="rounded-2xl border border-border p-5 space-y-5">
             <label class="block text-sm">房间服务器
@@ -38,6 +38,7 @@ export default function ListenPage() {
             <div class="grid grid-cols-2 gap-5 max-[600px]:grid-cols-1">
               <div class="space-y-3 rounded-xl bg-muted/50 p-4">
                 <h2 class="font-semibold">创建房间</h2>
+                <p class="text-xs text-muted-foreground">创建后将把房主音源设置中当前应用的登录 Cookie 提交到所填服务器；仅保留在服务器内存。未登录时匿名取源，Web 网站 Cookie 不可读取时也使用匿名取源。</p>
                 <p class="text-sm text-muted-foreground">带上当前队列的 {playQueue().length} 首歌；队列为空时，创建后再去搜索添加。</p>
                 <button class="btn px-4 py-2" disabled={joiningRoom()} onClick={() => { saveName(); void createListenRoom(roomServer(), name()) }}>用当前队列创建</button>
               </div>

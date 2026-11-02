@@ -113,7 +113,7 @@ describe('client Cookie settings', () => {
     update.mockClear()
     const original = Storage.prototype.setItem
     let failMode = true
-    const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (key, value) {
+    const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
       if (key === CLIENT_COOKIE_MODE_PREFIX + 'qq' && failMode) { failMode = false; throw new Error('quota') }
       original.call(this, key, value)
     })

@@ -33,11 +33,11 @@ let persist = vi.fn<(identity?: RoomIdentity) => void>()
 let exited = vi.fn<() => void>()
 let lockAvailable: boolean
 
-async function connect(memberId = 'member') {
+async function connect(memberId = 'member', patch: Partial<RoomSnapshot> = {}) {
   client.open('http://localhost:3410', { type: 'join', protocol: LISTEN_PROTOCOL, kind: 'music', name: 'test', code: '12345678' })
   socket = Socket.all.at(-1)!
   socket.onopen?.()
-  await socket.receive({ type: 'welcome', token: 'secret', memberId, generation: 1, snapshot: snapshot() })
+  await socket.receive({ type: 'welcome', token: 'secret', memberId, generation: 1, snapshot: snapshot(patch) })
   await socket.receive({ type: 'pong', sentAt: performance.now(), serverTime: performance.now() })
   await vi.advanceTimersByTimeAsync(0)
 }
@@ -380,5 +380,140 @@ describe('administrator controls and room activity', () => {
     await socket.receive({ type: 'snapshot', snapshot: snapshot({ activityVersion: 3, members: members.map(m => ({ ...m, role: m.id === 'member' ? 'member' : 'host' })), history }) })
     expect(client.snapshot!.members[1]).not.toBe(oldMember)
     expect(client.canControl).toBe(false)
+  })
+})
+
+describe('host sessions from current Provider settings', () => {
+  const platforms = ['netease', 'qq', 'bili'] as const
+  const hostedState = () => snapshot({ source: { mode: 'hosted', provider: 'netease', credential: 'none', version: 0, accounts: {}, modes: { netease: 'hosted', qq: 'hosted', bili: 'hosted' } } })
+  async function setup(read: (platform: typeof platforms[number]) => Promise<string>, member = 'host') {
+    client.dispose()
+    client = new ListenClient(playback, () => {}, persist, exited, { platforms, read })
+    let state = hostedState()
+    roomRequest.mockImplementation(async (_server, _token, request) => {
+      if (request.action === 'credential' || request.action === 'revoke') {
+        const platform = request.provider!
+        const affects = platform === state.source!.provider
+        const credential = request.action === 'credential' ? 'ready' as const : 'none' as const
+        state = { ...state, revision: state.revision + (affects ? 1 : 0), activityVersion: state.activityVersion + 1,
+          source: { ...state.source!, version: state.source!.version + (affects ? 1 : 0), ...(affects ? { credential } : {}), accounts: { ...state.source!.accounts, [platform]: { credential, version: 1 } } } }
+        return { ok: true, snapshot: state }
+      }
+      return { ticket: 'a'.repeat(64), leaseMs: 120_000 }
+    })
+    await connect(member, state)
+    await vi.advanceTimersByTimeAsync(0)
+  }
+  const mutations = () => roomRequest.mock.calls.filter(([, , request]) => request.action === 'credential' || request.action === 'revoke')
+
+  it('binds host sessions serially before media loading, leaving anonymous platforms hosted', async () => {
+    const read = vi.fn(async (platform: typeof platforms[number]) => platform === 'bili' ? '' : `${platform}-session-secret`)
+    await setup(read)
+    expect(mutations().map(([, , request]) => request)).toMatchObject([
+      { action: 'credential', provider: 'netease', cookie: 'netease-session-secret', expectedRevision: 0 },
+      { action: 'credential', provider: 'qq', cookie: 'qq-session-secret', expectedRevision: 1 },
+    ])
+    expect(roomRequest.mock.calls.findIndex(([, , request]) => request.action === 'ticket')).toBeGreaterThan(1)
+    expect(client.snapshot?.source?.modes?.bili).toBe('hosted')
+    expect(JSON.stringify(socket.sent)).not.toContain('session-secret')
+    expect(JSON.stringify(persist.mock.calls)).not.toContain('session-secret')
+    await client.refreshHostedCredentials()
+    expect(mutations()).toHaveLength(2)
+  })
+
+  it('never reads or uploads member sessions', async () => {
+    const read = vi.fn(async () => 'member-private')
+    await setup(read, 'member')
+    await client.refreshHostedCredentials()
+    expect(read).not.toHaveBeenCalled()
+    expect(mutations()).toHaveLength(0)
+  })
+
+  it('revokes an old account when the active website session becomes anonymous without changing source mode', async () => {
+    let cookie = 'host-session-secret'
+    await setup(async platform => platform === 'netease' ? cookie : '')
+    cookie = ''
+    await client.refreshHostedCredentials(['netease'])
+    await vi.advanceTimersByTimeAsync(0)
+    expect(mutations().at(-1)![2]).toMatchObject({ action: 'revoke', provider: 'netease' })
+    expect(client.snapshot?.source).toMatchObject({ mode: 'hosted', credential: 'none', modes: { netease: 'hosted' } })
+  })
+
+  it('blocks the active source after session refresh fails instead of reusing the old bound account', async () => {
+    let invalid = false
+    await setup(async platform => { if (platform === 'netease' && invalid) throw new Error('请更新音源设置'); return platform === 'netease' ? 'host-session-secret' : '' })
+    roomRequest.mockClear(); playback.load = vi.fn()
+    invalid = true
+    await client.refreshHostedCredentials(['netease'])
+    await vi.advanceTimersByTimeAsync(0)
+    expect(client.hostedCredentialErrors.netease).toBe('请更新音源设置')
+    expect(client.status).toBe('failed')
+    expect(playback.audio.paused).toBe(true)
+    expect(playback.load).not.toHaveBeenCalled()
+    expect(roomRequest.mock.calls.some(([, , request]) => request.action === 'ticket')).toBe(false)
+  })
+
+  it('does not reload the active source while another platform account changes', async () => {
+    let qq = 'qq-session-secret'
+    await setup(async platform => platform === 'qq' ? qq : '')
+    vi.mocked(playback.load).mockClear(); vi.mocked(playback.cancelLoad).mockClear()
+    qq = 'qq-new-session-secret'
+    await client.refreshHostedCredentials(['qq'])
+    expect(playback.cancelLoad).not.toHaveBeenCalled()
+    expect(playback.load).not.toHaveBeenCalled()
+  })
+  it('keeps a room-specific Cookie across global setting changes until explicitly following settings again', async () => {
+    const read = vi.fn(async (platform: typeof platforms[number]) => platform === 'netease' ? 'settings-session-secret' : '')
+    await setup(read)
+    expect(await client.manageSource('credential', 'room-only-session-secret', 'netease')).toBe(true)
+    expect(client.hostedCredentialOverrides).toEqual(['netease'])
+    expect(persist).toHaveBeenLastCalledWith(expect.objectContaining({ sourceOverrides: ['netease'] }))
+    expect(JSON.stringify(persist.mock.calls)).not.toContain('room-only-session-secret')
+    read.mockClear(); roomRequest.mockClear()
+    await client.refreshHostedCredentials(['netease'])
+    expect(read).not.toHaveBeenCalled()
+    expect(mutations()).toHaveLength(0)
+    await client.useSettingsCredentials(['netease'])
+    expect(client.hostedCredentialOverrides).toEqual([])
+    expect(mutations().at(-1)![2]).toMatchObject({ action: 'credential', provider: 'netease', cookie: 'settings-session-secret' })
+  })
+  it('retains an explicit room account revocation as anonymous hosting instead of rebinding global settings', async () => {
+    await setup(async platform => platform === 'netease' ? 'settings-session-secret' : '')
+    await client.manageSource('revoke', undefined, 'netease')
+    roomRequest.mockClear()
+    await client.refreshHostedCredentials(['netease'])
+    expect(mutations()).toHaveLength(0)
+    expect(client.snapshot?.source).toMatchObject({ mode: 'hosted', credential: 'none' })
+    expect(client.hostedCredentialOverrides).toEqual(['netease'])
+  })
+  it('restores only the room override flags after refresh, never the room Cookie', async () => {
+    await setup(async () => '')
+    await client.manageSource('credential', 'room-only-session-secret', 'netease')
+    const identity = structuredClone(persist.mock.calls.at(-1)![0]!)
+    const state = client.snapshot!
+    client.dispose()
+    const read = vi.fn(async (_platform: typeof platforms[number]) => '')
+    client = new ListenClient(playback, () => {}, persist, exited, { platforms, read })
+    roomRequest.mockClear()
+    await client.resume(identity)
+    socket = Socket.all.at(-1)!; socket.onopen?.()
+    await socket.receive({ type: 'welcome', token: 'secret', memberId: 'host', generation: 2, snapshot: state })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(client.hostedCredentialOverrides).toEqual(['netease'])
+    expect(read.mock.calls.some(([platform]) => platform === 'netease')).toBe(false)
+    expect(mutations()).toHaveLength(0)
+    expect(JSON.stringify(identity)).not.toContain('room-only-session-secret')
+  })
+  it('defers automatic track advance while refreshing another platform session instead of dropping it', async () => {
+    let release!: (cookie: string) => void
+    const pending = new Promise<string>(resolve => { release = resolve })
+    let waiting = false
+    await setup(async platform => platform === 'qq' && waiting ? pending : '')
+    waiting = true
+    const refresh = client.refreshHostedCredentials(['qq'])
+    client.control({ type: 'ended' })
+    expect(socket.sent.some(message => message.type === 'command' && message.action === 'ended')).toBe(false)
+    release(''); await refresh
+    expect(socket.sent.some(message => message.type === 'command' && message.action === 'ended')).toBe(true)
   })
 })

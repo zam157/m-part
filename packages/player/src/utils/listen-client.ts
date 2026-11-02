@@ -8,7 +8,7 @@ import { uniqueTracks } from '@m-part/listen-core/queue'
 import { needsTrackParts } from './track-parts'
 import { sendRoomControl } from './room-http'
 
-export interface RoomIdentity { server: string, token: string, roomId: string, away: boolean, personalSource?: boolean }
+export interface RoomIdentity { server: string, token: string, roomId: string, away: boolean, personalSource?: boolean, sourceOverrides?: HostedPlatform[] }
 export interface RoomPlayback {
   audio: HTMLAudioElement
   queue: (state: RoomSnapshot) => void
@@ -17,6 +17,10 @@ export interface RoomPlayback {
   empty: () => void
 }
 type Command = Omit<Extract<ClientMessage, { type: 'command' }>, 'type' | 'commandId' | 'expectedRevision'>
+export interface RoomCredentials {
+  platforms: readonly HostedPlatform[]
+  read: (platform: HostedPlatform) => Promise<string>
+}
 
 /** Product room controller: media events report readiness, never rebroadcast user controls. */
 export class ListenClient {
@@ -54,12 +58,20 @@ export class ListenClient {
   private confirmations = 0
   private commands: Command[] = []
   private pending?: { id: string, revision?: number, sentAt: number }
+  private syncingCredentials = false
+  private credentialRefresh?: Promise<boolean>
+  private credentialPlatforms = new Set<HostedPlatform>()
+  private credentialValues = new Map<HostedPlatform, string>()
+  private credentialErrors = new Map<HostedPlatform, string>()
+  private credentialOverrides = new Set<HostedPlatform>()
+  private deferredEnd?: string
 
   constructor(
     private playback: RoomPlayback,
     private changed: () => void,
     private persist: (identity?: RoomIdentity) => void,
     private exited: () => void,
+    private credentials?: RoomCredentials,
   ) {
     playback.audio.addEventListener('waiting', this.onWaiting)
     playback.audio.addEventListener('error', this.onError)
@@ -72,11 +84,25 @@ export class ListenClient {
   get canControl() { return this.isHost || !!this.snapshot?.members.some(member => member.id === this.memberId && member.role === 'admin') }
   get interactionBusy() { return !!this.interaction }
   get busy() { return !!this.pending || !!this.commands.length }
+  get sourceWorking() { return this.sourceBusy || this.syncingCredentials }
+  get hostedCredentialErrors() { return Object.fromEntries(this.credentialErrors) }
+  get hostedCredentialOverrides() { return [...this.credentialOverrides] }
+
+  private invalidateCredentialSource(platform: HostedPlatform) {
+    if (this.snapshot?.source?.provider !== platform) return
+    this.cancel(); this.playback.cancelLoad(); this.playback.audio.pause(); this.loadedKey = undefined; this.failedKey = undefined
+  }
+  private flushDeferredEnd() {
+    if (!this.deferredEnd || this.sourceWorking) return
+    const playbackId = this.deferredEnd; this.deferredEnd = undefined
+    if (this.isHost && this.connection === 'connected' && this.snapshot?.playbackId === playbackId) this.enqueue({ action: 'ended' })
+  }
 
   async resume(identity: RoomIdentity) {
     this.identity = identity
     this.away = identity.away
     this.personalSource = !!identity.personalSource
+    this.credentialOverrides = new Set(Array.isArray(identity.sourceOverrides) ? identity.sourceOverrides.filter(platform => this.credentials?.platforms.includes(platform)) : [])
     if (!await this.lock(identity.roomId, identity.server)) { this.fail('这个房间已在另一个窗口播放，请先退出或关闭原窗口'); return }
     this.connect(identity.server, { type: 'resume', protocol: LISTEN_PROTOCOL, token: identity.token })
   }
@@ -114,9 +140,10 @@ export class ListenClient {
           this.snapshot = message.snapshot
           if (!await this.lock(message.snapshot.roomId, server)) { this.send({ type: 'leave' }); this.fail('这个房间已在另一个窗口播放'); return }
           if (this.stopped || this.socket !== socket) return
-          this.identity = { server, token: message.token, roomId: message.snapshot.roomId, away: this.away, personalSource: this.personalSource }
+          this.identity = { server, token: message.token, roomId: message.snapshot.roomId, away: this.away, personalSource: this.personalSource, ...(this.credentialOverrides.size ? { sourceOverrides: this.hostedCredentialOverrides } : {}) }
           this.persist(this.identity)
           this.connection = 'connected'; this.attempts = 0; this.activeRevision = -1
+          if (this.isHost) void this.refreshHostedCredentials()
           this.clock.reset(); this.ping()
           for (let i = 1; i <= 4; i++) setTimeout(() => { if (this.socket === socket && this.connection === 'connected') this.ping() }, i * 100)
         }
@@ -167,6 +194,7 @@ export class ListenClient {
   private ping() { this.lastPing = performance.now(); this.send({ type: 'ping', sentAt: this.lastPing }) }
 
   private enqueue(command: Command) {
+    if (this.sourceWorking) { this.error = '请等待房间音源准备完成'; this.changed(); return }
     if (!this.canControl) { this.error = '播放和队列由房主或管理员控制，你可以调音量或暂离'; this.changed(); return }
     if (this.connection !== 'connected') { this.error = '连接恢复后才能控制房间'; this.changed(); return }
     this.error = ''
@@ -208,7 +236,7 @@ export class ListenClient {
       this.follow()
       return
     }
-    if (action.type === 'ended') { if (this.isHost) this.enqueue({ action: 'ended' }); return }
+    if (action.type === 'ended') { if (this.isHost) { if (this.sourceWorking) this.deferredEnd = this.snapshot?.playbackId; else this.enqueue({ action: 'ended' }) } return }
     if (action.type === 'queue') this.enqueue({ action: 'queue', tracks: action.tracks.map(track => publicTrack(track)) })
     else if (action.type === 'append-many') this.enqueue({ action: 'append-many', tracks: action.tracks.map(track => publicTrack(track)), placement: action.placement, autoplay: action.autoplay })
     else if (action.type === 'append' || action.type === 'add-next') this.enqueue({ action: action.type, track: publicTrack(action.track) })
@@ -218,10 +246,11 @@ export class ListenClient {
     else if (action.type === 'seek') this.enqueue({ action: 'seek', position: Math.max(0, Math.min(this.snapshot?.track.duration ?? 0, action.position)) })
   }
 
-  async manageSource(action: 'credential' | 'revoke' | 'source' | 'retry-source', value?: string, provider?: HostedPlatform) {
+  async manageSource(action: 'credential' | 'revoke' | 'source' | 'retry-source', value?: string, provider?: HostedPlatform, fromSettings = false) {
     if (!this.identity || !this.snapshot || this.connection !== 'connected' || !this.isHost) { this.error = '连接恢复后由房主管理房间音源'; this.changed(); return false }
     if (action === 'source' && !provider) { this.error = '请选择要设置的音源'; this.changed(); return false }
-    if (this.sourceBusy || this.busy) { this.error = '请等待当前房间操作完成'; this.changed(); return false }
+    if (this.sourceBusy || this.busy || (this.syncingCredentials && !fromSettings)) { this.error = '请等待当前房间操作完成'; this.changed(); return false }
+    if (action === 'source' && value === 'hosted' && provider && this.credentials && !this.credentialOverrides.has(provider)) this.credentialPlatforms.add(provider)
     const controller = new AbortController()
     this.management = controller; this.sourceBusy = true; this.error = ''; this.changed()
     const base = { roomId: this.identity.roomId, expectedRevision: this.snapshot.revision }
@@ -230,10 +259,17 @@ export class ListenClient {
         : action === 'revoke' ? { ...base, action, provider: provider ?? this.snapshot.source?.provider ?? 'netease' } : { ...base, action }
     try {
       const response = await sendRoomControl(this.identity.server, this.identity.token, request, controller.signal)
+      controller.signal.throwIfAborted()
       if (!response || typeof response !== 'object' || !('ok' in response) || response.ok !== true) throw new Error('房间服务器响应不兼容')
-      if ('snapshot' in response) {
-        const state = v.parse(roomSnapshot, response.snapshot)
-        if (state.roomId !== this.identity?.roomId) throw new Error('房间实例已更新')
+      const state = 'snapshot' in response ? v.parse(roomSnapshot, response.snapshot) : undefined
+      if (state && state.roomId !== this.identity?.roomId) throw new Error('房间实例已更新')
+      if (!fromSettings && (request.action === 'credential' || request.action === 'revoke')) {
+        const platform = request.provider!
+        this.credentialOverrides.add(platform); this.credentialPlatforms.delete(platform)
+        this.credentialErrors.delete(platform); this.credentialValues.delete(platform)
+        this.invalidateCredentialSource(platform); this.saveIdentity()
+      }
+      if (state) {
         if (this.acceptSnapshot(state)) {
           if (this.clock.estimate && state.revision !== this.activeRevision) void this.apply(state)
         }
@@ -241,7 +277,59 @@ export class ListenClient {
       return true
     }
     catch (error) { if (!controller.signal.aborted) this.error = error instanceof Error ? error.message : '房间音源操作失败'; return false }
-    finally { if (this.management === controller) { this.management = undefined; this.sourceBusy = false; this.changed() } }
+    finally { if (this.management === controller) { this.management = undefined; this.sourceBusy = false; this.flushDeferredEnd(); this.changed() } }
+  }
+
+  /** Host-only HTTP session synchronization; Cookie values never enter snapshots or messages. */
+  refreshHostedCredentials(platforms = this.credentials?.platforms ?? []): Promise<boolean> {
+    if (!this.credentials || !this.isHost || this.connection !== 'connected') return Promise.resolve(false)
+    for (const platform of platforms) if (!this.credentialOverrides.has(platform)) this.credentialPlatforms.add(platform)
+    if (this.credentialRefresh) return this.credentialRefresh
+    if (this.busy || this.sourceBusy) return Promise.resolve(false)
+    this.credentialRefresh = this.synchronizeCredentials().then(ok => { this.credentialRefresh = undefined; return ok })
+    return this.credentialRefresh
+  }
+
+  useSettingsCredentials(platforms = this.credentials?.platforms ?? []) {
+    if (!this.isHost || this.connection !== 'connected') return Promise.resolve(false)
+    for (const platform of platforms) { this.credentialOverrides.delete(platform); this.credentialValues.delete(platform); this.credentialErrors.delete(platform) }
+    this.saveIdentity()
+    return this.refreshHostedCredentials(platforms)
+  }
+
+  private async synchronizeCredentials() {
+    this.syncingCredentials = true; this.changed()
+    let ok = true
+    try {
+      for (const platform of [...this.credentialPlatforms]) {
+        this.credentialPlatforms.delete(platform)
+        if (!this.isHost || this.connection !== 'connected' || this.credentialOverrides.has(platform) || this.snapshot?.source?.modes?.[platform] !== 'hosted') continue
+        try {
+          const cookie = await this.credentials!.read(platform)
+          if (this.stopped || !this.isHost || this.connection !== 'connected') return false
+          const account = this.snapshot?.source?.accounts?.[platform]?.credential ?? 'none'
+          if (this.credentialValues.get(platform) === cookie && account === (cookie ? 'ready' : 'none')) { this.credentialErrors.delete(platform); continue }
+          this.invalidateCredentialSource(platform)
+          if ((cookie || account !== 'none') && !await this.manageSource(cookie ? 'credential' : 'revoke', cookie || undefined, platform, true)) throw new Error(this.error || '房间账号同步失败')
+          this.credentialValues.set(platform, cookie)
+          this.credentialErrors.delete(platform)
+        }
+        catch (error) {
+          ok = false
+          this.invalidateCredentialSource(platform)
+          const message = error instanceof Error ? error.message : '房间账号同步失败'
+          this.credentialErrors.set(platform, message)
+        }
+      }
+    }
+    finally {
+      this.syncingCredentials = false
+      this.flushDeferredEnd()
+      this.error = [...this.credentialErrors.values()].join('；')
+      if (!this.stopped && this.connection === 'connected' && this.snapshot && this.clock.estimate) void this.apply(this.snapshot)
+      this.changed()
+    }
+    return ok
   }
 
   private acceptSnapshot(state: RoomSnapshot) {
@@ -297,6 +385,7 @@ export class ListenClient {
   private async sourceUrl(state: RoomSnapshot, track: SharedRoomTrack, signal: AbortSignal, key: string) {
     if (state.source?.mode !== 'hosted' || this.personalSource) { this.mediaTicket = undefined; return undefined }
     if (!this.identity) throw new Error('房间连接尚未就绪')
+    if (this.isHost && this.credentialErrors.has(track.provider)) throw new Error(this.credentialErrors.get(track.provider))
     if (state.source.error) throw new Error(state.source.error)
     const reply = await sendRoomControl(this.identity.server, this.identity.token, {
       action: 'ticket', roomId: state.roomId, queueItemId: track.queueItemId, sourceVersion: state.source.version, playbackId: state.playbackId,
@@ -329,7 +418,7 @@ export class ListenClient {
     if (this.canControl && !this.snapshot?.wantsToPlay) this.enqueue({ action: 'play' })
     else if (this.snapshot && this.clock.estimate) void this.apply(this.snapshot)
   }
-  private saveIdentity() { if (this.identity) { this.identity.away = this.away; this.identity.personalSource = this.personalSource; this.persist(this.identity) } }
+  private saveIdentity() { if (this.identity) { this.identity.away = this.away; this.identity.personalSource = this.personalSource; if (this.credentialOverrides.size) this.identity.sourceOverrides = this.hostedCredentialOverrides; else delete this.identity.sourceOverrides; this.persist(this.identity) } }
 
   private cancel() {
     this.controller?.abort()
@@ -347,6 +436,7 @@ export class ListenClient {
   }
 
   private async apply(state: RoomSnapshot) {
+    if (this.syncingCredentials || (this.isHost && state.source?.provider && this.credentialPlatforms.has(state.source.provider))) return
     const audio = this.playback.audio
     const wasFollowing = this.status === 'following' && !audio.paused
     this.cancel(); this.activeRevision = state.revision
@@ -430,6 +520,7 @@ export class ListenClient {
   private tick() {
     if (this.stopped) return
     const now = performance.now()
+    if (this.credentialPlatforms.size && !this.sourceWorking && !this.busy && this.isHost && this.connection === 'connected') void this.refreshHostedCredentials([])
     if (this.connection === 'connected' && now - this.lastPing >= HEARTBEAT_MS) this.ping()
     if (this.connection === 'connected' && now - this.lastResponse >= CONNECTION_TIMEOUT_MS) this.socket?.close()
     if (Number.isFinite(this.lastResponse) && now - this.lastResponse >= DISCONNECT_GRACE_MS) { this.cancel(); this.playback.audio.pause(); this.status = this.away ? 'away' : 'loading' }
@@ -457,6 +548,7 @@ export class ListenClient {
     if (notify) this.send({ type: 'leave' })
     this.finishInteraction(false)
     this.management?.abort(); this.mediaTicket = undefined
+    this.credentialValues.clear(); this.credentialPlatforms.clear()
     this.stopped = true; this.cancel(); this.playback.cancelLoad(); this.playback.audio.pause()
     clearInterval(this.interval); clearTimeout(this.retryTimer)
     this.socket?.close(); this.socket = undefined; this.releaseWindow?.(); this.releaseWindow = undefined

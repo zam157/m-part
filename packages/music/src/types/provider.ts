@@ -20,6 +20,8 @@ export interface ProviderCookieConfig {
   /** Stable, globally unique extension session rule ID. Do not change existing IDs. */
   ruleId: number
   targets: readonly [ProviderCookieTarget, ...ProviderCookieTarget[]]
+  /** Login fields allowed to leave the client when the host uses server sourcing. */
+  session?: { names: readonly string[], required: readonly (readonly string[])[] }
 }
 
 /** Lightweight metadata shared with transport; must not import a Provider implementation. */

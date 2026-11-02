@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 vi.mock('../src/utils/constants', () => ({ TARGET_EXTENSION: true }))
 import { getQQSession, qqToken } from '../src/utils/providers/qq-session'
 import { getNeteaseCsrfToken } from '../src/utils/providers/netease-session'
-import { CLIENT_COOKIE_PREFIX, CLIENT_COOKIE_MODE_PREFIX } from '../src/utils/client-cookies'
+import { CLIENT_COOKIE_PREFIX, CLIENT_COOKIE_MODE_PREFIX, getClientSessionCookie, watchWebsiteSessionCookies } from '../src/utils/client-cookies'
 afterEach(() => { localStorage.clear(); vi.unstubAllGlobals() })
 
 it('derives QQ account and token exclusively from the manual cookie, without mixing browser fields', async () => {
@@ -37,4 +37,43 @@ it('uses website authentication fields while retaining saved manual QQ and Netea
   for (const source of ['qq', 'netease']) localStorage.setItem(CLIENT_COOKIE_MODE_PREFIX + source, 'manual')
   expect((await getQQSession()).uin).toBe('456')
   expect(await getNeteaseCsrfToken()).toBe('manual-csrf')
+})
+it('exports only the active manual session login fields without reading browser Cookies', async () => {
+  const getAll = vi.fn()
+  vi.stubGlobal('chrome', { cookies: { getAll } })
+  localStorage.setItem(CLIENT_COOKIE_PREFIX + 'netease', 'MUSIC_U=manual; __csrf=token; unrelated=private')
+  expect(await getClientSessionCookie('netease')).toBe('MUSIC_U=manual; __csrf=token')
+  expect(getAll).not.toHaveBeenCalled()
+})
+it('exports website login fields in website mode, ignoring retained manual values and unrelated browser Cookies', async () => {
+  vi.stubGlobal('chrome', { cookies: { getAll: vi.fn(async () => [{ name: 'MUSIC_U', value: 'website', path: '/' }, { name: 'other', value: 'private', path: '/' }]) } })
+  localStorage.setItem(CLIENT_COOKIE_PREFIX + 'netease', 'MUSIC_U=inactive')
+  localStorage.setItem(CLIENT_COOKIE_MODE_PREFIX + 'netease', 'website')
+  expect(await getClientSessionCookie('netease')).toBe('MUSIC_U=website')
+  localStorage.setItem(CLIENT_COOKIE_MODE_PREFIX + 'bili', 'website')
+  expect(await getClientSessionCookie('bili')).toBe('')
+})
+it('does not replace missing manual login fields with website credentials', async () => {
+  const getAll = vi.fn()
+  vi.stubGlobal('chrome', { cookies: { getAll } })
+  localStorage.setItem(CLIENT_COOKIE_PREFIX + 'qq', 'uin=123; unrelated=value')
+  await expect(getClientSessionCookie('qq')).rejects.toThrow('缺少登录字段')
+  expect(getAll).not.toHaveBeenCalled()
+})
+it('observes only declared session fields in the selected website mode and removes the listener', () => {
+  vi.useFakeTimers()
+  let listener!: (event: { cookie: { domain: string, name: string } }) => void
+  const remove = vi.fn()
+  vi.stubGlobal('chrome', { cookies: { onChanged: { addListener: (value: typeof listener) => { listener = value }, removeListener: remove } } })
+  const changed = vi.fn()
+  const stop = watchWebsiteSessionCookies(changed)
+  listener({ cookie: { domain: '.music.163.com', name: 'MUSIC_U' } })
+  listener({ cookie: { domain: '.evil.music.163.com', name: 'MUSIC_U' } })
+  listener({ cookie: { domain: '.music.163.com', name: 'unrelated' } })
+  vi.advanceTimersByTime(100)
+  localStorage.setItem(CLIENT_COOKIE_PREFIX + 'netease', 'MUSIC_U=manual')
+  listener({ cookie: { domain: '.music.163.com', name: 'MUSIC_U' } })
+  expect(changed).toHaveBeenCalledExactlyOnceWith('netease')
+  stop(); expect(remove).toHaveBeenCalledWith(listener)
+  vi.useRealTimers()
 })
