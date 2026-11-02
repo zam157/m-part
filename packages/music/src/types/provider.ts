@@ -21,7 +21,14 @@ export interface ProviderCookieConfig {
   ruleId: number
   targets: readonly [ProviderCookieTarget, ...ProviderCookieTarget[]]
   /** Login fields allowed to leave the client when the host uses server sourcing. */
-  session?: { names: readonly string[], required: readonly (readonly string[])[] }
+  session?: {
+    names: readonly string[]
+    required: readonly (readonly string[])[]
+    /** Fields indicating a login attempt; visitor identity fields alone need not imply a partial login. */
+    loginIndicators?: readonly string[]
+    /** Candidate request URLs, in priority order. Choose one complete session, never mix accounts across URLs. */
+    urls?: readonly `https://${string}`[]
+  }
 }
 
 /** Lightweight metadata shared with transport; must not import a Provider implementation. */

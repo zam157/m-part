@@ -3,8 +3,7 @@ import { TARGET_EXTENSION } from './constants'
 import { normalizeClientCookie, clientCookieValue } from './cookie-header'
 export { normalizeClientCookie, clientCookieValue } from './cookie-header'
 import { providerCookieFilter } from './provider-request'
-import { providerDefinitions } from './provider-definitions'
-import { getCookieProviders } from './provider-definitions'
+import { providerDefinitions, getCookieProviders, websiteCookieUrls } from './provider-definitions'
 
 export const CLIENT_COOKIE_PREFIX = 'mpart-client-cookie:'
 export const CLIENT_COOKIE_MODE_PREFIX = 'mpart-client-cookie-mode:'
@@ -43,13 +42,23 @@ export async function getClientSessionCookie(provider: ProviderName): Promise<st
   let cookie = ''
   if (mode === 'manual') cookie = getClientCookie(provider)
   else {
-    const api = (globalThis as any).chrome?.cookies
-    if (!TARGET_EXTENSION || !api?.getAll) return ''
-    try {
-      const cookies: { name: string, value: string, path: string }[] = await api.getAll({ url: config.loginUrl })
-      cookie = cookies.filter(item => config.session!.names.includes(item.name)).sort((a, b) => b.path.length - a.path.length).map(item => `${item.name}=${item.value}`).join('; ')
+    if (!TARGET_EXTENSION) return ''
+    const browser = (globalThis as any).chrome
+    const api = browser?.cookies
+    if (!api?.getAll) throw new Error('无法读取网站登录 Cookie，请重新加载扩展并检查权限')
+    let readFailed = false, partialSession = false
+    for (const url of websiteCookieUrls(config)) {
+      try {
+        if (browser.permissions?.contains && !await browser.permissions.contains({ permissions: ['cookies'], origins: [`${new URL(url).origin}/*`] })) { readFailed = true; continue }
+        const cookies: { name: string, value: string, path: string }[] = await api.getAll({ url })
+        const candidate = cookies.filter(item => config.session!.names.includes(item.name)).sort((a, b) => b.path.length - a.path.length).map(item => `${item.name}=${item.value}`).join('; ')
+        if (config.session.required.every(group => group.some(name => !!clientCookieValue(candidate, name)))) { cookie = candidate; break }
+        if ((config.session.loginIndicators ?? config.session.required.flat()).some(name => !!clientCookieValue(candidate, name))) partialSession = true
+      }
+      catch { readFailed = true }
     }
-    catch { throw new Error('无法读取网站登录 Cookie，请检查扩展权限或改用手动 Cookie') }
+    if (!cookie && readFailed) throw new Error('无法完整读取网站登录 Cookie，请重新加载扩展并允许访问音源网站')
+    if (!cookie && partialSession) throw new Error('网站登录 Cookie 不完整，请重新登录音源网站后重试')
   }
   if (mode !== getClientCookieMode(provider) || (mode === 'manual' && selected !== getStoredClientCookie(provider))) throw new Error('音源 Cookie 已更新，请重试当前操作')
   const fields = config.session.names.map(name => [name, clientCookieValue(cookie, name)] as const).filter(([, value]) => value)
@@ -70,8 +79,9 @@ export function watchWebsiteSessionCookies(changed: (provider: ProviderName) => 
   let timer: ReturnType<typeof setTimeout> | undefined
   const listener = ({ cookie }: { cookie: { name: string, domain: string } }) => {
     for (const { name, cookie: config } of getCookieProviders()) {
-      const host = new URL(config.loginUrl).hostname, domain = cookie.domain.replace(/^\./, '')
-      if (getClientCookieMode(name) === 'website' && config.session?.names.includes(cookie.name) && (host === domain || host.endsWith(`.${domain}`))) pending.add(name)
+      const domain = cookie.domain.replace(/^\./, '')
+      const inScope = websiteCookieUrls(config).some(url => { const host = new URL(url).hostname; return host === domain || host.endsWith(`.${domain}`) })
+      if (getClientCookieMode(name) === 'website' && config.session?.names.includes(cookie.name) && inScope) pending.add(name)
     }
     if (!pending.size) return
     clearTimeout(timer)

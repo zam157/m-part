@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { providers } from '../src/utils/providers'
-import { getCookieProviders, providerDefinitions } from '../src/utils/provider-definitions'
+import { getCookieProviders, providerDefinitions, websiteCookiePermissions } from '../src/utils/provider-definitions'
 import { providerCookieFilter, providerRequest } from '../src/utils/provider-request'
 import { clientCookieRule, setClientCookie } from '../src/utils/client-cookies'
 
@@ -11,6 +11,11 @@ it('shares each registered Provider declaration with transport and reserves stab
   for (const { name, cookie } of entries) expect(providers[name].cookie).toBe(cookie)
   expect(new Set(entries.map(entry => entry.cookie.ruleId)).size).toBe(entries.length)
   expect(Object.fromEntries(entries.map(entry => [entry.name, entry.cookie.ruleId]))).toMatchObject({ bili: 11001, netease: 11002, qq: 11003 })
+})
+it('declares Cookie permissions for both login websites and API scopes', () => {
+  const origins = websiteCookiePermissions()
+  expect(origins).toEqual(expect.arrayContaining(['https://www.bilibili.com/*', 'https://api.bilibili.com/*', 'https://music.163.com/*', 'https://y.qq.com/*', 'https://u.y.qq.com/*', 'https://c.y.qq.com/*']))
+  expect(new Set(origins).size).toBe(origins.length)
 })
 
 it.each([

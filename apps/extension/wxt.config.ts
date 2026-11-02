@@ -1,6 +1,7 @@
 import { preparePublicDir } from '@m-part/build-config/assets'
 import { defineConfig } from 'wxt'
 import { resolveAliases, sharedPlugins } from '@m-part/build-config/vite'
+import { websiteCookiePermissions } from '@m-part/music/provider-definitions'
 
 const publicDir = preparePublicDir(import.meta.dirname)
 
@@ -32,6 +33,7 @@ export default defineConfig({
     // 已知还有 Akamai 镜像（*.akamaized.net，主要给海外用户），暂不申请这么宽的
     // 权限；等日志里真出现该域名的 CORS 报错再按需加
     host_permissions: [
+      ...websiteCookiePermissions(),
       'http://127.0.0.1/*',
       'http://localhost/*',
       'https://api.bilibili.com/*',

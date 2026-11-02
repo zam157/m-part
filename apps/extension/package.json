@@ -15,6 +15,7 @@
     "@solidjs/router": "catalog:frontend"
   },
   "devDependencies": {
+    "@m-part/music": "workspace:*",
     "@m-part/build-config": "workspace:*",
     "wxt": "catalog:build",
     "vite": "catalog:build",

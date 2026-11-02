@@ -60,6 +60,40 @@ it('does not replace missing manual login fields with website credentials', asyn
   await expect(getClientSessionCookie('qq')).rejects.toThrow('缺少登录字段')
   expect(getAll).not.toHaveBeenCalled()
 })
+it('reads login Cookies scoped to API paths rather than only the website root', async () => {
+  const getAll = vi.fn(async ({ url }: { url: string }) => new URL(url).pathname.startsWith('/weapi/') ? [{ name: 'MUSIC_U', value: 'api-session', path: '/weapi/' }] : [])
+  vi.stubGlobal('chrome', { cookies: { getAll } })
+  expect(await getClientSessionCookie('netease')).toBe('MUSIC_U=api-session')
+  expect(getAll).toHaveBeenCalledExactlyOnceWith({ url: 'https://music.163.com/weapi/w/nuser/account/get' })
+})
+it('uses a complete website session when the API host has no login Cookies', async () => {
+  vi.stubGlobal('chrome', { cookies: { getAll: vi.fn(async ({ url }: { url: string }) => url === 'https://www.bilibili.com/' ? [{ name: 'SESSDATA', value: 'website-session', path: '/' }] : []) } })
+  expect(await getClientSessionCookie('bili')).toBe('SESSDATA=website-session')
+})
+it('does not mix incomplete accounts from different website and API Cookie scopes', async () => {
+  vi.stubGlobal('chrome', { cookies: { getAll: vi.fn(async ({ url }: { url: string }) => url === 'https://y.qq.com/' ? [{ name: 'uin', value: '111', path: '/' }] : [{ name: 'qqmusic_key', value: 'different-account-key', path: '/' }]) } })
+  await expect(getClientSessionCookie('qq')).rejects.toThrow('网站登录 Cookie 不完整')
+})
+it('reports missing website host permissions instead of silently exporting an anonymous session', async () => {
+  const getAll = vi.fn(async () => [])
+  vi.stubGlobal('chrome', { cookies: { getAll }, permissions: { contains: vi.fn(async () => false) } })
+  await expect(getClientSessionCookie('bili')).rejects.toThrow('允许访问音源网站')
+  expect(getAll).not.toHaveBeenCalled()
+})
+it('reports Cookie API failures without exposing the original error or treating them as logout', async () => {
+  vi.stubGlobal('chrome', { cookies: { getAll: vi.fn(async () => { throw new Error('SESSDATA=private-error') }) } })
+  await expect(getClientSessionCookie('bili')).rejects.toThrow('无法完整读取网站登录 Cookie')
+  vi.stubGlobal('chrome', {})
+  await expect(getClientSessionCookie('bili')).rejects.toThrow('重新加载扩展并检查权限')
+})
+it('exports no login credential only when all permitted scopes genuinely have no login fields', async () => {
+  vi.stubGlobal('chrome', { cookies: { getAll: vi.fn(async () => [{ name: 'buvid3', value: 'anonymous-visitor', path: '/' }]) }, permissions: { contains: vi.fn(async () => true) } })
+  expect(await getClientSessionCookie('bili')).toBe('')
+})
+it('does not treat a QQ visitor UIN without a login key as a broken signed-in account', async () => {
+  vi.stubGlobal('chrome', { cookies: { getAll: vi.fn(async () => [{ name: 'uin', value: '0', path: '/' }]) } })
+  expect(await getClientSessionCookie('qq')).toBe('')
+})
 it('observes only declared session fields in the selected website mode and removes the listener', () => {
   vi.useFakeTimers()
   let listener!: (event: { cookie: { domain: string, name: string } }) => void
@@ -74,6 +108,10 @@ it('observes only declared session fields in the selected website mode and remov
   localStorage.setItem(CLIENT_COOKIE_PREFIX + 'netease', 'MUSIC_U=manual')
   listener({ cookie: { domain: '.music.163.com', name: 'MUSIC_U' } })
   expect(changed).toHaveBeenCalledExactlyOnceWith('netease')
+  listener({ cookie: { domain: 'api.bilibili.com', name: 'SESSDATA' } })
+  vi.advanceTimersByTime(100)
+  expect(changed).toHaveBeenLastCalledWith('bili')
+  expect(changed).toHaveBeenCalledTimes(2)
   stop(); expect(remove).toHaveBeenCalledWith(listener)
   vi.useRealTimers()
 })

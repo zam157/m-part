@@ -397,6 +397,9 @@ importers:
       '@m-part/build-config':
         specifier: workspace:*
         version: link:../../packages/build-config
+      '@m-part/music':
+        specifier: workspace:*
+        version: link:../../packages/music
       '@types/chrome':
         specifier: catalog:dev
         version: 0.3.6

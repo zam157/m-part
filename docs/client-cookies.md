@@ -21,6 +21,10 @@ Cookie 是 `ProviderDefinition.cookie` 的可选能力，完整 `Provider` 继�
 
 `ProviderCookieConfig` 包含 `label`、`placeholder`、`loginUrl`、Web 转发的 `requestOrigin`、稳定且全局唯一的扩展 `ruleId`，以及非空的 `targets`。每个 target 使用固定 HTTPS `origin` 与 `path` 前缀；单一接口加 `exact: true`。请求分类、Web 允许列表和扩展 DNR 正则从同一组 targets 生成，不能分别维护域名正则；不要包含媒体 CDN、图片或任意代理地址。已有 rule ID 11001 / 11002 / 11003 必须保留，升级后才能替换或清除旧会话规则。
 
+托管导出使用 `cookie.session` 的字段允许列表、必需字段组和 `urls`（按优先级排列的会话读取地址，缺省为 `loginUrl`）。可用 `loginIndicators` 区分登录凭据与游客标识（例如 QQ 的 UIN 本身不代表已登录）。网站模式按真实 API 路径及登录页分别读取 Cookie，选择第一套完整会话；不将不同 URL 的不完整账号字段拼接成一个账号。扩展的 `host_permissions` 自动包含这些地址的主机，避免只允许 API 主机却漏掉登录网站；[Chrome Cookie API 要求相应主机权限](https://developer.chrome.com/docs/extensions/reference/api/cookies)。修改地址声明后重新加载扩展以更新权限。
+
+网站模式存在完整登录会话时，创建房间直接绑定该网站会话。读取失败、权限不足或检测到登录凭据但字段不完整时明确报错，不当作匿名状态；只有确认没有登录字段才匿名托管。普通 Web 页面无法读取其他网站 Cookie，仍需使用手动 Cookie 才能托管登录会话。
+
 接入新音源时扩展 `ProviderName`，注册其轻量声明与 Provider 实现，并按需要配置扩展 host permissions；提供 `cookie` 即可自动接入设置表单、存储、规则和 Web 转发，不需要修改这些通用消费方。缺省 `cookie` 则不显示设置，也不接受手动会话。CSRF、token 等平台专有认证字段继续由各自 Provider 的会话代码解析。
 
 轻量声明模块只能包含类型与静态元数据，禁止导入 Provider 实现、fetch、客户端存储或浏览器 API。传输层和 Web 服务都要读取这些声明；导入完整 Provider 会导致 `Provider → fetch → Provider` 循环依赖，也会把浏览器代码带入服务端。

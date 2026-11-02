@@ -13,3 +13,12 @@ export const providerDefinitions: Record<ProviderName, ProviderDefinition> = {
 export function getCookieProviders(): { name: ProviderName, cookie: ProviderCookieConfig }[] {
   return Object.values(providerDefinitions).flatMap(definition => definition.cookie ? [{ name: definition.name, cookie: definition.cookie }] : [])
 }
+
+export function websiteCookieUrls(cookie: ProviderCookieConfig): readonly string[] {
+  return cookie.session?.urls ?? [cookie.loginUrl]
+}
+
+/** Extension Cookie permissions follow Provider declarations, including login and API hosts. */
+export function websiteCookiePermissions(): string[] {
+  return [...new Set(getCookieProviders().filter(item => item.cookie.session).flatMap(item => websiteCookieUrls(item.cookie).map(url => `${new URL(url).origin}/*`)))]
+}
