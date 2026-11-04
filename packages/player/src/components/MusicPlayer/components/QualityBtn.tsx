@@ -15,7 +15,7 @@ export default function QualityBtn(props: QualityBtnProps) {
       value={props.qualities.find(quality => quality.active)?.name}
       onValueChange={name => { const quality = props.qualities.find(item => item.name === name); if (quality && !quality.active) props.onSelect?.(quality) }}
       aria-label="选择音质"
-      triggerClass="ghost-btn size-9 !border-0 !bg-transparent !p-0 !gap-0 text-muted-foreground !shadow-none"
+      triggerClass="ghost-btn !size-9 !border-0 !bg-transparent !p-0 !gap-0 text-muted-foreground !shadow-none"
       renderValue={() => <span class="i-solar:high-quality-outline text-5" />}
       side="top"
       align="end"

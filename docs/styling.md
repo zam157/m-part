@@ -73,7 +73,7 @@ grid-cols-[repeat(auto-fill,minmax(clamp(300px,15vw,360px),1fr))]
 
 ## 尺度
 
-搜索栏是 `w-full max-w-2xl` + `h-10`，左缘与下方结果网格对齐。`btn-group` 里各段都是 `h-full`，改高度只改外层即可。`Select` 触发器文字用 `text-sm`，与输入框同一尺度（曾经是 `text-xs`：12px 的标签配 14px 的输入框，看着别扭）。
+共享 `input` 和通用 `Select` 默认使用 `h-8`（32px），普通表单继承此默认值。聊天 textarea 等明确设置高度的控件继续由调用方覆盖；音质图标按钮保留专用 36px 槽位。搜索组合栏外框也为 32px，内部选择器与输入框填满扣除边框后的内容区，窄屏两行仍共用外框。`Select` 触发器文字用 `text-sm`，与输入框保持同一尺度。
 
 ## 侧栏收放
 

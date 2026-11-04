@@ -63,8 +63,8 @@ export default function SearchPage() {
           handleSearch(1, selectedType())
         }}
       >
-        <div class="min-w-0 h-10 flex flex-1 items-stretch overflow-hidden rounded-lg border border-input transition-[color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 max-[760px]:grid max-[760px]:grid-cols-2 max-[760px]:h-auto max-[760px]:w-full">
-          <div class="flex w-20 shrink-0 border-e border-input max-[760px]:w-auto max-[760px]:h-10">
+        <div class="min-w-0 h-8 flex flex-1 items-stretch overflow-hidden rounded-lg border border-input transition-[color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 max-[760px]:grid max-[760px]:grid-cols-2 max-[760px]:h-auto max-[760px]:w-full">
+          <div class="flex w-20 shrink-0 border-e border-input max-[760px]:w-auto max-[760px]:h-8">
             <Select
               value={selectedSource()}
               onValueChange={setSelectedSource}
@@ -75,7 +75,7 @@ export default function SearchPage() {
               triggerClass={searchSelectClass}
             />
           </div>
-          <div class="flex w-20 shrink-0 border-e border-input max-[760px]:border-e-0 max-[760px]:w-auto max-[760px]:h-10">
+          <div class="flex w-20 shrink-0 border-e border-input max-[760px]:border-e-0 max-[760px]:w-auto max-[760px]:h-8">
             <Select
               value={selectedType()}
               onValueChange={setSelectedType}
@@ -86,7 +86,7 @@ export default function SearchPage() {
               triggerClass={searchSelectClass}
             />
           </div>
-          <div class="min-w-0 flex flex-1 max-[760px]:col-span-full max-[760px]:h-10 max-[760px]:border-t max-[760px]:border-input">
+          <div class="min-w-0 flex flex-1 max-[760px]:col-span-full max-[760px]:h-8 max-[760px]:border-t max-[760px]:border-input">
             <input
               name="search"
               placeholder="搜索歌曲、创作者、歌单…"
@@ -97,7 +97,7 @@ export default function SearchPage() {
             />
           </div>
         </div>
-        <button class="btn h-10 px-4 max-[760px]:w-full" type="submit" disabled={searching()}>
+        <button class="btn h-8 px-4 max-[760px]:w-full" type="submit" disabled={searching()}>
           <Show when={searching()}>
             <div class="i-lucide:loader-circle text-4 animate-spin" />
           </Show>

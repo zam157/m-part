@@ -22,7 +22,7 @@ import Select from '~/components/Select/Select'
 - 传 `value` 时为受控组件，等待调用方更新后才显示新值；异步保存失败时仍保留旧值。省略 `value` 时使用内部状态，可传 `defaultValue`。`onValueChange` 仅在有效值确实变化时触发，重复选择当前项只关闭浮层。
 - `options` 支持普通项 `{ value, label, disabled? }` 和分组 `{ label, options }`，分组自动显示标题与分隔线。label 保持纯文本，用于类型定位与无障碍名称；复杂展示使用 `renderOption`，自定义按钮内容使用 `renderValue`。
 - 泛型值按 `Object.is` 比较；对象值可传 `isValueEqual`。组件缓存选项声明，渲染、选中标记和选项 ID 共用同一份对象，不能分别读取会重新 `.map()` 的 props getter。
-- `disabled` 禁用整体，项的 `disabled` 会被键盘跳过；`invalid` 显示无效状态。`size` 支持 `default` / `sm`。属性包括 `id`、`aria-label`、`aria-labelledby`、`aria-describedby` 与 `dir`。
+- `disabled` 禁用整体，项的 `disabled` 会被键盘跳过；`invalid` 显示无效状态。默认高度为 `h-8`（32px），与共享 `input` 样式一致；`size="sm"` 为 28px。普通表单直接使用默认高度，不再重复覆盖为 36 / 40px。属性包括 `id`、`aria-label`、`aria-labelledby`、`aria-describedby` 与 `dir`。
 
 ## 交互与布局
 
@@ -31,7 +31,7 @@ import Select from '~/components/Select/Select'
 - 默认尝试将选中项与按钮对齐；触摸操作或空间不足时回退到边缘定位。`alignItemWithTrigger={false}` 强制按边缘定位，`side`、`align`、`sideOffset` 控制方向、对齐与间隔，碰撞时翻转并限制在视口内。RTL 的 start / end 随方向反转。
 - 原生 dialog 内会自动把浮层挂在该 dialog 中，也可以显式传 `portalMount`。音质按钮保留原有 36px 槽位，用 `renderValue` 展示图标；它仍是同一个可用键盘操作的 Select。
 - `triggerClass` / `contentClass` 用 `cn/lite` 拼接。覆盖内置同类工具规则时使用明确的 `!`，例如 40px 筛选栏使用 `triggerClass="!h-10"`；不要依赖类名的文本先后顺序，也不要恢复各调用方的定位行内样式。
-- 触发器和下拉浮层默认均不带投影，保留边框与键盘焦点环。
+- 触发器默认不带投影，下拉浮层使用 `shadow-md`，保留边框与键盘焦点环。
 - 搜索栏由外层容器统一提供边框、圆角和 focus-within 焦点环，内部两项 Select 与输入框去掉自身边框和阴影，仅由间隔容器画分隔线；窄屏输入框换到第二行，但仍共用同一个外框。不能依赖旧 btn-group 的 shortcut 层规则覆盖 Select 的默认工具类。
 
 ## 表单与跨入口复用

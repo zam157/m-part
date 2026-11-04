@@ -29,8 +29,8 @@ export default function PlaylistsPage() {
       <Show when={playlistView() === 'local'}><LocalPlaylists /></Show>
       <Show when={playlistView() === 'platform'}>
         <div class="flex items-center gap-3 mb-6">
-          <Select value={playlistSource()} options={platformOptions} onValueChange={setPlaylistSource} aria-label="歌单音源" triggerClass="w-30 !h-10" />
-          <button class="border-btn px-3 h-10" disabled={library().loading} onClick={() => loadPlaylists(playlistSource(), { refresh: true })}>刷新歌单</button>
+          <Select value={playlistSource()} options={platformOptions} onValueChange={setPlaylistSource} aria-label="歌单音源" triggerClass="w-30" />
+          <button class="border-btn px-3 h-8" disabled={library().loading} onClick={() => loadPlaylists(playlistSource(), { refresh: true })}>刷新歌单</button>
           <Show when={library().user}><span class="text-sm text-muted-foreground truncate">{library().user?.name}</span></Show>
         </div>
         <Switch>

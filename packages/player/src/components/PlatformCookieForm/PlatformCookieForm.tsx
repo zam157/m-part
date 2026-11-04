@@ -37,11 +37,11 @@ export default function PlatformCookieForm(props: { source: ProviderName, config
         <a class="ghost-btn px-2 shrink-0" href={props.config.loginUrl} target="_blank" rel="noopener noreferrer">打开网站<span class="i-lucide:external-link text-4" /></a>
       </header>
       <label class="block text-sm space-y-2"><span>Cookie 来源</span>
-        <Select options={cookieModes} aria-label={`${props.config.label} Cookie 来源`} value={mode()} disabled={busy()} triggerClass="w-full !h-10" onValueChange={next => { void selectMode(next) }} />
+        <Select options={cookieModes} aria-label={`${props.config.label} Cookie 来源`} value={mode()} disabled={busy()} triggerClass="w-full" onValueChange={next => { void selectMode(next) }} />
       </label>
       <Show when={mode() === 'manual' && !configured()}><p class="text-sm text-muted-foreground">请先填写并保存手动 Cookie。</p></Show>
       <label class="block text-sm space-y-2"><span>{props.config.label} Cookie</span>
-        <input type="password" class="input h-10" autocomplete="off" spellcheck={false} aria-label={`${props.config.label} Cookie`} placeholder={configured() ? '已设置，填写新 Cookie 可替换' : props.config.placeholder} value={value()} disabled={busy()} onInput={event => { setValue(event.currentTarget.value); setMessage(''); setError('') }} />
+        <input type="password" class="input" autocomplete="off" spellcheck={false} aria-label={`${props.config.label} Cookie`} placeholder={configured() ? '已设置，填写新 Cookie 可替换' : props.config.placeholder} value={value()} disabled={busy()} onInput={event => { setValue(event.currentTarget.value); setMessage(''); setError('') }} />
       </label>
       <div class="flex items-center gap-3 flex-wrap">
         <button type="submit" class="btn h-9 px-3" disabled={busy() || !value().trim()}>{busy() ? '正在保存…' : configured() ? '更新 Cookie' : '保存 Cookie'}</button>

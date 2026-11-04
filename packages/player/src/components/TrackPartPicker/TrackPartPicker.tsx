@@ -41,9 +41,9 @@ export default function TrackPartPicker() {
       <Show when={trackParts()?.loading}><p class="p-8 text-sm text-muted-foreground" role="status">正在读取{label()}…</p></Show>
       <Show when={!trackParts()?.loading && !trackParts()?.error}>
         <div class="p-4 flex gap-2 items-center shrink-0 flex-wrap">
-          <input class="input h-9 flex-1 min-w-24" aria-label={`搜索${label()}`} placeholder={`搜索${label()}标题或序号`} value={query()} onInput={event => setQuery(event.currentTarget.value)} />
-          <button class="ghost-btn h-9 px-2" disabled={disabled()} onClick={() => setSelected(new Set(trackParts()?.tracks.map(track => track.id)))}>全选</button>
-          <button class="ghost-btn h-9 px-2" disabled={disabled()} onClick={() => setSelected(new Set())}>清空</button>
+          <input class="input flex-1 min-w-24" aria-label={`搜索${label()}`} placeholder={`搜索${label()}标题或序号`} value={query()} onInput={event => setQuery(event.currentTarget.value)} />
+          <button class="ghost-btn px-2" disabled={disabled()} onClick={() => setSelected(new Set(trackParts()?.tracks.map(track => track.id)))}>全选</button>
+          <button class="ghost-btn px-2" disabled={disabled()} onClick={() => setSelected(new Set())}>清空</button>
         </div>
         <div class="min-h-0 overflow-y-auto overscroll-contain px-4 space-y-1" aria-label={`${label()}列表`}>
           <For each={filtered()}>{track => (
