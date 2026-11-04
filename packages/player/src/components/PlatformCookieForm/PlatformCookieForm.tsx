@@ -36,11 +36,13 @@ export default function PlatformCookieForm(props: { source: ProviderName, config
         <div><h2 class="text-base font-semibold">{props.config.label}</h2><p class="text-sm text-muted-foreground mt-1">{configured() ? '已保存手动 Cookie' : '尚未保存手动 Cookie'}</p></div>
         <a class="ghost-btn px-2 shrink-0" href={props.config.loginUrl} target="_blank" rel="noopener noreferrer">打开网站<span class="i-lucide:external-link text-4" /></a>
       </header>
-      <label class="block text-sm space-y-2"><span>Cookie 来源</span>
-        <Select options={cookieModes} aria-label={`${props.config.label} Cookie 来源`} value={mode()} disabled={busy()} triggerClass="w-full" onValueChange={next => { void selectMode(next) }} />
-      </label>
-      <Show when={mode() === 'manual' && !configured()}><p class="text-sm text-muted-foreground">请先填写并保存手动 Cookie。</p></Show>
-      <label class="block text-sm space-y-2"><span>{props.config.label} Cookie</span>
+      <div class="grid gap-3">
+        <label class="grid gap-3 text-sm"><span>Cookie 来源</span>
+          <Select options={cookieModes} aria-label={`${props.config.label} Cookie 来源`} value={mode()} disabled={busy()} triggerClass="w-full" onValueChange={next => { void selectMode(next) }} />
+        </label>
+        <Show when={mode() === 'manual' && !configured()}><p class="text-sm text-muted-foreground">请先填写并保存手动 Cookie。</p></Show>
+      </div>
+      <label class="grid gap-3 text-sm"><span>{props.config.label} Cookie</span>
         <input type="password" class="input" autocomplete="off" spellcheck={false} aria-label={`${props.config.label} Cookie`} placeholder={configured() ? '已设置，填写新 Cookie 可替换' : props.config.placeholder} value={value()} disabled={busy()} onInput={event => { setValue(event.currentTarget.value); setMessage(''); setError('') }} />
       </label>
       <div class="flex items-center gap-3 flex-wrap">

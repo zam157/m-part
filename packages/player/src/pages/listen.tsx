@@ -28,12 +28,14 @@ export default function ListenPage() {
         <header><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm mt-2">在同一个房间听同一首歌。房主与管理员控制播放和队列，各平台默认服务器托管，也可切换各自取源。</p></header>
         <Show when={roomPlayerActive()} fallback={(
           <section class="rounded-2xl border border-border p-5 space-y-5">
-            <label class="block text-sm">房间服务器
-              <input class="input mt-2" type="url" value={roomServer()} onInput={e => setRoomServer(e.currentTarget.value)} placeholder="https://rooms.example.com" autocomplete="url" />
-            </label>
-            <p class="text-xs text-muted-foreground">所有人填写同一个已启动的房间服务器地址，支持 HTTP 和 HTTPS。局域网可用 HTTP，公网建议使用 HTTPS。</p>
-            <label class="block text-sm">房间内的称呼
-              <input class="input mt-2" maxlength="80" value={name()} onInput={e => setName(e.currentTarget.value)} autocomplete="nickname" />
+            <div class="grid gap-3">
+              <label class="grid gap-3 text-sm"><span>房间服务器</span>
+                <input class="input" type="url" value={roomServer()} onInput={e => setRoomServer(e.currentTarget.value)} placeholder="https://rooms.example.com" autocomplete="url" />
+              </label>
+              <p class="text-xs text-muted-foreground">所有人填写同一个已启动的房间服务器地址，支持 HTTP 和 HTTPS。局域网可用 HTTP，公网建议使用 HTTPS。</p>
+            </div>
+            <label class="grid gap-3 text-sm"><span>房间内的称呼</span>
+              <input class="input" maxlength="80" value={name()} onInput={e => setName(e.currentTarget.value)} autocomplete="nickname" />
             </label>
             <div class="grid grid-cols-2 gap-5 max-[600px]:grid-cols-1">
               <div class="space-y-3 rounded-xl bg-muted/50 p-4">
@@ -44,7 +46,7 @@ export default function ListenPage() {
               </div>
               <form class="space-y-3 rounded-xl bg-muted/50 p-4" onSubmit={e => { e.preventDefault(); saveName(); void joinListenRoom(roomServer(), name(), code()) }}>
                 <h2 class="font-semibold">加入朋友的房间</h2>
-                <label class="block text-sm">房间码<input class="input mt-2 font-mono uppercase" maxlength="8" value={code()} onInput={e => setCode(e.currentTarget.value)} placeholder="8 位房间码" autocomplete="off" /></label>
+                <label class="grid gap-3 text-sm"><span>房间码</span><input class="input font-mono uppercase" maxlength="8" value={code()} onInput={e => setCode(e.currentTarget.value)} placeholder="8 位房间码" autocomplete="off" /></label>
                 <button class="btn px-4 py-2" type="submit" disabled={joiningRoom()}>加入并准备播放</button>
               </form>
             </div>

@@ -53,7 +53,7 @@ export default function ListenRoomHistory() {
         </Show>
       </div>
       <form class="flex gap-2 items-end" onSubmit={event => { event.preventDefault(); void send() }}>
-        <label class="flex flex-col gap-1 flex-1 min-w-0 text-xs text-muted-foreground">
+        <label class="flex flex-col gap-3 flex-1 min-w-0 text-xs text-muted-foreground">
           <span>发送消息（{draft().length}/500）</span>
           <textarea class="input block w-full resize-none h-20 text-sm" aria-label="聊天消息" title="Enter 发送，Shift + Enter 换行" value={draft()} onInput={event => setDraft(event.currentTarget.value)} onKeyDown={handleKeyDown} maxlength="500" placeholder="和房间里的朋友聊聊…" />
         </label>

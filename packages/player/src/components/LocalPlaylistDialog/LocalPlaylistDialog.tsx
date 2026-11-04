@@ -87,8 +87,8 @@ export default function LocalPlaylistDialog() {
       </Show>
       <form class="space-y-3" onSubmit={event => { event.preventDefault(); void save() }}>
         <Show when={!deleting()} fallback={<p class="text-sm break-words">确定删除「{playlistTitle()}」？歌单中的歌曲记录也会被移除，此操作无法撤销。</p>}>
-          <label class="block text-sm">{adding() ? '新建歌单' : '歌单名称'}
-            <input class="input w-full mt-2" aria-label="本地歌单名称" value={title()} onInput={event => setTitle(event.currentTarget.value)} placeholder="输入歌单名称" maxlength="80" disabled={busy()} />
+          <label class="grid gap-3 text-sm"><span>{adding() ? '新建歌单' : '歌单名称'}</span>
+            <input class="input w-full" aria-label="本地歌单名称" value={title()} onInput={event => setTitle(event.currentTarget.value)} placeholder="输入歌单名称" maxlength="80" disabled={busy()} />
           </label>
         </Show>
         <div class="flex justify-end gap-2 flex-wrap">

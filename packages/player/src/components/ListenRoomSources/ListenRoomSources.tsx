@@ -58,7 +58,7 @@ export default function ListenRoomSources() {
                 <h2 id="room-source-settings-title" class="text-lg font-semibold">{selected().name}取源设置</h2>
                 <button class="ghost-btn h-8 px-2" aria-label="关闭取源设置" onClick={() => dialog.close()}>关闭</button>
               </div>
-              <div class="space-y-2">
+              <div class="grid gap-3">
                 <p class="font-medium">取源方式</p>
                 <div class="flex gap-2 flex-wrap" role="group" aria-label={`${selected().name}取源方式`}>
                   <button class={clsx('border-btn h-8 px-3', source()?.modes?.[platform()] !== 'hosted' && 'bg-muted')} aria-pressed={source()?.modes?.[platform()] !== 'hosted' ? 'true' : 'false'} disabled={disabled() || source()?.modes?.[platform()] !== 'hosted'} onClick={() => void manageRoomSource('source', 'independent', platform())}>各自取源</button>
@@ -75,10 +75,12 @@ export default function ListenRoomSources() {
                 </div>
               </div>
               <form class="space-y-3" onSubmit={event => { event.preventDefault(); void bind() }}>
-                <label class="block text-sm">房间专用 Cookie
-                  <input type="password" class="input mt-2 w-full" aria-label={`${selected().name}房间专用 Cookie`} value={cookie()} onInput={event => setCookie(event.currentTarget.value)} maxlength="4096" autocomplete="off" spellcheck={false} placeholder={selected().placeholder} disabled={disabled()} />
-                </label>
-                <p class="text-xs text-muted-foreground">仅提交至当前房间服务器并在内存保留，不保存到本机音源设置；绑定后此平台自动使用服务器取源。</p>
+                <div class="grid gap-3">
+                  <label class="grid gap-3 text-sm"><span>房间专用 Cookie</span>
+                    <input type="password" class="input w-full" aria-label={`${selected().name}房间专用 Cookie`} value={cookie()} onInput={event => setCookie(event.currentTarget.value)} maxlength="4096" autocomplete="off" spellcheck={false} placeholder={selected().placeholder} disabled={disabled()} />
+                  </label>
+                  <p class="text-xs text-muted-foreground">仅提交至当前房间服务器并在内存保留，不保存到本机音源设置；绑定后此平台自动使用服务器取源。</p>
+                </div>
                 <div class="flex gap-2 flex-wrap">
                   <button type="submit" class="btn px-3 h-8" disabled={disabled() || !cookie().trim()}>绑定房间账号</button>
                   <Show when={source()?.accounts?.[platform()]?.credential && source()?.accounts?.[platform()]?.credential !== 'none'}><button type="button" class="border-btn h-8 px-3" disabled={disabled()} onClick={() => void manageRoomSource('revoke', undefined, platform())}>撤销房间账号</button></Show>

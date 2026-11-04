@@ -75,6 +75,8 @@ grid-cols-[repeat(auto-fill,minmax(clamp(300px,15vw,360px),1fr))]
 
 共享 `input` 和通用 `Select` 默认使用 `h-8`（32px），普通表单继承此默认值。聊天 textarea 等明确设置高度的控件继续由调用方覆盖；音质图标按钮保留专用 36px 槽位。搜索组合栏外框也为 32px，内部选择器与输入框填满扣除边框后的内容区，窄屏两行仍共用外框。`Select` 触发器文字用 `text-sm`，与输入框保持同一尺度。
 
+单个表单项内部的标签、输入框 / 选择器和底部说明之间统一使用 `gap-3`（12px）。用 `grid gap-3` 或 `flex flex-col gap-3` 组织子项，移除控件上重复的 `mt-1` / `mt-2`；说明文字放入同一表单项容器。此约定只针对表单项内部，不改变表单项之间、操作按钮之间或搜索组合栏内部的布局。
+
 ## 侧栏收放
 
 侧栏宽度和内边距使用 200ms 过渡，`sidebar-item` 的宽度、横向 margin 同步过渡，始终保持从左排列，避免切换 `justify-center` / `mx-auto` 时图标跳位。`sidebar-label` 保留布局、禁止收缩和换行，通过透明度与 4px 位移过渡：收起用 100ms 淡出，展开延迟 60ms 后淡入。Logo、导航、队列数量和底部文案共用此规则；不要恢复 `display:none` / `hidden`，否则文字会在宽度动画开始时突然消失。按钮裁切溢出内容，所有过渡响应 `prefers-reduced-motion`。
