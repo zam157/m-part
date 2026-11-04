@@ -1,6 +1,9 @@
 import { LISTEN_PROTOCOL } from '@m-part/listen-core/protocol'
 import { roomPosition } from '@m-part/listen-core/clock'
 import { ListenLabSession } from './session'
+import { createComponent, render as renderComponent } from '@solidjs/web'
+import Select from '@m-part/player/select'
+import 'uno.css'
 import './style.css'
 
 function element<T extends HTMLElement>(id: string) { return document.getElementById(id)! as T }
@@ -37,7 +40,12 @@ button('away').onclick = () => session!.pauseLocal()
 button('resume').onclick = () => session!.resumeLocal()
 input('volume').oninput = () => { session!.audio.volume = Number(input('volume').value) }
 input('threshold').onchange = () => { session!.threshold = Math.max(0.1, Math.min(2, Number(input('threshold').value) || 0.3)) }
-element<HTMLSelectElement>('strategy').onchange = event => session!.setStrategy((event.currentTarget as HTMLSelectElement).value === 'rate' ? 'rate' : 'seek')
+renderComponent(() => createComponent(Select<'seek' | 'rate'>, {
+  options: [{ value: 'seek', label: '阈值 seek（默认）' }, { value: 'rate', label: '有限倍速微调（实验）' }],
+  defaultValue: 'seek',
+  'aria-labelledby': 'strategy-label',
+  onValueChange: value => session!.setStrategy(value),
+}), element('strategy'))
 button('buffer').onclick = () => session!.buffer(true)
 button('unbuffer').onclick = () => session!.buffer(false)
 button('blocked').onclick = () => { session!.simulateBlocked = true; text('error', '已设置：下次启动模拟受阻') }

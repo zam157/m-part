@@ -32,6 +32,7 @@
 | 要改的东西 | 去哪儿 |
 | --- | --- |
 | 组件 | `packages/player/src/components/<Name>/<Name>.tsx`（一个目录一个组件，样式放同目录 `.css`） |
+| 单选下拉 | `components/Select/Select.tsx`；搜索 / 歌单 / Cookie 来源 / 音质 / 同步实验共用，禁止业务页面自行写选择浮层；跨包用 `@m-part/player/select` → [Select 说明](./docs/select.md) |
 | 页面 | `packages/player/src/pages/`（文件即路由） |
 | 跨路由保留的状态 | `packages/player/src/composables/*.ts` 的**模块级信号** |
 | 本地歌单 | `composables/local-playlists.ts`、`utils/local-playlist-storage.ts`、`LocalPlaylists/`、`LocalPlaylistDialog/` 与 `/local-playlist/:id`；仅保存曲目资料，IndexedDB 事务成功后再更新状态 → [歌单说明](./docs/playlists.md#本地歌单) |

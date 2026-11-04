@@ -1,13 +1,16 @@
 import { createComponent, render } from '@solidjs/web'
 import { createSignal, flush } from 'solid-js'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { mockPopover } from '../helpers/popover'
 const { save, selectMode } = vi.hoisted(() => ({ save: vi.fn(), selectMode: vi.fn() }))
 const [mode, setMode] = createSignal<'manual' | 'website'>('manual')
 vi.mock('~/composables/client-cookies', () => ({ clientCookieStatus: () => ({ configured: { bili: true }, modes: { bili: mode() } }), saveClientCookie: save, selectClientCookieMode: selectMode }))
 import { biliDefinition } from '@m-part/music/providers/bilibili-definition'
 import PlatformCookieForm from '~/components/PlatformCookieForm/PlatformCookieForm'
 let dispose: () => void
-afterEach(() => { dispose?.(); document.body.replaceChildren(); save.mockReset(); selectMode.mockReset(); setMode('manual'); flush() })
+let restorePopover: () => void
+beforeEach(() => { restorePopover = mockPopover() })
+afterEach(() => { dispose?.(); restorePopover(); document.body.replaceChildren(); save.mockReset(); selectMode.mockReset(); setMode('manual'); flush() })
 function mount() { dispose = render(() => createComponent(PlatformCookieForm, { source: 'bili', config: biliDefinition.cookie }), document.body); flush() }
 const button = (text: string) => [...document.querySelectorAll('button')].find(b=>b.textContent === text)!
 it('never pre-fills the stored cookie, prevents duplicate saves, and clears the input after success', async () => {
@@ -41,21 +44,23 @@ it('switches the source independently without clearing saved Cookies or the unsa
   mount()
   const input = document.querySelector('input')!
   input.value = 'SESSDATA=draft'; input.dispatchEvent(new Event('input', { bubbles: true })); flush()
-  const select = document.querySelector('select')!
-  expect([...select.options].map(option => option.text)).toEqual(['手动 Cookie', '网站 Cookie'])
-  select.value = 'website'; select.dispatchEvent(new Event('change', { bubbles: true }))
+  const select = document.querySelector<HTMLButtonElement>('[role="combobox"]')!
+  expect([...document.querySelectorAll('[role="option"]')].map(option => option.textContent)).toEqual(['手动 Cookie', '网站 Cookie'])
+  select.click(); flush()
+  ;(document.querySelectorAll('[role="option"]')[1] as HTMLElement).click()
   await Promise.resolve(); await Promise.resolve(); flush()
   expect(selectMode).toHaveBeenCalledExactlyOnceWith('bili', 'website')
-  expect(select.value).toBe('website')
+  expect(select.textContent).toContain('网站 Cookie')
   expect(input.value).toBe('SESSDATA=draft')
   expect(save).not.toHaveBeenCalled()
 })
 it('keeps the previous selection when switching source fails', async () => {
   selectMode.mockRejectedValueOnce(new Error('切换失败'))
   mount()
-  const select = document.querySelector('select')!
-  select.value = 'website'; select.dispatchEvent(new Event('change', { bubbles: true }))
+  const select = document.querySelector<HTMLButtonElement>('[role="combobox"]')!
+  select.click(); flush()
+  ;(document.querySelectorAll('[role="option"]')[1] as HTMLElement).click()
   await Promise.resolve(); await Promise.resolve(); flush()
-  expect(select.value).toBe('manual')
+  expect(select.textContent).toContain('手动 Cookie')
   expect(document.querySelector('[role="alert"]')?.textContent).toBe('切换失败')
 })

@@ -346,6 +346,15 @@ importers:
         specifier: catalog:shared
         version: 1.5.0(typescript@7.0.2)
     devDependencies:
+      '@m-part/build-config':
+        specifier: workspace:*
+        version: link:../../packages/build-config
+      '@m-part/player':
+        specifier: workspace:*
+        version: link:../../packages/player
+      '@solidjs/web':
+        specifier: catalog:frontend
+        version: 2.0.0-rc.16(solid-js@2.0.0-rc.16)
       '@types/node':
         specifier: catalog:dev
         version: 26.6.5

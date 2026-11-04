@@ -8,7 +8,8 @@
     "test": "vitest run"
   },
   "exports": {
-    "./main": "./src/main.tsx"
+    "./main": "./src/main.tsx",
+    "./select": "./src/components/Select/Select.tsx"
   },
   "dependencies": {
     "@m-part/music": "workspace:*",

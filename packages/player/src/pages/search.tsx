@@ -29,6 +29,8 @@ import {
   sourceOptions,
 } from '~/composables/search'
 
+const searchSelectClass = 'w-full !h-full !rounded-none !border-0 !shadow-none !bg-transparent !gap-1.5 !ps-2.5 !pe-1 focus-visible:!ring-0'
+
 export default function SearchPage() {
   const navigate = useNavigate()
 
@@ -52,7 +54,7 @@ export default function SearchPage() {
       <header class="pb-6"><h1 class="page-title">搜索</h1><p class="page-description">搜索歌曲、创作者、专辑和公开歌单</p></header>
       {/*
         搜索栏与结果网格左缘对齐，最大宽度 800px。
-        窄屏将筛选与输入框排为网格；! 覆盖 btn-group 的相邻按钮拼接规则。
+        外层统一边框与焦点环，内部仅保留分隔线；窄屏输入框换到下一行。
       */}
       <form
         class="w-full max-w-200 mb-6 p-0 grow-0 shrink-0 flex gap-2 max-[760px]:flex-wrap"
@@ -61,31 +63,39 @@ export default function SearchPage() {
           handleSearch(1, selectedType())
         }}
       >
-        <div class="btn-group h-10 flex-1 max-[760px]:grid max-[760px]:grid-cols-2 max-[760px]:h-auto max-[760px]:w-full max-[760px]:gap-2">
-          <Select
-            value={selectedSource()}
-            onValueChange={setSelectedSource}
-            placeholder="音源"
-            options={sourceOptions}
-            contentStyle="justify-self:auto;right:anchor(right);left:auto;"
-            triggerClass="w-20 max-[760px]:h-10 max-[760px]:w-full max-[760px]:!rounded-[8px] max-[760px]:!border-s-1 max-[760px]:border-input"
-          />
-          <Select
-            value={selectedType()}
-            onValueChange={setSelectedType}
-            placeholder="类型"
-            options={availableTypeOptions()}
-            contentStyle="justify-self:auto;left:anchor(left);"
-            triggerClass="w-20 max-[760px]:h-10 max-[760px]:w-full max-[760px]:!rounded-[8px] max-[760px]:!border-s-1 max-[760px]:border-input"
-          />
-          <input
-            name="search"
-            placeholder="搜索歌曲、创作者、歌单…"
-            aria-label="搜索关键词"
-            class="h-full input max-[760px]:col-span-full max-[760px]:h-10 max-[760px]:!rounded-[8px] max-[760px]:!border-s-1"
-            value={keyword()}
-            onInput={event => setKeyword(event.currentTarget.value)}
-          />
+        <div class="min-w-0 h-10 flex flex-1 items-stretch overflow-hidden rounded-lg border border-input transition-[color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 max-[760px]:grid max-[760px]:grid-cols-2 max-[760px]:h-auto max-[760px]:w-full">
+          <div class="flex w-20 shrink-0 border-e border-input max-[760px]:w-auto max-[760px]:h-10">
+            <Select
+              value={selectedSource()}
+              onValueChange={setSelectedSource}
+              placeholder="音源"
+              aria-label="搜索音源"
+              options={sourceOptions}
+              alignItemWithTrigger={false}
+              triggerClass={searchSelectClass}
+            />
+          </div>
+          <div class="flex w-20 shrink-0 border-e border-input max-[760px]:border-e-0 max-[760px]:w-auto max-[760px]:h-10">
+            <Select
+              value={selectedType()}
+              onValueChange={setSelectedType}
+              placeholder="类型"
+              aria-label="搜索类型"
+              options={availableTypeOptions()}
+              alignItemWithTrigger={false}
+              triggerClass={searchSelectClass}
+            />
+          </div>
+          <div class="min-w-0 flex flex-1 max-[760px]:col-span-full max-[760px]:h-10 max-[760px]:border-t max-[760px]:border-input">
+            <input
+              name="search"
+              placeholder="搜索歌曲、创作者、歌单…"
+              aria-label="搜索关键词"
+              class="h-full input !rounded-none !border-0 !bg-transparent focus-visible:!ring-0"
+              value={keyword()}
+              onInput={event => setKeyword(event.currentTarget.value)}
+            />
+          </div>
         </div>
         <button class="btn h-10 px-4 max-[760px]:w-full" type="submit" disabled={searching()}>
           <Show when={searching()}>

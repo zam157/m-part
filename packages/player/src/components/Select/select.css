@@ -1,0 +1,15 @@
+@layer components {
+  .select-content {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    transition-property: display, opacity, overlay;
+    transition-duration: 150ms;
+    transition-behavior: allow-discrete;
+    opacity: 0;
+    &:popover-open {
+      opacity: 1;
+      @starting-style { opacity: 0; }
+    }
+  }
+}

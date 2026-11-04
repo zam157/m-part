@@ -10,7 +10,9 @@
       "DOM",
       "DOM.Iterable"
     ],
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "jsx": "preserve",
+    "jsxImportSource": "@solidjs/web"
   },
   "include": [
     "**/*.ts"

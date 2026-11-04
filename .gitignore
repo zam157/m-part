@@ -21,5 +21,7 @@ apps/extension/.keys/
 # Workspace-generated assets and lab outputs
 apps/*/public/scripts/color-mode-bootstrap.js
 apps/*/public/assets/fonts/
+apps/rooms/lab/public/scripts/color-mode-bootstrap.js
+apps/rooms/lab/public/assets/fonts/
 dist-lab
 dist-lab-client

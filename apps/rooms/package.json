@@ -21,6 +21,9 @@
     "@m-part/music": "workspace:*"
   },
   "devDependencies": {
+    "@m-part/player": "workspace:*",
+    "@m-part/build-config": "workspace:*",
+    "@solidjs/web": "catalog:frontend",
     "typescript": "catalog:dev",
     "vitest": "catalog:dev",
     "@types/node": "catalog:dev",

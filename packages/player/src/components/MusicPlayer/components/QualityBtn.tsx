@@ -1,8 +1,5 @@
 import type { MusicQuality } from '@m-part/music/types/music-info'
-import { clsx } from 'cn/lite'
-import { For } from 'solid-js'
-import Popover from '~/components/Popover/Popover'
-import type { PopoverApi } from '~/components/Popover/Popover'
+import Select from '~/components/Select/Select'
 
 export interface QualityBtnProps {
   portalMount?: HTMLElement
@@ -11,37 +8,19 @@ export interface QualityBtnProps {
 }
 
 export default function QualityBtn(props: QualityBtnProps) {
-  let popover: PopoverApi | undefined
   return (
-    <Popover
-      ref={api => (popover = api)}
+    <Select
       portalMount={props.portalMount}
-      triggerAttrs={{ class: 'ghost-btn size-9 text-muted-foreground', 'aria-label': '选择音质' }}
-      trigger={<span class="i-solar:high-quality-outline text-5" />}
-      contentAttrs={{ class: 'z-10 max-w-30 w-max max-h-80 overflow-y-auto p-1 mb-4' }}
-      content={(
-        <div class="flex flex-col gap-0.5 w-full">
-          <For each={props.qualities}>
-            {quality => (
-              <button
-                type="button"
-                aria-pressed={quality.active ? 'true' : 'false'}
-                class={clsx(
-                  'ghost-btn flex px-2.5 py-1 text-3.5 w-full truncate',
-                  quality.active && 'bg-accent fw-medium text-accent-foreground',
-                )}
-                onClick={() => {
-                  if (!quality.active)
-                    props.onSelect?.(quality)
-                  popover?.hide()
-                }}
-              >
-                {quality.name}
-              </button>
-            )}
-          </For>
-        </div>
-      )}
+      options={props.qualities.map(quality => ({ value: quality.name, label: quality.name }))}
+      value={props.qualities.find(quality => quality.active)?.name}
+      onValueChange={name => { const quality = props.qualities.find(item => item.name === name); if (quality && !quality.active) props.onSelect?.(quality) }}
+      aria-label="选择音质"
+      triggerClass="ghost-btn size-9 !border-0 !bg-transparent !p-0 !gap-0 text-muted-foreground !shadow-none"
+      renderValue={() => <span class="i-solar:high-quality-outline text-5" />}
+      side="top"
+      align="end"
+      sideOffset={8}
+      alignItemWithTrigger={false}
     />
   )
 }

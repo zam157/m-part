@@ -3,6 +3,9 @@ import { createSignal, Show } from 'solid-js'
 import type { ClientCookieMode } from '@m-part/music/client-cookies'
 import { clientCookieStatus, saveClientCookie, selectClientCookieMode } from '~/composables/client-cookies'
 import { errorMessage } from '~/utils/index'
+import Select from '~/components/Select/Select'
+
+const cookieModes = [{ value: 'manual', label: '手动 Cookie' }, { value: 'website', label: '网站 Cookie' }] as const
 
 export default function PlatformCookieForm(props: { source: ProviderName, config: ProviderCookieConfig }) {
   const [value, setValue] = createSignal('')
@@ -34,10 +37,7 @@ export default function PlatformCookieForm(props: { source: ProviderName, config
         <a class="ghost-btn px-2 shrink-0" href={props.config.loginUrl} target="_blank" rel="noopener noreferrer">打开网站<span class="i-lucide:external-link text-4" /></a>
       </header>
       <label class="block text-sm space-y-2"><span>Cookie 来源</span>
-        <select class="input h-10" aria-label={`${props.config.label} Cookie 来源`} value={mode()} disabled={busy()} onChange={event => { const next = event.currentTarget.value as ClientCookieMode; event.currentTarget.value = mode(); void selectMode(next) }}>
-          <option value="manual">手动 Cookie</option>
-          <option value="website">网站 Cookie</option>
-        </select>
+        <Select options={cookieModes} aria-label={`${props.config.label} Cookie 来源`} value={mode()} disabled={busy()} triggerClass="w-full !h-10" onValueChange={next => { void selectMode(next) }} />
       </label>
       <Show when={mode() === 'manual' && !configured()}><p class="text-sm text-muted-foreground">请先填写并保存手动 Cookie。</p></Show>
       <label class="block text-sm space-y-2"><span>{props.config.label} Cookie</span>
