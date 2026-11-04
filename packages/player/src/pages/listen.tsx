@@ -42,12 +42,12 @@ export default function ListenPage() {
                 <h2 class="font-semibold">创建房间</h2>
                 <p class="text-xs text-muted-foreground">创建后将把房主音源设置中当前应用的登录 Cookie 提交到所填服务器；仅保留在服务器内存。未登录时匿名取源，Web 网站 Cookie 不可读取时也使用匿名取源。</p>
                 <p class="text-sm text-muted-foreground">带上当前队列的 {playQueue().length} 首歌；队列为空时，创建后再去搜索添加。</p>
-                <button class="btn px-4 py-2" disabled={joiningRoom()} onClick={() => { saveName(); void createListenRoom(roomServer(), name()) }}>用当前队列创建</button>
+                <button class="btn px-4 py-2" disabled={joiningRoom()} onClick={() => { saveName(); void createListenRoom(roomServer(), name()) }}>创建</button>
               </div>
               <form class="space-y-3 rounded-xl bg-muted/50 p-4" onSubmit={e => { e.preventDefault(); saveName(); void joinListenRoom(roomServer(), name(), code()) }}>
                 <h2 class="font-semibold">加入朋友的房间</h2>
                 <label class="grid gap-3 text-sm"><span>房间码</span><input class="input font-mono uppercase" maxlength="8" value={code()} onInput={e => setCode(e.currentTarget.value)} placeholder="8 位房间码" autocomplete="off" /></label>
-                <button class="btn px-4 py-2" type="submit" disabled={joiningRoom()}>加入并准备播放</button>
+                <button class="btn px-4 py-2" type="submit" disabled={joiningRoom()}>加入</button>
               </form>
             </div>
           </section>

@@ -46,8 +46,8 @@ export default function PlatformCookieForm(props: { source: ProviderName, config
         <input type="password" class="input" autocomplete="off" spellcheck={false} aria-label={`${props.config.label} Cookie`} placeholder={configured() ? '已设置，填写新 Cookie 可替换' : props.config.placeholder} value={value()} disabled={busy()} onInput={event => { setValue(event.currentTarget.value); setMessage(''); setError('') }} />
       </label>
       <div class="flex items-center gap-3 flex-wrap">
-        <button type="submit" class="btn h-9 px-3" disabled={busy() || !value().trim()}>{busy() ? '正在保存…' : configured() ? '更新 Cookie' : '保存 Cookie'}</button>
-        <button type="button" class="border-btn h-9 px-3" disabled={busy() || !configured()} onClick={() => void clear()}>清除 Cookie</button>
+        <button type="submit" class="btn h-9 px-3" disabled={busy() || !value().trim()}>{busy() ? '保存中…' : '保存'}</button>
+        <button type="button" class="border-btn h-9 px-3" disabled={busy() || !configured()} onClick={() => void clear()}>清除</button>
       </div>
       <Show when={error()}><p class="text-sm text-destructive break-words" role="alert">{error()}</p></Show>
       <Show when={message()}><p class="text-sm text-muted-foreground" role="status">{message()}</p></Show>
