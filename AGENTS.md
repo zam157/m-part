@@ -134,6 +134,8 @@
 
 ## 完成前自检
 
+- 按本次提交的实际改动选择验证方式。未涉及代码逻辑修改（如简单样式调整、文档修改等）时，无需运行 Vitest 测试；涉及代码逻辑修改时，运行与改动相关的测试。样式调整仍按需检查页面效果，其他必要验证按改动范围执行。
+
 ```bash
 pnpm dev:ext             # 启动扩展开发模式（加载 `apps/extension/.output/chrome-mv3-dev`）
 pnpm typecheck:frontend  # 完整检查用 pnpm typecheck
