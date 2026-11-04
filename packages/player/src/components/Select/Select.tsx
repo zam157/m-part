@@ -220,7 +220,7 @@ export default function Select<T>(props: SelectProps<T>) {
         aria-label={props['aria-label'] ?? (props['aria-labelledby'] ? undefined : props.placeholder ?? '选择选项')} aria-labelledby={props['aria-labelledby']} aria-describedby={props['aria-describedby']}
         aria-haspopup="listbox" aria-controls={contentId} aria-expanded={open() ? 'true' : 'false'} aria-activedescendant={open() && active() ? optionId(active()!) : undefined}
         aria-required={props.required ? 'true' : 'false'} aria-invalid={invalid() ? 'true' : 'false'} data-state={open() ? 'open' : 'closed'} data-placeholder={!selected() ? '' : undefined} data-size={props.size ?? 'default'}
-        class={clsx('inline-flex min-w-0 shrink-0 cursor-default items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-3 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 dark:bg-input/30', props.size === 'sm' ? 'h-8' : 'h-9', !selected() && 'text-muted-foreground', invalid() && 'border-destructive ring-destructive/20', props.triggerClass)}
+        class={clsx('inline-flex min-w-0 shrink-0 cursor-default items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 dark:bg-input/30', props.size === 'sm' ? 'h-8' : 'h-9', !selected() && 'text-muted-foreground', invalid() && 'border-destructive ring-destructive/20', props.triggerClass)}
         onPointerDown={event => { pointerType = event.pointerType }} onKeyDown={keyDown} onClick={() => opened ? close(true) : show()}>
         <span class="min-w-0 truncate">{props.renderValue ? props.renderValue(selected()) : selected()?.label ?? props.placeholder ?? '请选择'}</span>
         <Show when={!props.renderValue}><span class="i-lucide:chevron-down shrink-0 text-4 text-muted-foreground" /></Show>
@@ -235,7 +235,7 @@ export default function Select<T>(props: SelectProps<T>) {
       </Show>
       <Portal mount={mount()}>
         <div ref={popup} id={`${contentId}-popup`} popover="auto" dir={props.dir} data-slot="select-content"
-          class={clsx('select-content open:flex flex-col overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none', props.contentClass)}
+          class={clsx('select-content open:flex flex-col overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground outline-none', props.contentClass)}
           onBeforeToggle={event => { if (event.newState === 'closed') close(false, true) }} onKeyDown={keyDown}>
           <Show when={canScrollUp() || canScrollDown()}>
             <button type="button" tabindex={-1} aria-label="向上滚动选项" disabled={!canScrollUp()} class="flex h-6 w-full shrink-0 items-center justify-center disabled:opacity-30" onMouseDown={event => event.preventDefault()} onPointerEnter={() => startScrolling(-1)} onPointerLeave={stopScrolling} onClick={() => scroll(-1)}><span class="i-lucide:chevron-up text-4" /></button>

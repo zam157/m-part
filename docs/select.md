@@ -31,6 +31,7 @@ import Select from '~/components/Select/Select'
 - 默认尝试将选中项与按钮对齐；触摸操作或空间不足时回退到边缘定位。`alignItemWithTrigger={false}` 强制按边缘定位，`side`、`align`、`sideOffset` 控制方向、对齐与间隔，碰撞时翻转并限制在视口内。RTL 的 start / end 随方向反转。
 - 原生 dialog 内会自动把浮层挂在该 dialog 中，也可以显式传 `portalMount`。音质按钮保留原有 36px 槽位，用 `renderValue` 展示图标；它仍是同一个可用键盘操作的 Select。
 - `triggerClass` / `contentClass` 用 `cn/lite` 拼接。覆盖内置同类工具规则时使用明确的 `!`，例如 40px 筛选栏使用 `triggerClass="!h-10"`；不要依赖类名的文本先后顺序，也不要恢复各调用方的定位行内样式。
+- 触发器和下拉浮层默认均不带投影，保留边框与键盘焦点环。
 - 搜索栏由外层容器统一提供边框、圆角和 focus-within 焦点环，内部两项 Select 与输入框去掉自身边框和阴影，仅由间隔容器画分隔线；窄屏输入框换到第二行，但仍共用同一个外框。不能依赖旧 btn-group 的 shortcut 层规则覆盖 Select 的默认工具类。
 
 ## 表单与跨入口复用
