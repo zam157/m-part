@@ -79,6 +79,8 @@ grid-cols-[repeat(auto-fill,minmax(clamp(300px,15vw,360px),1fr))]
 
 ## 侧栏收放
 
+侧栏按钮（含 Logo 入口、导航及底部操作）统一使用 `h-8`（32px），展开和收起时保持同一高度。`sidebar-item` 不再叠加纵向 padding 或更大的最小高度，避免按钮被撑高。
+
 侧栏宽度和内边距使用 200ms 过渡，`sidebar-item` 的宽度、横向 margin 同步过渡，始终保持从左排列，避免切换 `justify-center` / `mx-auto` 时图标跳位。`sidebar-label` 保留布局、禁止收缩和换行，通过透明度与 4px 位移过渡：收起用 100ms 淡出，展开延迟 60ms 后淡入。Logo、导航、队列数量和底部文案共用此规则；不要恢复 `display:none` / `hidden`，否则文字会在宽度动画开始时突然消失。按钮裁切溢出内容，所有过渡响应 `prefers-reduced-motion`。
 
 UnoCSS Wind4 的 `transition-[opacity,transform]` 会把独立的 `translate` / `scale` / `rotate` 也展开进过渡属性，无需再添加 `translate` token。修改共享 UnoCSS 配置后，开发服务可能仍持有旧配置，需要重启 WXT，再检查实际计算样式和生产产物；只刷新页面不足以确认配置更新。
