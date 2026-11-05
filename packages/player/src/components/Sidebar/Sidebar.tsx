@@ -27,7 +27,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      class="group/sidebar w-58 shrink-0 flex flex-col gap-2 p-4 overflow-hidden transition-[width,padding] duration-200 ease-[ease] data-[collapsed=true]:w-16 data-[collapsed=true]:px-2 motion-reduce:transition-none bg-sidebar text-sidebar-foreground border-r border-sidebar-border"
+      class="group/sidebar w-58 shrink-0 flex flex-col gap-2 p-2 overflow-hidden transition-[width] duration-200 ease-[ease] data-[collapsed=true]:w-16 motion-reduce:transition-none bg-sidebar text-sidebar-foreground border-r border-sidebar-border"
       data-collapsed={collapsed() ? 'true' : 'false'}
     >
       <button class="w-full self-center shrink-0 flex items-center gap-2.5 text-left p-2 overflow-hidden rounded-lg transition-[width,background-color] duration-200 group-data-[collapsed=true]/sidebar:w-13 motion-reduce:transition-none hover:bg-accent" aria-label="Music Party 首页" onClick={() => navigate('/')}>
