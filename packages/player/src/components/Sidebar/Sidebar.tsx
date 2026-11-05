@@ -34,7 +34,7 @@ export default function Sidebar() {
         <span class="grid place-items-center size-9 rounded-[10px] shrink-0 bg-primary text-primary-foreground"><span class="i-lucide:audio-lines text-5" /></span>
         <span class="sidebar-label"><strong class="block text-[15px] leading-5 tracking-[-0.4px]">Music Party</strong></span>
       </button>
-      <nav id="sidebar-navigation" class="flex flex-col gap-1" aria-label="主导航">
+      <nav id="sidebar-navigation" class="min-h-0 flex-1 flex flex-col gap-1 overflow-y-auto" aria-label="主导航">
         <For each={menuItems}>{item => (
           <Tooltip content={item.label} disabled={!collapsed()} placement="right">
             {triggerProps => (
@@ -52,7 +52,7 @@ export default function Sidebar() {
           )}
         </Tooltip>
       </nav>
-      <div class="mt-auto flex flex-col pt-3.5 border-t border-border">
+      <div class="shrink-0 flex flex-col gap-1 pt-3.5 border-t border-border">
         <Tooltip content="音源设置" disabled={!collapsed()} placement="right">
           {triggerProps => <button {...triggerProps} class={clsx('sidebar-item text-muted-foreground', location.pathname === '/settings' && 'bg-accent text-accent-foreground')} aria-label="音源设置" aria-current={location.pathname === '/settings' ? 'page' : undefined} onClick={() => navigate('/settings')}><span class="i-lucide:settings-2 text-4 shrink-0" /><span class="sidebar-label">音源设置</span></button>}
         </Tooltip>
