@@ -12,7 +12,7 @@ export default function LocalPlaylists() {
     <section class="grid gap-5" aria-label="本地歌单">
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <p class="text-sm text-muted-foreground">保存在当前浏览器，可收集不同音源的歌曲。</p>
-        <button class="btn h-9 px-3" onClick={() => setLocalPlaylistDialog({ kind: 'create' })}><span class="i-lucide:plus text-4" />新建歌单</button>
+        <button class="btn px-3" onClick={() => setLocalPlaylistDialog({ kind: 'create' })}><span class="i-lucide:plus text-4" />新建歌单</button>
       </div>
       <Switch>
         <Match when={state().error}><ErrorMessage message={state().error} onRetry={() => localPlaylists.load(true)} /></Match>
