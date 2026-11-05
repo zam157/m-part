@@ -35,19 +35,19 @@ export default function ListenRoomHistory() {
     if (!event.repeat) void send()
   }
   return (
-    <section aria-label="房间聊天与操作历史" class="space-y-3 min-w-0">
+    <section aria-label="房间聊天与操作历史" class="grid gap-3 min-w-0">
       <div class="flex items-center gap-3 flex-wrap justify-between">
         <h3 class="font-semibold">聊天与动态</h3>
         <div class="flex gap-1" role="group" aria-label="记录筛选">
           <For each={filters}>{item => <button class={clsx('ghost-btn h-7 px-2 text-xs', filter() === item.id && 'bg-muted')} aria-pressed={filter() === item.id ? 'true' : 'false'} onClick={() => { following = true; setFilter(item.id); latest() }}>{item.label}</button>}</For>
         </div>
       </div>
-      <div ref={list} class="h-72 overflow-y-auto rounded-xl border border-border p-3 space-y-3" aria-label="房间记录" onScroll={() => { if (list) following = list.scrollHeight - list.scrollTop - list.clientHeight < 48 }}>
+      <div ref={list} class="h-72 overflow-y-auto rounded-xl border border-border p-3 grid auto-rows-max content-start gap-3" aria-label="房间记录" onScroll={() => { if (list) following = list.scrollHeight - list.scrollTop - list.clientHeight < 48 }}>
         <Show when={entries().length} fallback={<p class="text-sm text-muted-foreground">暂无记录</p>}>
           <For each={entries()}>{entry => (
-            <article class={clsx('text-sm break-words whitespace-pre-wrap [overflow-wrap:anywhere]', entry.kind === 'operation' && 'text-muted-foreground text-xs')}>
+            <article class={clsx('grid gap-1 text-sm break-words whitespace-pre-wrap [overflow-wrap:anywhere]', entry.kind === 'operation' && 'text-muted-foreground text-xs')}>
               <div class="flex gap-2 items-baseline flex-wrap"><span class="font-medium">{entry.name ?? '系统'}</span><span class="text-xs text-muted-foreground">{entry.kind === 'chat' ? '聊天' : '操作'}</span><time class="text-xs text-muted-foreground" datetime={new Date(entry.at).toISOString()}>{time(entry.at)}</time></div>
-              <p class="mt-1">{entry.text}</p>
+              <p>{entry.text}</p>
             </article>
           )}</For>
         </Show>

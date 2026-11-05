@@ -24,10 +24,10 @@ export default function ListenPage() {
   }
   return (
     <div class="flex-1 min-w-0 min-h-0 overflow-auto p-6 max-[760px]:p-4">
-      <div class="max-w-220 mx-auto space-y-6">
-        <header><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm mt-2">在同一个房间听同一首歌。房主与管理员控制播放和队列，各平台默认服务器托管，也可切换各自取源。</p></header>
+      <div class="max-w-220 mx-auto grid gap-6">
+        <header class="grid gap-2"><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm">在同一个房间听同一首歌。房主与管理员控制播放和队列，各平台默认服务器托管，也可切换各自取源。</p></header>
         <Show when={roomPlayerActive()} fallback={(
-          <section class="rounded-2xl border border-border p-5 space-y-5">
+          <section class="rounded-2xl border border-border p-5 grid gap-5">
             <div class="grid gap-3">
               <label class="grid gap-3 text-sm"><span>房间服务器</span>
                 <input class="input" type="url" value={roomServer()} onInput={e => setRoomServer(e.currentTarget.value)} placeholder="https://rooms.example.com" autocomplete="url" />
@@ -38,29 +38,29 @@ export default function ListenPage() {
               <input class="input" maxlength="80" value={name()} onInput={e => setName(e.currentTarget.value)} autocomplete="nickname" />
             </label>
             <div class="grid grid-cols-2 gap-5 max-[600px]:grid-cols-1">
-              <div class="space-y-3 rounded-xl bg-muted/50 p-4">
+              <div class="grid content-start gap-3 rounded-xl bg-muted/50 p-4">
                 <h2 class="font-semibold">创建房间</h2>
                 <p class="text-xs text-muted-foreground">创建后将把房主音源设置中当前应用的登录 Cookie 提交到所填服务器；仅保留在服务器内存。未登录时匿名取源，Web 网站 Cookie 不可读取时也使用匿名取源。</p>
                 <p class="text-sm text-muted-foreground">带上当前队列的 {playQueue().length} 首歌；队列为空时，创建后再去搜索添加。</p>
-                <button class="btn px-4 py-2" disabled={joiningRoom()} onClick={() => { saveName(); void createListenRoom(roomServer(), name()) }}>创建</button>
+                <button class="btn px-4 py-2 justify-self-start" disabled={joiningRoom()} onClick={() => { saveName(); void createListenRoom(roomServer(), name()) }}>创建</button>
               </div>
-              <form class="space-y-3 rounded-xl bg-muted/50 p-4" onSubmit={e => { e.preventDefault(); saveName(); void joinListenRoom(roomServer(), name(), code()) }}>
+              <form class="grid content-start gap-3 rounded-xl bg-muted/50 p-4" onSubmit={e => { e.preventDefault(); saveName(); void joinListenRoom(roomServer(), name(), code()) }}>
                 <h2 class="font-semibold">加入朋友的房间</h2>
                 <label class="grid gap-3 text-sm"><span>房间码</span><input class="input font-mono uppercase" maxlength="8" value={code()} onInput={e => setCode(e.currentTarget.value)} placeholder="8 位房间码" autocomplete="off" /></label>
-                <button class="btn px-4 py-2" type="submit" disabled={joiningRoom()}>加入</button>
+                <button class="btn px-4 py-2 justify-self-start" type="submit" disabled={joiningRoom()}>加入</button>
               </form>
             </div>
           </section>
         )}>
-          <section class="rounded-2xl border border-border p-5 space-y-5">
+          <section class="rounded-2xl border border-border p-5 grid gap-5">
             <div class="flex items-start gap-4 justify-between flex-wrap">
-              <div><p class="text-xs text-muted-foreground">{roomView().isHost ? '你是房主' : roomView().canControl ? '你是管理员' : '你是房间成员'}</p><h2 class="font-mono text-8 font-semibold tracking-widest mt-1">{snapshot()?.code ?? '连接中…'}</h2><p class="text-sm text-muted-foreground mt-1" role="status">{roomStatusLabel()}</p></div>
+              <div class="grid gap-1"><p class="text-xs text-muted-foreground">{roomView().isHost ? '你是房主' : roomView().canControl ? '你是管理员' : '你是房间成员'}</p><h2 class="font-mono text-8 font-semibold tracking-widest">{snapshot()?.code ?? '连接中…'}</h2><p class="text-sm text-muted-foreground" role="status">{roomStatusLabel()}</p></div>
               <div class="flex gap-2"><button class="ghost-btn px-3 h-9 border border-border" disabled={!snapshot()} onClick={copyCode}>{copied() ? '已复制' : '复制房间码'}</button><button class="ghost-btn px-3 h-9 border border-border" onClick={leaveListenRoom}>{roomView().isHost ? '结束房间' : '退出房间'}</button></div>
             </div>
-            <div class="rounded-xl bg-muted/50 p-4 space-y-3">
+            <div class="rounded-xl bg-muted/50 p-4 grid gap-3">
               <p class="font-semibold">{current()?.title ?? '还没有歌曲'}</p><p class="text-sm text-muted-foreground">{current()?.artist ?? '房主与管理员可以在搜索、歌单或首页选择歌曲'}</p>
               <Show when={roomView().canControl} fallback={(
-                <button class="btn px-4 py-2" onClick={() => roomView().away || roomView().status === 'blocked' || roomView().status === 'failed' ? resumeRoomPlayback() : pauseRoomLocally()}>{roomView().away || roomView().status === 'blocked' || roomView().status === 'failed' ? '恢复同步' : '暂停本机并暂离'}</button>
+                <button class="btn px-4 py-2 justify-self-start" onClick={() => roomView().away || roomView().status === 'blocked' || roomView().status === 'failed' ? resumeRoomPlayback() : pauseRoomLocally()}>{roomView().away || roomView().status === 'blocked' || roomView().status === 'failed' ? '恢复同步' : '暂停本机并暂离'}</button>
               )}>
                 <div class="flex gap-2 flex-wrap">
                   <button class="ghost-btn px-3 h-9 border border-border" disabled={!current() || roomView().connection !== 'connected'} onClick={() => prevNext(0)}>上一首</button>
@@ -68,13 +68,13 @@ export default function ListenPage() {
                   <button class="ghost-btn px-3 h-9 border border-border" disabled={!current() || roomView().connection !== 'connected'} onClick={() => prevNext(1)}>下一首</button>
                 </div>
               </Show>
-              <button class="ghost-btn px-3 h-8 text-sm" onClick={() => setShowPlayQueue(true)}>查看房间队列 · {snapshot()?.queue.length ?? 0} 首</button>
+              <button class="ghost-btn px-3 h-8 text-sm justify-self-start" onClick={() => setShowPlayQueue(true)}>查看房间队列 · {snapshot()?.queue.length ?? 0} 首</button>
             </div>
             <ListenRoomSources />
-            <div><h3 class="font-semibold mb-3">房间成员 · {snapshot()?.members.length ?? 0}/5</h3>
-              <ul class="space-y-2"><For each={snapshot()?.members ?? []}>{member => (
+            <div class="grid gap-3"><h3 class="font-semibold">房间成员 · {snapshot()?.members.length ?? 0}/5</h3>
+              <ul class="grid gap-2"><For each={snapshot()?.members ?? []}>{member => (
                 <li class="rounded-lg border border-border p-3 flex items-start justify-between gap-4 text-sm">
-                  <div class="min-w-0"><span class="font-medium">{member.name}</span><Show when={member.id === snapshot()?.hostId}><span class="ml-2 text-xs text-muted-foreground">房主</span></Show><Show when={member.role === 'admin'}><span class="ml-2 text-xs text-primary">管理员</span></Show><Show when={member.id === roomView().memberId}><span class="ml-2 text-xs text-muted-foreground">你</span></Show><Show when={member.message}><p class="text-xs text-destructive mt-1 break-words">{member.message}</p></Show></div>
+                  <div class="min-w-0 grid gap-1"><div class="flex flex-wrap items-baseline gap-2"><span class="font-medium">{member.name}</span><Show when={member.id === snapshot()?.hostId}><span class="text-xs text-muted-foreground">房主</span></Show><Show when={member.role === 'admin'}><span class="text-xs text-primary">管理员</span></Show><Show when={member.id === roomView().memberId}><span class="text-xs text-muted-foreground">你</span></Show></div><Show when={member.message}><p class="text-xs text-destructive break-words">{member.message}</p></Show></div>
                   <div class="shrink-0 flex flex-col items-end gap-2">
                     <span class={clsx('text-xs', member.online ? 'text-muted-foreground' : 'text-destructive')}>{member.online ? statuses[member.status] : '已断开'}</span>
                     <Show when={roomView().isHost && member.id !== snapshot()?.hostId}>

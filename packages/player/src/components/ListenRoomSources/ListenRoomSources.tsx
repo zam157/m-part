@@ -33,12 +33,12 @@ export default function ListenRoomSources() {
   return (
     <details class="rounded-xl border border-border p-4">
       <summary class="cursor-pointer text-sm font-medium">房间音源 · 按平台设置</summary>
-      <div class="mt-4 space-y-4 text-sm">
+      <div class="pt-4 grid gap-4 text-sm">
         <p class="text-muted-foreground">本机正在使用：{hosted() && !roomView().personalSource ? currentLabel() : '个人音源'}。切换后会重新准备并追赶房间进度，主动暂离时保持暂停。</p>
-        <ul class="space-y-2" aria-label="各平台房间账号">
+        <ul class="grid gap-2" aria-label="各平台房间账号">
           <For each={platforms}>{item => (
             <li class="rounded-lg border border-border p-3 flex flex-wrap gap-2 items-center justify-between" data-platform={item.id}>
-              <div class="min-w-0"><span class="font-medium">{item.name}</span><p class="text-xs text-muted-foreground mt-1 break-words">{roomView().sourceErrors?.[item.id] ?? (source()?.accounts?.[item.id]?.credential === 'ready' ? source()?.accounts?.[item.id]?.label : source()?.accounts?.[item.id]?.credential === 'invalid' ? '账号已失效，请更新音源设置' : '匿名托管')} · {source()?.modes?.[item.id] === 'hosted' ? '服务器取源' : '各自取源'}</p></div>
+              <div class="min-w-0 grid gap-1"><span class="font-medium">{item.name}</span><p class="text-xs text-muted-foreground break-words">{roomView().sourceErrors?.[item.id] ?? (source()?.accounts?.[item.id]?.credential === 'ready' ? source()?.accounts?.[item.id]?.label : source()?.accounts?.[item.id]?.credential === 'invalid' ? '账号已失效，请更新音源设置' : '匿名托管')} · {source()?.modes?.[item.id] === 'hosted' ? '服务器取源' : '各自取源'}</p></div>
               <Show when={roomView().isHost}>
                 <button class="border-btn h-8 px-3 text-xs" aria-label={`修改${item.name}取源设置`} disabled={disabled()} onClick={() => openSettings(item.id)}>修改</button>
               </Show>
@@ -53,7 +53,7 @@ export default function ListenRoomSources() {
         </Show>
         <Show when={roomView().isHost}>
           <dialog ref={dialog} aria-labelledby="room-source-settings-title" class="m-auto w-[min(32rem,calc(100vw-2rem))] max-w-none max-h-[calc(100svh-2rem)] rounded-2xl border border-border bg-background text-foreground p-0 shadow-xl backdrop:bg-black/50" onClose={() => setCookie('')}>
-            <div class="p-5 space-y-5">
+            <div class="p-5 grid gap-5">
               <div class="flex items-center justify-between gap-3">
                 <h2 id="room-source-settings-title" class="text-lg font-semibold">{selected().name}取源设置</h2>
                 <button class="ghost-btn h-8 px-2" aria-label="关闭取源设置" onClick={() => dialog.close()}>关闭</button>
@@ -66,7 +66,7 @@ export default function ListenRoomSources() {
                 </div>
                 <p class="text-xs text-muted-foreground">未绑定账号时，服务器取源使用匿名权限。</p>
               </div>
-              <div class="space-y-3">
+              <div class="grid gap-3">
                 <p class="text-sm">当前会话来源：{overridden() ? '房间单独设置' : clientCookieStatus().modes[platform()] === 'manual' ? '音源设置 · 手动 Cookie' : '音源设置 · 网站 Cookie'}</p>
                 <p class="text-xs text-muted-foreground">默认跟随房主音源设置中的当前会话；单独绑定后，此平台使用房间专用 Cookie，不受音源设置变化影响。无网站登录态时匿名取源，成员不会收到 Cookie。</p>
                 <div class="flex gap-2 flex-wrap">
@@ -74,7 +74,7 @@ export default function ListenRoomSources() {
                   <button class="border-btn px-3 h-8" onClick={() => { dialog.close(); navigate('/settings') }}>前往音源设置</button>
                 </div>
               </div>
-              <form class="space-y-3" onSubmit={event => { event.preventDefault(); void bind() }}>
+              <form class="grid gap-3" onSubmit={event => { event.preventDefault(); void bind() }}>
                 <div class="grid gap-3">
                   <label class="grid gap-3 text-sm"><span>房间专用 Cookie</span>
                     <input type="password" class="input w-full" aria-label={`${selected().name}房间专用 Cookie`} value={cookie()} onInput={event => setCookie(event.currentTarget.value)} maxlength="4096" autocomplete="off" spellcheck={false} placeholder={selected().placeholder} disabled={disabled()} />

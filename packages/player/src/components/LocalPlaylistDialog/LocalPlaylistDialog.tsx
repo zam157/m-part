@@ -63,39 +63,43 @@ export default function LocalPlaylistDialog() {
   }
   return (
     <dialog ref={dialog} aria-labelledby="local-playlist-dialog-title" class="m-auto w-[min(28rem,calc(100vw-2rem))] max-w-none max-h-[calc(100svh-2rem)] overflow-y-auto rounded-2xl border border-border bg-background text-foreground p-5 shadow-xl backdrop:bg-black/50" onCancel={close} onClose={() => { if (!dialog.open) close() }}>
-      <header class="flex items-center justify-between gap-3 mb-4">
-        <h2 id="local-playlist-dialog-title" class="text-lg font-semibold">{heading()}</h2>
-        <button type="button" class="ghost-btn size-8 shrink-0" aria-label="关闭本地歌单弹窗" onClick={close}><span class="i-lucide:x text-5" /></button>
-      </header>
-      <Show when={request()?.kind === 'add'}>
-        <p class="text-sm text-muted-foreground break-words mb-3">{musicTitle()}</p>
-      </Show>
-      <Show when={error() || state().error}>
-        <div class="text-sm text-destructive mb-3" role="alert">{error() || state().error}<Show when={state().error}><button type="button" class="ghost-btn px-2 ml-2" disabled={busy() || state().loading} onClick={() => { setError(''); void localPlaylists.load(true) }}>重试</button></Show></div>
-      </Show>
-      <Show when={message()}><p class="text-sm mb-3" role="status">{message()}</p></Show>
-      <Show when={adding()}>
-        <Show when={state().loading && !state().loaded}><p class="text-sm text-muted-foreground mb-3" role="status">正在读取本地歌单…</p></Show>
-        <div class="space-y-1 max-h-60 overflow-y-auto mb-4" aria-label="选择本地歌单">
-          <For each={state().items}>{playlist => (
-            <button type="button" class="ghost-btn w-full h-auto min-h-12 px-3 py-2 justify-between gap-3 text-left" disabled={busy() || state().loading || contains(playlist.id)} onClick={() => void save(playlist.id)}>
-              <span class="min-w-0 flex-1 truncate">{playlist.title}</span><span class="text-xs text-muted-foreground shrink-0">{contains(playlist.id) ? '已添加' : `${playlist.tracks.length} 首`}</span>
-            </button>
-          )}</For>
-        </div>
-        <Show when={state().loaded && !state().error && !state().items.length}><p class="text-sm text-muted-foreground mb-4">还没有本地歌单，在下方新建并添加这首歌。</p></Show>
-      </Show>
-      <form class="space-y-3" onSubmit={event => { event.preventDefault(); void save() }}>
-        <Show when={!deleting()} fallback={<p class="text-sm break-words">确定删除「{playlistTitle()}」？歌单中的歌曲记录也会被移除，此操作无法撤销。</p>}>
-          <label class="grid gap-3 text-sm"><span>{adding() ? '新建歌单' : '歌单名称'}</span>
-            <input class="input w-full" aria-label="本地歌单名称" value={title()} onInput={event => setTitle(event.currentTarget.value)} placeholder="输入歌单名称" maxlength="80" disabled={busy()} />
-          </label>
+      <div class="grid gap-3">
+        <header class="flex items-center justify-between gap-3 pb-1">
+          <h2 id="local-playlist-dialog-title" class="text-lg font-semibold">{heading()}</h2>
+          <button type="button" class="ghost-btn size-8 shrink-0" aria-label="关闭本地歌单弹窗" onClick={close}><span class="i-lucide:x text-5" /></button>
+        </header>
+        <Show when={request()?.kind === 'add'}>
+          <p class="text-sm text-muted-foreground break-words">{musicTitle()}</p>
         </Show>
-        <div class="flex justify-end gap-2 flex-wrap">
-          <button type="button" class="border-btn h-9 px-3" onClick={close}>{adding() ? '完成' : '取消'}</button>
-          <button type="submit" class="btn h-9 px-3" disabled={busy() || state().loading || (!deleting() && !title().trim())}>{busy() ? '正在保存…' : deleting() ? '删除歌单' : adding() ? '新建并添加' : request()?.kind === 'rename' ? '保存名称' : '创建歌单'}</button>
-        </div>
-      </form>
+        <Show when={error() || state().error}>
+          <div class="flex flex-wrap items-center gap-2 text-sm text-destructive" role="alert"><span>{error() || state().error}</span><Show when={state().error}><button type="button" class="ghost-btn px-2" disabled={busy() || state().loading} onClick={() => { setError(''); void localPlaylists.load(true) }}>重试</button></Show></div>
+        </Show>
+        <Show when={message()}><p class="text-sm" role="status">{message()}</p></Show>
+        <Show when={adding()}>
+          <Show when={state().loading && !state().loaded}><p class="text-sm text-muted-foreground" role="status">正在读取本地歌单…</p></Show>
+          <div class="pb-1">
+            <div class="grid gap-1 max-h-60 overflow-y-auto" aria-label="选择本地歌单">
+              <For each={state().items}>{playlist => (
+                <button type="button" class="ghost-btn w-full h-auto min-h-12 px-3 py-2 justify-between gap-3 text-left" disabled={busy() || state().loading || contains(playlist.id)} onClick={() => void save(playlist.id)}>
+                  <span class="min-w-0 flex-1 truncate">{playlist.title}</span><span class="text-xs text-muted-foreground shrink-0">{contains(playlist.id) ? '已添加' : `${playlist.tracks.length} 首`}</span>
+                </button>
+              )}</For>
+            </div>
+          </div>
+          <Show when={state().loaded && !state().error && !state().items.length}><p class="text-sm text-muted-foreground pb-1">还没有本地歌单，在下方新建并添加这首歌。</p></Show>
+        </Show>
+        <form class="grid gap-3" onSubmit={event => { event.preventDefault(); void save() }}>
+          <Show when={!deleting()} fallback={<p class="text-sm break-words">确定删除「{playlistTitle()}」？歌单中的歌曲记录也会被移除，此操作无法撤销。</p>}>
+            <label class="grid gap-3 text-sm"><span>{adding() ? '新建歌单' : '歌单名称'}</span>
+              <input class="input w-full" aria-label="本地歌单名称" value={title()} onInput={event => setTitle(event.currentTarget.value)} placeholder="输入歌单名称" maxlength="80" disabled={busy()} />
+            </label>
+          </Show>
+          <div class="flex justify-end gap-2 flex-wrap">
+            <button type="button" class="border-btn h-9 px-3" onClick={close}>{adding() ? '完成' : '取消'}</button>
+            <button type="submit" class="btn h-9 px-3" disabled={busy() || state().loading || (!deleting() && !title().trim())}>{busy() ? '正在保存…' : deleting() ? '删除歌单' : adding() ? '新建并添加' : request()?.kind === 'rename' ? '保存名称' : '创建歌单'}</button>
+          </div>
+        </form>
+      </div>
     </dialog>
   )
 }

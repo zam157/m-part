@@ -27,14 +27,14 @@ export default function Sidebar() {
 
   return (
     <aside
-      class="group/sidebar w-58 shrink-0 flex flex-col p-4 overflow-hidden transition-[width,padding] duration-200 ease-[ease] data-[collapsed=true]:w-16 data-[collapsed=true]:px-2 motion-reduce:transition-none bg-sidebar text-sidebar-foreground border-r border-sidebar-border"
+      class="group/sidebar w-58 shrink-0 flex flex-col gap-2 p-4 overflow-hidden transition-[width,padding] duration-200 ease-[ease] data-[collapsed=true]:w-16 data-[collapsed=true]:px-2 motion-reduce:transition-none bg-sidebar text-sidebar-foreground border-r border-sidebar-border"
       data-collapsed={collapsed() ? 'true' : 'false'}
     >
-      <button class="w-full mx-0 shrink-0 flex items-center gap-2.5 text-left p-2 overflow-hidden rounded-lg transition-[width,margin,background-color] duration-200 group-data-[collapsed=true]/sidebar:w-13 group-data-[collapsed=true]/sidebar:-mx-0.5 motion-reduce:transition-none hover:bg-accent" aria-label="Music Party 首页" onClick={() => navigate('/')}>
+      <button class="w-full self-center shrink-0 flex items-center gap-2.5 text-left p-2 overflow-hidden rounded-lg transition-[width,background-color] duration-200 group-data-[collapsed=true]/sidebar:w-13 motion-reduce:transition-none hover:bg-accent" aria-label="Music Party 首页" onClick={() => navigate('/')}>
         <span class="grid place-items-center size-9 rounded-[10px] shrink-0 bg-primary text-primary-foreground"><span class="i-lucide:audio-lines text-5" /></span>
         <span class="sidebar-label"><strong class="block text-[15px] leading-5 tracking-[-0.4px]">Music Party</strong></span>
       </button>
-      <nav id="sidebar-navigation" class="mt-2 flex flex-col gap-1" aria-label="主导航">
+      <nav id="sidebar-navigation" class="flex flex-col gap-1" aria-label="主导航">
         <For each={menuItems}>{item => (
           <Tooltip content={item.label} disabled={!collapsed()} placement="right">
             {triggerProps => (
@@ -52,7 +52,7 @@ export default function Sidebar() {
           )}
         </Tooltip>
       </nav>
-      <div class="mt-auto pt-3.5 border-t border-border">
+      <div class="mt-auto flex flex-col pt-3.5 border-t border-border">
         <Tooltip content="音源设置" disabled={!collapsed()} placement="right">
           {triggerProps => <button {...triggerProps} class={clsx('sidebar-item text-muted-foreground', location.pathname === '/settings' && 'bg-accent text-accent-foreground')} aria-label="音源设置" aria-current={location.pathname === '/settings' ? 'page' : undefined} onClick={() => navigate('/settings')}><span class="i-lucide:settings-2 text-4 shrink-0" /><span class="sidebar-label">音源设置</span></button>}
         </Tooltip>

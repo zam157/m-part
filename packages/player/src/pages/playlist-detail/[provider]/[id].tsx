@@ -63,7 +63,7 @@ function PlaylistDetailView(props: { source: ProviderName, id: string }) {
         <Show when={metadata.cover} fallback={<div class="size-24 shrink-0 rounded-lg bg-muted grid place-items-center"><span class="i-lucide:library text-9 text-muted-foreground" /></div>}>
           <ProviderImage provider={props.source} usage="detail" src={metadata.cover} alt="" referrerpolicy="no-referrer" class="size-24 shrink-0 rounded-lg object-cover" />
         </Show>
-        <div class="min-w-0"><h1 class="text-6 font-semibold break-words">{metadata.title}</h1><p class="page-description">{metadata.creator}</p><span class="text-xs text-muted-foreground">已加载 {state().items.length} 首</span></div>
+        <div class="min-w-0"><h1 class="text-6 font-semibold break-words">{metadata.title}</h1><div class="pt-[7px]"><p class="page-description">{metadata.creator}</p><span class="text-xs text-muted-foreground">已加载 {state().items.length} 首</span></div></div>
       </header>
       <div class="flex gap-3 mb-5 flex-wrap">
         <button class="btn h-9 px-3" disabled={!canControlRoom() || tracks.loadingAll() || state().loading || state().loginRequired || !state().items.length && !state().hasMore} onClick={() => void applyPlaylist('play')}><span class={tracks.loadingAll() ? 'i-lucide:loader-circle text-4 animate-spin' : 'i-lucide:play text-4'} />一键播放</button>

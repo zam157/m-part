@@ -77,9 +77,9 @@ export default function AlertPopover(props: AlertPopoverProps) {
       >
         <div class="flex items-start gap-3">
           <span aria-hidden="true" class={clsx('mt-0.5 text-4 shrink-0', props.variant === 'destructive' ? 'i-lucide:circle-alert text-destructive' : 'i-lucide:info text-muted-foreground')} />
-          <div class="min-w-0 flex-1">
+          <div class="min-w-0 flex-1 grid gap-1">
             <h2 class={clsx('text-sm font-medium leading-5', props.variant === 'destructive' && 'text-destructive')}>{props.title}</h2>
-            <p class="mt-1 text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere] max-h-40 overflow-y-auto">{props.message}</p>
+            <p class="text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere] max-h-40 overflow-y-auto">{props.message}</p>
           </div>
           <div class="flex items-center gap-1 shrink-0">
             <Show when={props.action} keyed>{action => <button type="button" class="border-btn h-8 px-2.5" onClick={action.onClick}>{action.label}</button>}</Show>

@@ -51,7 +51,7 @@ export default function SearchPage() {
 
   return (
     <div class="flex-1 min-w-0 flex flex-col gap-2 px-9 pt-8 pb-5 max-[760px]:px-4.5 max-[760px]:py-6">
-      <header class="pb-6"><h1 class="page-title">搜索</h1><p class="page-description">搜索歌曲、创作者、专辑和公开歌单</p></header>
+      <header class="pb-6 grid gap-[7px]"><h1 class="page-title">搜索</h1><p class="page-description">搜索歌曲、创作者、专辑和公开歌单</p></header>
       {/*
         搜索栏与结果网格左缘对齐，最大宽度 800px。
         外层统一边框与焦点环，内部仅保留分隔线；窄屏输入框换到下一行。

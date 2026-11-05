@@ -36,7 +36,7 @@ export default function LocalPlaylistPage() {
             <Show when={playlist()?.tracks[0]?.coverUrl} fallback={<div class="size-24 shrink-0 rounded-lg bg-muted grid place-items-center"><span class="i-lucide:library text-9 text-muted-foreground" /></div>}>
               <ProviderImage provider={playlist()?.tracks[0]?.provider} usage="detail" src={playlist()?.tracks[0]?.coverUrl} alt="" referrerpolicy="no-referrer" class="size-24 shrink-0 rounded-lg object-cover" />
             </Show>
-            <div class="min-w-0"><h1 class="text-6 font-semibold break-words">{playlist()?.title}</h1><p class="page-description">本地歌单 · {playlist()?.tracks.length} 首</p></div>
+            <div class="min-w-0 grid gap-[7px]"><h1 class="text-6 font-semibold break-words">{playlist()?.title}</h1><p class="page-description">本地歌单 · {playlist()?.tracks.length} 首</p></div>
           </header>
           <div class="flex gap-3 mb-5 flex-wrap">
             <button class="btn h-9 px-3" disabled={!playlist()?.tracks.length || !canControlRoom() || state().loading} onClick={() => { const tracks = playlist()?.tracks; if (tracks?.length) void setPlayQueue(tracks) }}><span class="i-lucide:play text-4" />一键播放</button>

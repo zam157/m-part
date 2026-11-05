@@ -31,9 +31,9 @@ export default function PlatformCookieForm(props: { source: ProviderName, config
   const clear = () => run(() => saveClientCookie(props.source, ''), '已清除本地保存的 Cookie。', true)
   const selectMode = (next: ClientCookieMode) => run(() => selectClientCookieMode(props.source, next), '已切换 Cookie 来源，已保存的 Cookie 保持不变。')
   return (
-    <form class="rounded-xl border border-border p-5 space-y-4" aria-label={`${props.config.label} Cookie 设置`} onSubmit={event => { event.preventDefault(); void save() }}>
+    <form class="rounded-xl border border-border p-5 grid gap-4" aria-label={`${props.config.label} Cookie 设置`} onSubmit={event => { event.preventDefault(); void save() }}>
       <header class="flex items-start justify-between gap-3">
-        <div><h2 class="text-base font-semibold">{props.config.label}</h2><p class="text-sm text-muted-foreground mt-1">{configured() ? '已保存手动 Cookie' : '尚未保存手动 Cookie'}</p></div>
+        <div class="grid gap-1"><h2 class="text-base font-semibold">{props.config.label}</h2><p class="text-sm text-muted-foreground">{configured() ? '已保存手动 Cookie' : '尚未保存手动 Cookie'}</p></div>
         <a class="ghost-btn px-2 shrink-0" href={props.config.loginUrl} target="_blank" rel="noopener noreferrer">打开网站<span class="i-lucide:external-link text-4" /></a>
       </header>
       <div class="grid gap-3">

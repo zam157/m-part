@@ -29,6 +29,7 @@ cn('text-9 text-primary', 'i-solar:play-circle-bold')
 
 - 布局、间距、字号、颜色和响应式状态直接写 UnoCSS 类；重复的组合放在 `packages/build-config/src/uno.ts` 的 shortcuts（如 `sidebar-item`、`page-title`、`popover-surface`），不要再增加只负责这些属性的语义 CSS 类。
 - 间距优先由父容器管理：兄弟元素之间用 flex / grid 的 `gap`，容器内部留白用 `padding`。避免用 `margin` 工具类或基于子元素 margin 的 `space-*` 撑开间隔，尽量不使用负 margin 修补对齐；仅在确有布局需要（如原生 dialog 的自动居中）时保留必要的 margin。
+- `page-description` 仅提供文字样式，标题与说明的间距由所在容器的 `gap-[7px]` 或 `padding` 管理。设置与一起听表单、聊天记录、歌单弹窗和首页推荐区同样由父容器管理间距。固定高度的聊天记录列表使用 `grid auto-rows-max content-start gap-3`，避免记录被拉伸或压缩；原生 dialog 的内容布局放在内部容器，保留关闭时的 `display: none`。
 - 全局 CSS 只保留文档默认值和减少动画设置。组件 CSS 主要保留原生锚点、`@starting-style` 与 `display` / `overlay` 离散过渡等规则，避免迁移时丢失浮层定位或退场效果。
 - 连续变化的进度、音量通过行内 CSS 自定义属性传值，宽高与定位使用 `w-[--progress-percent]` 等类，不动态拼接 UnoCSS 类名。
 - 当前 `presetWind4` 会把 `bg-[repeating-radial-gradient(...)]` 解析成 `background-color`，导致渐变无效；使用 `[background-image:repeating-radial-gradient(...)]`。锚点名 `--thumb` 保留原生 CSS：`[anchor-name:--thumb]` 会被改写成 `anchor-name: var(--thumb)`。
@@ -80,9 +81,9 @@ grid-cols-[repeat(auto-fill,minmax(clamp(300px,15vw,360px),1fr))]
 
 ## 侧栏收放
 
-侧栏导航及底部操作按钮统一使用 `h-8`（32px），展开和收起时保持同一高度。`sidebar-item` 不再叠加纵向 padding 或更大的最小高度，避免按钮被撑高。Logo 入口保留 36px 图标，使用 `p-2` 留出悬停背景的内边距，不固定按钮高度；收起时宽度为 52px，图标保持居中，导航上间距为 `mt-2`（8px）。悬停时使用 `hover:bg-accent` 高亮背景。
+侧栏导航及底部操作按钮统一使用 `h-8`（32px），展开和收起时保持同一高度。`sidebar-item` 不再叠加纵向 padding 或更大的最小高度，避免按钮被撑高。Logo 入口保留 36px 图标，使用 `p-2` 留出悬停背景的内边距，不固定按钮高度；收起时宽度为 52px，图标保持居中，Logo 和导航由父容器的 `gap-2`（8px）分隔。悬停时使用 `hover:bg-accent` 高亮背景。
 
-侧栏宽度和内边距使用 200ms 过渡，`sidebar-item` 的宽度、横向 margin 同步过渡，始终保持从左排列，避免切换 `justify-center` / `mx-auto` 时图标跳位。`sidebar-label` 保留布局、禁止收缩和换行，通过透明度与 4px 位移过渡：收起用 100ms 淡出，展开延迟 60ms 后淡入。Logo、导航、队列数量和底部文案共用此规则；不要恢复 `display:none` / `hidden`，否则文字会在宽度动画开始时突然消失。按钮裁切溢出内容，所有过渡响应 `prefers-reduced-motion`。
+侧栏宽度和内边距使用 200ms 过渡，`sidebar-item` 的宽度同步过渡，Logo 和按钮通过 `self-center` 居中，不依赖横向或负 margin，始终保持从左排列，避免切换 `justify-center` / `mx-auto` 时图标跳位。`sidebar-label` 保留布局、禁止收缩和换行，通过透明度与 4px 位移过渡：收起用 100ms 淡出，展开延迟 60ms 后淡入。Logo、导航、队列数量和底部文案共用此规则；不要恢复 `display:none` / `hidden`，否则文字会在宽度动画开始时突然消失。按钮裁切溢出内容，所有过渡响应 `prefers-reduced-motion`。
 
 UnoCSS Wind4 的 `transition-[opacity,transform]` 会把独立的 `translate` / `scale` / `rotate` 也展开进过渡属性，无需再添加 `translate` token。修改共享 UnoCSS 配置后，开发服务可能仍持有旧配置，需要重启 WXT，再检查实际计算样式和生产产物；只刷新页面不足以确认配置更新。
 
