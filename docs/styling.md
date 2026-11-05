@@ -79,7 +79,7 @@ grid-cols-[repeat(auto-fill,minmax(clamp(300px,15vw,360px),1fr))]
 
 ## 侧栏收放
 
-侧栏导航及底部操作按钮统一使用 `h-8`（32px），展开和收起时保持同一高度。`sidebar-item` 不再叠加纵向 padding 或更大的最小高度，避免按钮被撑高。Logo 入口保留 `h-9` 与 36px 图标，悬停时使用 `hover:bg-accent` 高亮背景。
+侧栏导航及底部操作按钮统一使用 `h-8`（32px），展开和收起时保持同一高度。`sidebar-item` 不再叠加纵向 padding 或更大的最小高度，避免按钮被撑高。Logo 入口保留 36px 图标，使用 `p-2` 留出悬停背景的内边距，不固定按钮高度；收起时宽度为 52px，图标保持居中，导航上间距为 `mt-2`（8px）。悬停时使用 `hover:bg-accent` 高亮背景。
 
 侧栏宽度和内边距使用 200ms 过渡，`sidebar-item` 的宽度、横向 margin 同步过渡，始终保持从左排列，避免切换 `justify-center` / `mx-auto` 时图标跳位。`sidebar-label` 保留布局、禁止收缩和换行，通过透明度与 4px 位移过渡：收起用 100ms 淡出，展开延迟 60ms 后淡入。Logo、导航、队列数量和底部文案共用此规则；不要恢复 `display:none` / `hidden`，否则文字会在宽度动画开始时突然消失。按钮裁切溢出内容，所有过渡响应 `prefers-reduced-motion`。
 
