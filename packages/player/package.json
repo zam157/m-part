@@ -10,7 +10,8 @@
   "exports": {
     "./main": "./src/main.tsx",
     "./select": "./src/components/Select/Select.tsx",
-    "./dialog": "./src/components/Dialog/Dialog.tsx"
+    "./dialog": "./src/components/Dialog/Dialog.tsx",
+    "./tabs": "./src/components/Tabs/index.ts"
   },
   "dependencies": {
     "@m-part/music": "workspace:*",
