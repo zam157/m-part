@@ -113,6 +113,7 @@
 
 - 尽量用 UnoCSS 的原子类，避免写自定义 CSS；必要时在组件目录下建 `.css` 文件
 - 间距优先用 `gap` 和 `padding`：兄弟元素之间由父容器的 `gap` 控制，容器内部留白用 `padding`。避免新增用于撑开间隔的 `margin`（含 `m-*` / `mt-*` / `space-*` 等），也尽量避免负 margin 补偿布局；确有布局需要时再使用。
+- 居中优先用父容器的 flex / grid 对齐，避免 `m-auto` / `mx-auto` 等依赖自动 margin 的居中方式。dialog 使用 `fixed` + `top-1/2 left-1/2` + `-translate-x-1/2 -translate-y-1/2` 居中，并重置原生 inset / margin；不要用 `m-auto` 实现 dialog 居中。
 - 完整长列表可在每个内容项加 `content-visibility-auto`，固定行高或提供内在尺寸占位，让浏览器延迟屏外渲染；节点仍全量创建。播放队列使用此方式，不添加“显示更多”分页 → [docs/styling.md](./docs/styling.md#长列表使用-content-visibility-auto)
 
 ## 错误态约定
