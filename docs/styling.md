@@ -28,6 +28,7 @@ cn('text-9 text-primary', 'i-solar:play-circle-bold')
 ## 原子类优先与 CSS 的保留范围
 
 - 布局、间距、字号、颜色和响应式状态直接写 UnoCSS 类；重复的组合放在 `packages/build-config/src/uno.ts` 的 shortcuts（如 `sidebar-item`、`page-title`、`popover-surface`），不要再增加只负责这些属性的语义 CSS 类。
+- 间距优先由父容器管理：兄弟元素之间用 flex / grid 的 `gap`，容器内部留白用 `padding`。避免用 `margin` 工具类或基于子元素 margin 的 `space-*` 撑开间隔，尽量不使用负 margin 修补对齐；仅在确有布局需要（如原生 dialog 的自动居中）时保留必要的 margin。
 - 全局 CSS 只保留文档默认值和减少动画设置。组件 CSS 主要保留原生锚点、`@starting-style` 与 `display` / `overlay` 离散过渡等规则，避免迁移时丢失浮层定位或退场效果。
 - 连续变化的进度、音量通过行内 CSS 自定义属性传值，宽高与定位使用 `w-[--progress-percent]` 等类，不动态拼接 UnoCSS 类名。
 - 当前 `presetWind4` 会把 `bg-[repeating-radial-gradient(...)]` 解析成 `background-color`，导致渐变无效；使用 `[background-image:repeating-radial-gradient(...)]`。锚点名 `--thumb` 保留原生 CSS：`[anchor-name:--thumb]` 会被改写成 `anchor-name: var(--thumb)`。
