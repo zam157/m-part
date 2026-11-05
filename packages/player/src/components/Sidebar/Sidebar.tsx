@@ -27,11 +27,11 @@ export default function Sidebar() {
 
   return (
     <aside
-      class="group/sidebar w-58 shrink-0 flex flex-col gap-2 p-2 overflow-hidden transition-[width] duration-200 ease-[ease] data-[collapsed=true]:w-16 motion-reduce:transition-none bg-sidebar text-sidebar-foreground border-r border-sidebar-border"
+      class="group/sidebar w-58 shrink-0 flex flex-col gap-2 p-2 overflow-hidden transition-[width,padding] duration-200 ease-[ease] data-[collapsed=true]:w-12 data-[collapsed=true]:pr-1.75 motion-reduce:transition-none bg-sidebar text-sidebar-foreground border-r border-sidebar-border"
       data-collapsed={collapsed() ? 'true' : 'false'}
     >
-      <button class="w-full self-center shrink-0 flex items-center gap-2.5 text-left p-2 overflow-hidden rounded-lg transition-[width,background-color] duration-200 group-data-[collapsed=true]/sidebar:w-13 motion-reduce:transition-none hover:bg-accent" aria-label="Music Party 首页" onClick={() => navigate('/')}>
-        <span class="grid place-items-center size-9 rounded-[10px] shrink-0 bg-primary text-primary-foreground"><span class="i-lucide:audio-lines text-5" /></span>
+      <button class="w-full shrink-0 flex items-center gap-2.5 text-left p-2 overflow-hidden rounded-lg transition-[padding,background-color] duration-200 group-data-[collapsed=true]/sidebar:p-0 motion-reduce:transition-none hover:bg-accent" aria-label="Music Party 首页" onClick={() => navigate('/')}>
+        <span class="grid place-items-center size-8 rounded-[10px] shrink-0 bg-primary text-primary-foreground"><span class="i-lucide:audio-lines text-5" /></span>
         <span class="sidebar-label"><strong class="block text-[15px] leading-5 tracking-[-0.4px]">Music Party</strong></span>
       </button>
       <nav id="sidebar-navigation" class="min-h-0 flex-1 flex flex-col gap-1 overflow-y-auto" aria-label="主导航">

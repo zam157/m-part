@@ -83,11 +83,11 @@ grid-cols-[repeat(auto-fill,minmax(clamp(300px,15vw,360px),1fr))]
 
 ## 侧栏收放
 
-侧栏导航和底部按钮使用 16px 图标、12px 字号和 16px 行高。`sidebar-item` 的 `p-2` 在内容上下各留 8px，自然形成 32px 高度。收起时宽度为 `w-8`（32px），图标居中。Logo 入口使用 36px 图标和 `p-2` 内边距，收起时宽度为 52px。Logo 和导航之间使用 `gap-2`（8px），悬停背景使用 `hover:bg-accent`。
+侧栏导航和底部按钮使用 16px 图标、12px 字号和 16px 行高。`sidebar-item` 的 `p-2` 在内容上下各留 8px，自然形成 32px 高度。Logo 图标为 `size-8`（32px），入口展开时使用 `p-2`，收起时使用 `p-0`。Logo 和导航之间使用 `gap-2`（8px），悬停背景使用 `hover:bg-accent`。
 
 导航和底部操作按钮组内部均使用 `gap-1`（4px）。导航通过 `flex-1 min-h-0` 占据剩余空间，高度不足时自身滚动；底部操作区使用 `shrink-0` 保持贴底，无需 `mt-auto`。
 
-侧栏外层在展开、收起状态均使用 `p-2`（8px）内边距；宽度使用 200ms 过渡，`sidebar-item` 的宽度同步过渡，Logo 和按钮通过 `self-center` 居中，不依赖横向或负 margin，始终保持从左排列，避免切换 `justify-center` / `mx-auto` 时图标跳位。`sidebar-label` 保留布局、禁止收缩和换行，通过透明度与 4px 位移过渡：收起用 100ms 淡出，展开延迟 60ms 后淡入。Logo、导航、队列数量和底部文案共用此规则；不要恢复 `display:none` / `hidden`，否则文字会在宽度动画开始时突然消失。按钮裁切溢出内容，所有过渡响应 `prefers-reduced-motion`。
+侧栏外层使用 `p-2`（8px），收起时宽度为 `w-12`（48px），右侧留白由 7px 内边距与 1px 边框组成，按钮内容区正好宽 32px。外层宽度和内边距过渡 200ms，按钮以 `w-full` 跟随内容区，导航图标始终距侧栏左边缘 16px。Logo 入口随内边距过渡平滑移动。`sidebar-label` 保留布局、禁止收缩和换行，收起用 100ms 淡出和 4px 位移，展开延迟 60ms 后淡入。Logo、导航、队列数量和底部文案共用此规则。按钮裁切溢出内容，所有过渡响应 `prefers-reduced-motion`。
 
 UnoCSS Wind4 的 `transition-[opacity,transform]` 会把独立的 `translate` / `scale` / `rotate` 也展开进过渡属性，无需再添加 `translate` token。修改共享 UnoCSS 配置后，开发服务可能仍持有旧配置，需要重启 WXT，再检查实际计算样式和生产产物；只刷新页面不足以确认配置更新。
 
