@@ -30,7 +30,7 @@ export default function TrackPartPicker() {
     setSelected(next)
   }
   return (
-    <dialog ref={dialog} aria-labelledby="track-parts-title" class="m-auto w-[min(42rem,calc(100vw-2rem))] max-w-none max-h-[calc(100svh-2rem)] open:flex flex-col overflow-hidden rounded-2xl border border-border bg-background text-foreground p-0 shadow-xl backdrop:bg-black/50" onCancel={() => cancelTrackParts()} onClose={() => { if (!dialog.open) cancelTrackParts() }}>
+    <dialog ref={dialog} aria-labelledby="track-parts-title" class="fixed [inset:auto] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 m-0 w-[min(42rem,calc(100vw-2rem))] max-w-none max-h-[calc(100svh-2rem)] open:flex flex-col overflow-hidden rounded-2xl border border-border bg-background text-foreground p-0 shadow-xl backdrop:bg-black/50" onCancel={() => cancelTrackParts()} onClose={() => { if (!dialog.open) cancelTrackParts() }}>
       <header class="flex items-center justify-between gap-3 border-b border-border p-4 shrink-0">
         <div class="min-w-0"><h2 id="track-parts-title" class="text-lg font-semibold">选择{label()}</h2><p class="text-xs text-muted-foreground truncate mt-1">{trackParts()?.music.title}</p></div>
         <button class="ghost-btn size-9 shrink-0" aria-label={`关闭${label()}选择器`} onClick={cancelTrackParts}><span class="i-lucide:x text-5" /></button>

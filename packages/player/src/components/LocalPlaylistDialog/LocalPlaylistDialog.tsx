@@ -62,7 +62,7 @@ export default function LocalPlaylistDialog() {
     return current?.kind === 'add' && state().items.find(playlist => playlist.id === id)?.tracks.some(track => track.provider === current.music.provider && track.id === current.music.id)
   }
   return (
-    <dialog ref={dialog} aria-labelledby="local-playlist-dialog-title" class="m-auto w-[min(28rem,calc(100vw-2rem))] max-w-none max-h-[calc(100svh-2rem)] overflow-y-auto rounded-2xl border border-border bg-background text-foreground p-5 shadow-xl backdrop:bg-black/50" onCancel={close} onClose={() => { if (!dialog.open) close() }}>
+    <dialog ref={dialog} aria-labelledby="local-playlist-dialog-title" class="fixed [inset:auto] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 m-0 w-[min(28rem,calc(100vw-2rem))] max-w-none max-h-[calc(100svh-2rem)] overflow-y-auto rounded-2xl border border-border bg-background text-foreground p-5 shadow-xl backdrop:bg-black/50" onCancel={close} onClose={() => { if (!dialog.open) close() }}>
       <div class="grid gap-3">
         <header class="flex items-center justify-between gap-3 pb-1">
           <h2 id="local-playlist-dialog-title" class="text-lg font-semibold">{heading()}</h2>

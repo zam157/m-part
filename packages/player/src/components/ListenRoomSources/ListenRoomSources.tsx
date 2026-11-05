@@ -52,7 +52,7 @@ export default function ListenRoomSources() {
           </div>
         </Show>
         <Show when={roomView().isHost}>
-          <dialog ref={dialog} aria-labelledby="room-source-settings-title" class="m-auto w-[min(32rem,calc(100vw-2rem))] max-w-none max-h-[calc(100svh-2rem)] rounded-2xl border border-border bg-background text-foreground p-0 shadow-xl backdrop:bg-black/50" onClose={() => setCookie('')}>
+          <dialog ref={dialog} aria-labelledby="room-source-settings-title" class="fixed [inset:auto] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 m-0 w-[min(32rem,calc(100vw-2rem))] max-w-none max-h-[calc(100svh-2rem)] rounded-2xl border border-border bg-background text-foreground p-0 shadow-xl backdrop:bg-black/50" onClose={() => setCookie('')}>
             <div class="p-5 grid gap-5">
               <div class="flex items-center justify-between gap-3">
                 <h2 id="room-source-settings-title" class="text-lg font-semibold">{selected().name}取源设置</h2>
