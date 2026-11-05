@@ -9,7 +9,8 @@
   },
   "exports": {
     "./main": "./src/main.tsx",
-    "./select": "./src/components/Select/Select.tsx"
+    "./select": "./src/components/Select/Select.tsx",
+    "./dialog": "./src/components/Dialog/Dialog.tsx"
   },
   "dependencies": {
     "@m-part/music": "workspace:*",

@@ -3,8 +3,9 @@ import { hostedPlatform } from '@m-part/listen-core/protocol'
 import { useNavigate } from '@solidjs/router'
 import { clientCookieStatus } from '~/composables/client-cookies'
 import { roomCredentialProviders } from '~/utils/room-credentials'
-import { createSignal, For, Show } from 'solid-js'
+import { createEffect, createSignal, For, Show } from 'solid-js'
 import { clsx } from 'cn/lite'
+import Dialog, { DialogBody, DialogHeader } from '~/components/Dialog/Dialog'
 import { manageRoomSource, roomView, usePersonalRoomSource, syncRoomCredentials } from '~/composables/listen-room'
 
 /** Room credentials follow the host's active Provider session settings. */
@@ -12,7 +13,7 @@ export default function ListenRoomSources() {
   const navigate = useNavigate()
   const platforms = roomCredentialProviders.map(item => ({ id: item.name, name: item.cookie.label, placeholder: item.cookie.placeholder }))
   const [platform, setPlatform] = createSignal<HostedPlatform>(platforms[0]?.id ?? hostedPlatform.options[0])
-  let dialog!: HTMLDialogElement
+  const [settingsOpen, setSettingsOpen] = createSignal(false)
   const [cookie, setCookie] = createSignal('')
   const selected = () => platforms.find(item => item.id === platform()) ?? { id: platform(), name: '音源', placeholder: '' }
   const source = () => roomView().snapshot?.source
@@ -28,8 +29,13 @@ export default function ListenRoomSources() {
   function openSettings(id: HostedPlatform) {
     setCookie('')
     setPlatform(id)
-    dialog.showModal()
+    setSettingsOpen(true)
   }
+  function closeSettings() {
+    setSettingsOpen(false)
+    setCookie('')
+  }
+  createEffect(() => roomView().isHost, (isHost) => { if (!isHost) closeSettings() })
   return (
     <details class="rounded-xl border border-border p-4">
       <summary class="cursor-pointer text-sm font-medium">房间音源 · 按平台设置</summary>
@@ -52,12 +58,9 @@ export default function ListenRoomSources() {
           </div>
         </Show>
         <Show when={roomView().isHost}>
-          <dialog ref={dialog} aria-labelledby="room-source-settings-title" class="fixed [inset:auto] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 m-0 w-[min(32rem,calc(100vw-2rem))] max-w-none max-h-[calc(100svh-2rem)] rounded-2xl border border-border bg-background text-foreground p-0 shadow-xl backdrop:bg-black/50" onClose={() => setCookie('')}>
-            <div class="p-5 grid gap-5">
-              <div class="flex items-center justify-between gap-3">
-                <h2 id="room-source-settings-title" class="text-lg font-semibold">{selected().name}取源设置</h2>
-                <button class="ghost-btn h-8 px-2" aria-label="关闭取源设置" onClick={() => dialog.close()}>关闭</button>
-              </div>
+          <Dialog open={settingsOpen()} onClose={closeSettings} size="md" aria-labelledby="room-source-settings-title">
+            <DialogHeader title={`${selected().name}取源设置`} titleId="room-source-settings-title" closeLabel="关闭取源设置" onClose={closeSettings} />
+            <DialogBody class="grid auto-rows-max content-start gap-4">
               <div class="grid gap-3">
                 <p class="font-medium">取源方式</p>
                 <div class="flex gap-2 flex-wrap" role="group" aria-label={`${selected().name}取源方式`}>
@@ -71,7 +74,7 @@ export default function ListenRoomSources() {
                 <p class="text-xs text-muted-foreground">默认跟随房主音源设置中的当前会话；单独绑定后，此平台使用房间专用 Cookie，不受音源设置变化影响。无网站登录态时匿名取源，成员不会收到 Cookie。</p>
                 <div class="flex gap-2 flex-wrap">
                   <button class="btn px-3 h-8" disabled={disabled()} onClick={() => void syncRoomCredentials(platform())}>使用音源设置 Cookie</button>
-                  <button class="border-btn px-3 h-8" onClick={() => { dialog.close(); navigate('/settings') }}>前往音源设置</button>
+                  <button class="border-btn px-3 h-8" onClick={() => { closeSettings(); navigate('/settings') }}>前往音源设置</button>
                 </div>
               </div>
               <form class="grid gap-3" onSubmit={event => { event.preventDefault(); void bind() }}>
@@ -86,8 +89,8 @@ export default function ListenRoomSources() {
                   <Show when={source()?.accounts?.[platform()]?.credential && source()?.accounts?.[platform()]?.credential !== 'none'}><button type="button" class="border-btn h-8 px-3" disabled={disabled()} onClick={() => void manageRoomSource('revoke', undefined, platform())}>撤销房间账号</button></Show>
                 </div>
               </form>
-            </div>
-          </dialog>
+            </DialogBody>
+          </Dialog>
         </Show>
       </div>
     </details>

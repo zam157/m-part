@@ -1,8 +1,9 @@
 import ProviderImage from '~/components/ProviderImage/ProviderImage'
 import { Portal } from '@solidjs/web'
 import { clsx } from 'cn/lite'
-import { createEffect, createSignal, onCleanup, Show, untrack } from 'solid-js'
+import { createEffect, createSignal, Show } from 'solid-js'
 import { closeContextMenu } from '~/components/ContextMenu/state'
+import Dialog from '~/components/Dialog/Dialog'
 import {
   currentSong, currentSourceInfo, playing, playQueue,
   setPlaying, setVolume, volume,
@@ -30,27 +31,11 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
   const [showTranslation, setShowTranslation] = createSignal(true)
   const [hasTranslation, setHasTranslation] = createSignal(false)
   const close = () => props.onShowChange(false)
-  function closeDialog() {
-    for (const popover of dialogRef.querySelectorAll<HTMLElement>('[popover]'))
-      popover.hidePopover()
-    dialogRef.close()
-  }
-
-  // 动画交给 CSS；JS 只同步原生对话框的打开状态，不测量布局或逐帧更新。
-  createEffect(() => props.show, (show) => {
-    closeContextMenu()
-    untrack(() => {
-      if (show && !dialogRef.open)
-        dialogRef.showModal()
-      else if (!show && dialogRef.open)
-        closeDialog()
-    })
-  })
+  createEffect(() => props.show, () => closeContextMenu())
   createEffect(() => props.show && playQueue().length === 0, (empty) => {
     if (empty)
       close()
   })
-  onCleanup(() => { if (dialogRef.open) closeDialog() })
 
   function handleKeyDown(event: KeyboardEvent) {
     if (event.defaultPrevented || event.key !== ' ' || !(event.target instanceof HTMLElement)
@@ -62,15 +47,14 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
 
   return (
     <Portal>
-      <dialog
+      <Dialog
+        open={props.show}
+        onClose={close}
+        fullScreen
         id="expanded-player"
         ref={element => { dialogRef = element; props.ref?.(element) }}
         aria-label="展开播放器"
-        aria-modal="true"
-        inert={!props.show}
-        class="expanded-player fixed inset-0 m-0 w-full h-100dvh max-w-none max-h-none border-0 p-0 bg-background text-foreground outline-none overflow-hidden"
-        onCancel={(event) => { event.preventDefault(); close() }}
-        onClose={() => { if (!dialogRef.open && props.show) close() }}
+        class="expanded-player"
         onKeyDown={handleKeyDown}
       >
         <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -111,7 +95,7 @@ export default function ExpandedPlayer(props: ExpandedPlayerProps) {
           </div>
         </div>
         <PlayQueue floating open={props.show && showQueue()} onOpenChange={setShowQueue} />
-      </dialog>
+      </Dialog>
     </Portal>
   )
 }

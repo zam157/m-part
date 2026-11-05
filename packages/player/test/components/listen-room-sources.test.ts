@@ -76,3 +76,16 @@ it('changes source modes independently and shows scoped account synchronization 
   expect(container.querySelector('dialog')!.textContent).toContain('BiliBili取源设置')
   expect(container.querySelector('[data-platform=bili]')!.textContent).toContain('请更新音源设置')
 })
+
+it('discards the room Cookie draft when host controls disappear and does not reopen on regaining them', () => {
+  open('netease')
+  const input = container.querySelector('input')!
+  input.value = 'unsubmitted-draft'; input.dispatchEvent(new Event('input', { bubbles: true })); flush()
+  setRoomView(v => ({ ...v, isHost: false })); flush()
+  expect(container.querySelector('dialog')).toBeNull()
+  setRoomView(v => ({ ...v, isHost: true })); flush()
+  expect(container.querySelector('dialog')!.open).toBe(false)
+  open('netease')
+  expect(container.querySelector('input')!.value).toBe('')
+  expect(manage).not.toHaveBeenCalled()
+})

@@ -30,7 +30,8 @@ cn('text-9 text-primary', 'i-solar:play-circle-bold')
 - 布局、间距、字号、颜色和响应式状态直接写 UnoCSS 类；重复的组合放在 `packages/build-config/src/uno.ts` 的 shortcuts（如 `sidebar-item`、`page-title`、`popover-surface`），不要再增加只负责这些属性的语义 CSS 类。
 - 间距优先由父容器管理：兄弟元素之间用 flex / grid 的 `gap`，容器内部留白用 `padding`。避免用 `margin` 工具类或基于子元素 margin 的 `space-*` 撑开间隔，尽量不使用负 margin 修补对齐。
 - 居中优先由父容器的 flex / grid 对齐控制（如 `items-center justify-center`、`place-items-center`、`self-center`），避免 `m-auto` / `mx-auto` 等依赖自动 margin 的写法。dialog 使用 `fixed [inset:auto] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 m-0` 居中；`m-0` 只重置浏览器默认 margin，不参与居中计算。保留浮层的视口宽高限制与内容滚动方式，动画中的位移应在居中偏移基础上叠加，避免切换时跳位。
-- `page-description` 仅提供文字样式，标题与说明的间距由所在容器的 `gap-[7px]` 或 `padding` 管理。设置与一起听表单、聊天记录、歌单弹窗和首页推荐区同样由父容器管理间距。固定高度的聊天记录列表使用 `grid auto-rows-max content-start gap-3`，避免记录被拉伸或压缩；原生 dialog 的内容布局放在内部容器，保留关闭时的 `display: none`。
+- 普通 dialog 统一复用 [Dialog 组件](./dialog.md) 的紧凑样式：内容横向内边距 16px（`px-4`），标题区 `pt-4 pb-3`、标题 `text-base font-medium`；关闭图标在视觉上与内容区顶部、右侧的 16px 内边距对齐，24px 点击区域通过 `absolute top-3 right-3` 向外延伸。使用 `rounded-xl shadow-sm` 和浅遮罩。已有底部操作区使用 `px-4 py-3 border-t bg-muted/40`，按钮保持 32px；参考视觉样式时不额外增加关闭按钮或其他操作。标题与底部操作不收缩，长内容只在正文区域滚动，避免双滚动条。
+- `page-description` 仅提供文字样式，标题与说明的间距由所在容器的 `gap-[7px]` 或 `padding` 管理。设置与一起听表单、聊天记录、歌单弹窗和首页推荐区同样由父容器管理间距。固定高度的聊天记录列表使用 `grid auto-rows-max content-start gap-3`，避免记录被拉伸或压缩；原生 dialog 仅通过 `open:flex` 或内部容器启用布局，保留关闭时的 `display: none`。
 - 全局 CSS 只保留文档默认值和减少动画设置。组件 CSS 主要保留原生锚点、`@starting-style` 与 `display` / `overlay` 离散过渡等规则，避免迁移时丢失浮层定位或退场效果。
 - 连续变化的进度、音量通过行内 CSS 自定义属性传值，宽高与定位使用 `w-[--progress-percent]` 等类，不动态拼接 UnoCSS 类名。
 - 当前 `presetWind4` 会把 `bg-[repeating-radial-gradient(...)]` 解析成 `background-color`，导致渐变无效；使用 `[background-image:repeating-radial-gradient(...)]`。锚点名 `--thumb` 保留原生 CSS：`[anchor-name:--thumb]` 会被改写成 `anchor-name: var(--thumb)`。
