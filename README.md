@@ -22,12 +22,12 @@
 pnpm install --frozen-lockfile
 pnpm dev:ext           # 扩展开发，终端日志显示 dev server 端口
 pnpm build:ext         # 扩展生产构建
-pnpm dev:rooms         # 一起听服务，127.0.0.1:3410
-pnpm dev:rooms:lan     # 一起听服务，0.0.0.0:3410，供局域网设备访问
+pnpm dev:rooms         # 一起听服务，监听 0.0.0.0:3410
+pnpm dev:rooms:lan     # 与 pnpm dev:rooms 相同
 pnpm build:rooms       # 独立房间服务产物
-pnpm dev               # Web UI 与代理，localhost:3333
+pnpm dev               # Web UI 与代理，监听 0.0.0.0:3411
 pnpm build             # Web 客户端及 Nitro 服务
-pnpm preview           # 启动构建好的 Web 服务，默认端口 3000
+pnpm preview           # 启动构建好的 Web 服务，监听 0.0.0.0:3411
 pnpm build:all         # Web、扩展和房间服务
 ```
 
@@ -75,10 +75,10 @@ locales/               未启用的旧国际化文件，保留
 ```bash
 pnpm install --frozen-lockfile
 pnpm build:rooms
-NITRO_HOST=0.0.0.0 NITRO_PORT=3410 node apps/rooms/dist/server/index.mjs
+node apps/rooms/dist/server/index.mjs
 ```
 
-将 `apps/rooms/dist/` 整个目录复制到服务器即可运行，不需要同时部署播放器。默认不校验 Origin；仅设置 `LISTEN_ALLOWED_ORIGINS` 时按允许列表校验，本机、局域网和公网使用相同规则。HTTP / HTTPS 地址均支持；公网建议 HTTPS / WSS。详见 [一起听使用与部署](./docs/listen-together-usage.md)。
+将 `apps/rooms/dist/` 整个目录复制到服务器即可运行，不需要同时部署播放器。服务默认监听 `0.0.0.0:3410`，可用 `NITRO_HOST` 和 `NITRO_PORT` 覆盖。默认不校验 Origin；仅设置 `LISTEN_ALLOWED_ORIGINS` 时按允许列表校验，本机、局域网和公网使用相同规则。HTTP / HTTPS 地址均支持；公网建议 HTTPS / WSS。详见 [一起听使用与部署](./docs/listen-together-usage.md)。
 
 客户端与服务需要同时更新至协议 7。取源由房主按平台选择，Cookie 按平台选填，无需服务器开关，HTTP / HTTPS 地址均可绑定；真实服务器会话与风控仍待使用者实测，详见使用说明。
 

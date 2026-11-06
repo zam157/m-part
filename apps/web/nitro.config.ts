@@ -3,6 +3,12 @@ import { defineConfig } from 'nitro'
 
 export default defineConfig({
   builder: 'rolldown',
+  hooks: {
+    'build:before'(nitro) {
+      if (nitro.options.preset === 'node-server')
+        nitro.options.unenv.push({ polyfill: [path.resolve(import.meta.dirname, 'server-env.ts')] })
+    },
+  },
   serverDir: './server',
   renderer: { template: './dist/client/index.html', static: true },
   alias: { '#server/': `${path.resolve(import.meta.dirname, 'server')}/` },

@@ -1,6 +1,6 @@
 # Web 取源与部署
 
-运行 `pnpm dev`，打开 [本地设置页](http://localhost:3333/settings)。开发服务器同时提供播放器与 Nitro API。网页会在当前浏览器保存取源方式，切换方式时重新加载页面。
+运行 `pnpm dev`，打开 [本地设置页](http://localhost:3411/settings)。开发服务器监听 `0.0.0.0:3411`，同时提供播放器与 Nitro API。网页会在当前浏览器保存取源方式，切换方式时重新加载页面。
 
 ## 代理服务
 
@@ -8,17 +8,17 @@
 
 音频通过同站流式转发，支持浏览器的 Range 请求和进度跳转。代理只允许 Provider 声明的 API 与音频 CDN，跳转仍受同一音源的地址限制。一起听的房间接口及托管音频继续使用用户填写的独立房间服务。
 
-生产运行 `pnpm build && pnpm preview`，默认在 3000 端口启动。也可以在目标服务器以相同相对结构部署 `apps/web/dist/server` 和 `apps/web/dist/public`，然后执行以下命令。对外部署时将 Web 页面和 `/api/provider-*` 路由放在同一个网站源下。由反向代理处理 HTTPS 时，让它设置 `X-Forwarded-Proto` 与 `X-Forwarded-Host` 为实际的公网协议与主机。
+生产运行 `pnpm build && pnpm preview`，默认监听 `0.0.0.0:3411`，可用 `NITRO_HOST` 和 `NITRO_PORT` 覆盖。也可以在目标服务器以相同相对结构部署 `apps/web/dist/server` 和 `apps/web/dist/public`，然后执行以下命令。对外部署时将 Web 页面和 `/api/provider-*` 路由放在同一个网站源下。由反向代理处理 HTTPS 时，让它设置 `X-Forwarded-Proto` 与 `X-Forwarded-Host` 为实际的公网协议与主机。
 
 ```bash
-NITRO_HOST=0.0.0.0 NITRO_PORT=3000 node apps/web/dist/server/index.mjs
+node apps/web/dist/server/index.mjs
 ```
 
 ## 浏览器扩展
 
 安装或更新本项目的 Chrome 扩展，在网页「设置 → 网页取源」选择「浏览器扩展」并保存。网页连接固定 ID 的扩展，扩展后台使用同一浏览器配置里的音源网站会话完成搜索、歌单、歌词与取源。登录凭据留在扩展一侧；网页只拿到正常的 Provider 结果和音频。网页已保存的手动 Cookie 在此模式下暂不使用。一起听需要账号托管时，可以在房间内独立填写 Cookie。
 
-默认扩展构建允许 `localhost` 和 `127.0.0.1` 的 HTTP 3333、3000 端口。发布到自己的 HTTPS 网站后，用该网站的准确地址构建扩展并重新加载。多个地址以逗号分隔，端口属于来源的一部分。
+默认扩展构建允许 `http://localhost:3411` 和 `http://127.0.0.1:3411`。发布到自己的 HTTPS 网站后，用该网站的准确地址构建扩展并重新加载。多个地址以逗号分隔，端口属于来源的一部分。
 
 ```bash
 MPART_WEB_ORIGINS=https://music.example.com pnpm build:ext

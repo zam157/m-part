@@ -11,7 +11,7 @@ BiliBili 多 P 视频通过分 P 选择器加入，每个 P 是独立曲目，�
 本机开发开两个终端：
 
 ```bash
-pnpm dev:rooms   # 房间服务 http://127.0.0.1:3410
+pnpm dev:rooms   # 房间服务监听 0.0.0.0:3410，本机访问 http://127.0.0.1:3410
 pnpm dev:ext     # 按日志加载 apps/extension/.output/chrome-mv3-dev
 ```
 
@@ -40,7 +40,7 @@ pnpm dev:ext     # 按日志加载 apps/extension/.output/chrome-mv3-dev
 2. 在服务器电脑启动一个房间服务，不需要收集扩展 ID 或配置来源白名单：
 
    ```bash
-   pnpm dev:rooms:lan
+   pnpm dev:rooms
    ```
 
 3. 假设服务器局域网 IP 为 `192.168.1.10`，另一台电脑先打开 `http://192.168.1.10:3410/health`，应返回 JSON。系统防火墙需允许该端口；两台设备应处于可互相访问的网络，访客 Wi-Fi 的设备隔离可能阻止连接。

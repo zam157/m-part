@@ -81,7 +81,7 @@ pnpm --filter @m-part/rooms test
 pnpm typecheck
 ```
 
-Web HTTP 集成测试需真实服务，独立通过 `pnpm test:backend` 执行，不混入离线单元测试。可用 `WEB_TEST_BASE_URL` 覆盖地址；默认请求 `http://localhost:3000`，先运行 `pnpm build && pnpm preview`。
+Web HTTP 集成测试需真实服务，独立通过 `pnpm test:backend` 执行，不混入离线单元测试。默认请求 `http://127.0.0.1:3411`，可用 `WEB_TEST_BASE_URL` 覆盖地址。先运行 `pnpm build && pnpm preview`。
 
 每个 workspace 的 tsconfig 声明自己的环境与类型。Solid 2 约定仍有效，测试读取信号前调用 `flush()`。ESLint 的 TypeScript 7 兼容限制保持不变。
 
@@ -97,10 +97,10 @@ pnpm --filter @m-part/rooms build
 复制 `apps/rooms/dist/` 整个目录到目标服务器，在产物目录执行：
 
 ```bash
-NITRO_HOST=0.0.0.0 NITRO_PORT=3410 node server/index.mjs
+node server/index.mjs
 ```
 
-产物已包含服务依赖，不需要安装或部署浏览器扩展、Web 应用或音乐 Provider。构建命令仍应在完整 workspace 源码中执行，不能只复制 `apps/rooms` 源码后省略 `listen-core`。
+产物默认监听 `0.0.0.0:3410`，已包含服务依赖，不需要安装或部署浏览器扩展、Web 应用或音乐 Provider。构建命令仍应在完整 workspace 源码中执行，不能只复制 `apps/rooms` 源码后省略 `listen-core`。
 
 服务环境变量、来源限制及局域网步骤见 [一起听使用与部署](./listen-together-usage.md)。monorepo 拆分本身没有改变房间协议和行为；后续托管、管理员、聊天与分 P 功能已将协议升级为 7，需要同时更新客户端与服务。服务直接提供托管能力，无环境变量开关；新房间仍默认独立取源，房主可逐平台选择服务器托管；各平台 Cookie 独立选填，绑定后该平台自动托管，未绑定默认各自取源。
 

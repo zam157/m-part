@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest'
 import { providerApiProxy } from '../server/utils/provider-api-proxy'
 
 const payload = { url: 'https://music.163.com/weapi/test', method: 'POST', cookie: 'MUSIC_U=manual', body: 'params=encoded', headers: { 'content-type': 'application/x-www-form-urlencoded' } }
-const request = (data: unknown = payload, origin = 'http://localhost:3333') => new Request('http://localhost:3333/api/provider-request', { method: 'POST', headers: { 'content-type': 'application/json', origin, cookie: 'web_app_cookie=private' }, body: JSON.stringify(data) })
+const request = (data: unknown = payload, origin = 'http://localhost:3411') => new Request('http://localhost:3411/api/provider-request', { method: 'POST', headers: { 'content-type': 'application/json', origin, cookie: 'web_app_cookie=private' }, body: JSON.stringify(data) })
 
 it('forwards Cookie values containing commas unchanged', async () => {
   const upstream = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ code: 200 }))

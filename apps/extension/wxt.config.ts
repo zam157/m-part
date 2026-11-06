@@ -4,7 +4,7 @@ import { resolveAliases, sharedPlugins } from '@m-part/build-config/vite'
 import { websiteCookiePermissions } from '@m-part/music/provider-definitions'
 
 const publicDir = preparePublicDir(import.meta.dirname)
-const defaultWebOrigins = ['http://localhost:3333', 'http://127.0.0.1:3333', 'http://localhost:3000', 'http://127.0.0.1:3000']
+const defaultWebOrigins = ['http://localhost:3411', 'http://127.0.0.1:3411']
 const webOrigins = (process.env.MPART_WEB_ORIGINS?.split(',') ?? defaultWebOrigins).map((value) => {
   const url = new URL(value.trim())
   const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1'

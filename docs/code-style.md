@@ -38,7 +38,7 @@ m-part 是开发中的音乐 App：前端 Solid 2 + Vite，按 Provider 提供�
 pnpm install --frozen-lockfile
 pnpm dev:ext          # apps/extension/.output/chrome-mv3-dev
 pnpm build:ext        # apps/extension/.output/chrome-mv3
-pnpm dev              # Web UI，端口 3333；开发代理限制见 README
+pnpm dev              # Web UI 与代理，监听 0.0.0.0:3411
 pnpm build            # Web 客户端及 Nitro 生产服务
 pnpm preview          # 先 build，启动 apps/web/dist/server/index.mjs
 pnpm dev:rooms
