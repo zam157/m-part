@@ -2,7 +2,6 @@ import { useLocation, useNavigate } from '@solidjs/router'
 import { clsx } from 'cn/lite'
 import { createEffect, createSignal, For } from 'solid-js'
 import { colorMode, switchColorMode } from '~/composables/dark'
-import { playQueue, setShowPlayQueue, showPlayQueue } from '~/composables/player'
 import Tooltip from '~/components/Tooltip/Tooltip'
 
 const menuItems = [
@@ -44,13 +43,6 @@ export default function Sidebar() {
             )}
           </Tooltip>
         )}</For>
-        <Tooltip content="播放队列" disabled={!collapsed()} placement="right">
-          {triggerProps => (
-            <button {...triggerProps} class={clsx('sidebar-item', showPlayQueue() && 'bg-accent')} aria-label="播放队列" aria-controls="play-queue" aria-expanded={showPlayQueue() ? 'true' : 'false'} onClick={() => setShowPlayQueue(!showPlayQueue())}>
-              <span class="i-lucide:list-music text-4 shrink-0" /><span class="sidebar-label">播放队列</span><span class="sidebar-label ml-auto text-[11px] tabular-nums text-muted-foreground">{playQueue().length}</span>
-            </button>
-          )}
-        </Tooltip>
       </nav>
       <div class="shrink-0 flex flex-col gap-1 pt-3.5 border-t border-border">
         <Tooltip content="设置" disabled={!collapsed()} placement="right">

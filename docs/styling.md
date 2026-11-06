@@ -87,7 +87,7 @@ grid-cols-[repeat(auto-fill,minmax(clamp(300px,15vw,360px),1fr))]
 
 导航和底部操作按钮组内部均使用 `gap-1`（4px）。导航通过 `flex-1 min-h-0` 占据剩余空间，高度不足时自身滚动；底部操作区使用 `shrink-0` 保持贴底，无需 `mt-auto`。
 
-侧栏外层使用 `p-2`（8px），收起时宽度为 `w-12`（48px），右侧留白由 7px 内边距与 1px 边框组成，按钮内容区正好宽 32px。外层宽度和内边距过渡 200ms，按钮以 `w-full` 跟随内容区，导航图标始终距侧栏左边缘 16px。Logo 入口随内边距过渡平滑移动。`sidebar-label` 保留布局、禁止收缩和换行，收起用 100ms 淡出和 4px 位移，展开延迟 60ms 后淡入。Logo、导航、队列数量和底部文案共用此规则。按钮裁切溢出内容，所有过渡响应 `prefers-reduced-motion`。
+侧栏外层使用 `p-2`（8px），收起时宽度为 `w-12`（48px），右侧留白由 7px 内边距与 1px 边框组成，按钮内容区正好宽 32px。外层宽度和内边距过渡 200ms，按钮以 `w-full` 跟随内容区，导航图标始终距侧栏左边缘 16px。Logo 入口随内边距过渡平滑移动。`sidebar-label` 保留布局、禁止收缩和换行，收起用 100ms 淡出和 4px 位移，展开延迟 60ms 后淡入。Logo、导航和底部文案共用此规则。按钮裁切溢出内容，所有过渡响应 `prefers-reduced-motion`。
 
 UnoCSS Wind4 的 `transition-[opacity,transform]` 会把独立的 `translate` / `scale` / `rotate` 也展开进过渡属性，无需再添加 `translate` token。修改共享 UnoCSS 配置后，开发服务可能仍持有旧配置，需要重启 WXT，再检查实际计算样式和生产产物；只刷新页面不足以确认配置更新。
 
