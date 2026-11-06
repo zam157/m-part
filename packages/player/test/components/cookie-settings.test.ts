@@ -2,6 +2,7 @@ import { createComponent, render } from '@solidjs/web'
 import { flush } from 'solid-js'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { mockDialog } from '../helpers/dialog'
+import { setWebTransport } from '@m-part/music/web-transport'
 
 const { definitions, save } = vi.hoisted(() => ({
   definitions: [{ name: 'bili', cookie: { label: '测试音源', placeholder: 'session=…', loginUrl: 'https://example.test/' } }],
@@ -15,9 +16,10 @@ import SettingsPage from '~/pages/settings'
 let dispose: (() => void) | undefined
 let restore: () => void
 beforeEach(() => { restore = mockDialog() })
-afterEach(() => { dispose?.(); restore(); document.body.replaceChildren(); save.mockClear() })
+afterEach(() => { dispose?.(); restore(); document.body.replaceChildren(); localStorage.clear(); save.mockClear() })
 
-it('opens a Cookie form for the chosen provider and discards drafts on close', async () => {
+it.each([['proxy', '匿名取源'], ['extension', '网站 Cookie']] as const)('opens the chosen Cookie form in %s mode and discards drafts on close', async (transport, sourceLabel) => {
+  setWebTransport(transport)
   dispose = render(() => createComponent(SettingsPage, {}), document.body)
   flush()
   const edit = document.querySelector<HTMLButtonElement>('button[aria-label="设置测试音源账号"]')!
@@ -26,6 +28,7 @@ it('opens a Cookie form for the chosen provider and discards drafts on close', a
   const dialog = document.querySelector('dialog[open]')!
   expect(dialog.querySelector('h2')?.textContent).toBe('测试音源账号')
   expect(dialog.querySelector('form')?.getAttribute('aria-label')).toBe('测试音源 Cookie 设置')
+  expect(dialog.querySelector('[role="combobox"]')?.textContent).toBe(sourceLabel)
   expect(dialog.querySelector('a')?.href).toBe('https://example.test/')
   const input = dialog.querySelector('input')!
   expect(input.placeholder).toBe('session=…')

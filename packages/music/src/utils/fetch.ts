@@ -1,5 +1,5 @@
 import { TARGET_EXTENSION, USE_GM_FETCH } from './constants'
-import { getClientCookie, syncClientCookie } from './client-cookies'
+import { extensionWorkerSession, getClientCookie, syncClientCookie } from './client-cookies'
 import { providerMedia, providerRequest } from './provider-request'
 import { fetchBridgeMedia } from './web-bridge'
 import { getWebTransport, usesWebTransport, webMediaProxyUrl } from './web-transport'
@@ -112,8 +112,12 @@ export async function tRequest(url: string, options?: TRequestOptions): Promise<
   }
   if (target && options?.cookieContext !== undefined && options.cookieContext !== cookie) throw new Error('音源 Cookie 已更新，请重试当前操作')
   if (target) fetchOptions.credentials ??= 'include'
-  // The bridge runs inside the extension worker with the website account.
-  // Only extension tabs update their manual Cookie rules.
+  // The bridge installs its own rule for the duration of the Provider operation.
+  const workerSession = target && extensionWorkerSession(target.provider)
+  if (workerSession) {
+    fetchOptions.signal = options?.signal ? AbortSignal.any([options.signal, workerSession.signal]) : workerSession.signal
+    if (cookie) fetchOptions.redirect = 'error'
+  }
   if (target && TARGET_EXTENSION && globalWindow) await syncClientCookie(target.provider, cookie)
   fetchOptions.signal?.throwIfAborted()
 

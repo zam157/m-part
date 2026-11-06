@@ -5,6 +5,7 @@ import { WEB_BRIDGE_PORT } from '@m-part/music/web-transport'
 import { isMediaContentType, mediaResponseHeaders, providerMedia } from '@m-part/music/provider-request'
 import { LoginRequiredError } from '@m-part/music/providers/login-required'
 import { providers } from '@m-part/music/providers'
+import { withExtensionWorkerCookie } from '@m-part/music/client-cookies'
 
 const allowedOrigins = new Set(import.meta.env.VITE_WEB_BRIDGE_ORIGINS?.split(',') ?? [])
 const MEDIA_LIMIT = 128 * 1024 * 1024
@@ -73,8 +74,10 @@ export function registerWebBridge() {
           await relayMedia(message.url, controller.signal, send)
           send({ type: 'result', value: null })
         }
-        else if (message?.type === 'provider' && Object.hasOwn(providers, message.source) && bridgeMethods.includes(message.method) && Array.isArray(message.args) && message.args.length <= 3) {
-          const value = await providerCall(providers[message.source], message.method, message.args, controller.signal, send)
+        else if ((message?.type === 'provider' || message?.type === 'provider-manual') && Object.hasOwn(providers, message.source) && bridgeMethods.includes(message.method) && Array.isArray(message.args) && message.args.length <= 3) {
+          const cookie = message.type === 'provider-manual' ? message.cookie : undefined
+          if (message.type === 'provider-manual' && typeof cookie !== 'string') throw new Error('手动 Cookie 格式无效')
+          const value = await withExtensionWorkerCookie(message.source, cookie, controller.signal, () => providerCall(providers[message.source], message.method, message.args, controller.signal, send))
           send({ type: 'result', value })
         }
         else send({ type: 'error', message: '扩展收到不支持的取源请求' })

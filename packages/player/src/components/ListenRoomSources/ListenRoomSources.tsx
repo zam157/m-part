@@ -26,8 +26,8 @@ export default function ListenRoomSources() {
   const extensionBridge = web && getWebTransport() === 'extension'
   function sessionSource() {
     if (overridden()) return '房间单独设置'
-    if (extensionBridge) return '匿名托管'
     if (clientCookieStatus().modes[platform()] === 'manual') return '音源设置 · 手动 Cookie'
+    if (extensionBridge) return '匿名托管'
     return web ? '音源设置 · 匿名取源' : '音源设置 · 网站 Cookie'
   }
   async function bind() {
@@ -80,9 +80,9 @@ export default function ListenRoomSources() {
               </div>
               <div class="grid gap-3">
                 <p class="text-sm">当前会话来源：{sessionSource()}</p>
-                <p class="text-xs text-muted-foreground">{extensionBridge ? '网页通过扩展使用网站登录状态。房间服务器默认匿名取源，可在下方绑定房间专用 Cookie。' : '默认跟随房主音源设置中的当前会话；单独绑定后，此平台使用房间专用 Cookie，不受音源设置变化影响。无登录会话时匿名取源，成员不会收到 Cookie。'}</p>
+                <p class="text-xs text-muted-foreground">{extensionBridge ? '房间可托管音源设置中的手动 Cookie，或使用下方绑定的专用 Cookie。跟随网站 Cookie 时，扩展使用网站登录态，房间使用匿名权限。' : '默认跟随房主音源设置中的当前会话；单独绑定后，此平台使用房间专用 Cookie，不受音源设置变化影响。无登录会话时匿名取源，成员不会收到 Cookie。'}</p>
                 <div class="flex gap-2 flex-wrap">
-                  <button class="btn px-3 h-8" disabled={disabled()} onClick={() => void syncRoomCredentials(platform())}>{extensionBridge ? '使用匿名取源' : '使用音源设置 Cookie'}</button>
+                  <button class="btn px-3 h-8" disabled={disabled()} onClick={() => void syncRoomCredentials(platform())}>使用音源设置 Cookie</button>
                   <button class="border-btn px-3 h-8" onClick={() => { closeSettings(); navigate('/settings') }}>前往音源设置</button>
                 </div>
               </div>

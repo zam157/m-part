@@ -56,7 +56,7 @@ function WebTransportSettings(props: { mode: WebTransport }) {
         <Select aria-labelledby="web-transport-label" options={webModes} value={mode()} disabled={busy()} triggerClass="w-full" onValueChange={next => { setMode(next); setMessage(''); setError('') }} />
         <p class="text-sm text-muted-foreground">
           {mode() === 'extension'
-            ? '通过已安装的 m-part 扩展请求音源，使用当前浏览器在音源网站的登录状态。'
+            ? '通过已安装的 m-part 扩展请求音源，可使用网站登录态或下方设置的手动 Cookie。'
             : '通过本站服务请求接口和音频。可匿名取源，也可使用下方保存的手动 Cookie。'}
         </p>
         <Show when={mode() !== props.mode}>
@@ -75,7 +75,7 @@ function WebTransportSettings(props: { mode: WebTransport }) {
 export default function SettingsPage() {
   const web = usesWebTransport()
   const transport = web ? getWebTransport() : 'extension'
-  const usesWebsiteSession = web && transport === 'extension'
+  const anonymous = web && transport === 'proxy'
   const providers = getCookieProviders()
   const [editingAccount, setEditingAccount] = createSignal<(typeof providers)[number]>()
   const closeAccount = () => setEditingAccount(undefined)
@@ -97,36 +97,32 @@ export default function SettingsPage() {
             <div class="grid gap-3">
               <h2 id="source-settings-title" class="text-base font-semibold">音源账号</h2>
               <p class="text-sm text-muted-foreground leading-relaxed">
-                {usesWebsiteSession
-                  ? '网页当前通过扩展使用网站登录状态。手动 Cookie 保存在本网页，切换回代理服务后可以继续使用。一起听房间可独立绑定 Cookie。'
-                  : web
-                    ? '手动 Cookie 保存在当前浏览器，取源时由本站服务转发。匿名取源使用平台的访客会话。'
-                    : '各平台独立选择手动 Cookie 或网站 Cookie。切换来源会保留已保存的值，只有「清除」会删除手动 Cookie。'}
+                {anonymous
+                  ? '手动 Cookie 保存在当前浏览器，取源时由本站服务转发。匿名取源使用平台的访客会话。'
+                  : '各平台独立选择手动 Cookie 或网站 Cookie。切换来源会保留已保存的值，只有「清除」会删除手动 Cookie。'}
               </p>
-              <Show when={!usesWebsiteSession}><p class="text-sm text-muted-foreground">作为一起听房主时，跟随音源设置的平台会将当前可用会话用于服务器托管。</p></Show>
+              <p class="text-sm text-muted-foreground">作为一起听房主时，跟随音源设置的平台会将当前可用会话用于服务器托管。</p>
             </div>
-            <Show when={!usesWebsiteSession}>
-              <Show when={clientCookieStatus().error}><p class="text-sm text-destructive" role="alert">{clientCookieStatus().error}</p></Show>
-              <ul class="divide-y divide-border rounded-xl border border-border" aria-label="各平台音源账号">
-                <For each={providers}>{provider => (
-                  <li class="flex items-center justify-between gap-3 px-4 py-3">
-                    <div class="min-w-0 grid gap-1">
-                      <span class="text-sm font-medium">{provider.cookie.label}</span>
-                      <span class="text-xs text-muted-foreground">{clientCookieStatus().modes[provider.name] === 'manual' ? '手动 Cookie' : web ? '匿名取源' : '网站 Cookie'}</span>
-                    </div>
-                    <button type="button" class="border-btn h-8 px-3" aria-haspopup="dialog" aria-label={`设置${provider.cookie.label}账号`} onClick={() => setEditingAccount(provider)}>修改</button>
-                  </li>
-                )}</For>
-              </ul>
-              <Dialog open={!!editingAccount()} aria-labelledby="source-account-title" onClose={closeAccount}>
-                <Show when={editingAccount()} keyed>{provider => (
-                  <>
-                    <DialogHeader title={`${provider.cookie.label}账号`} titleId="source-account-title" onClose={closeAccount} />
-                    <DialogBody><PlatformCookieForm source={provider.name} config={provider.cookie} anonymous={web} /></DialogBody>
-                  </>
-                )}</Show>
-              </Dialog>
-            </Show>
+            <Show when={clientCookieStatus().error}><p class="text-sm text-destructive" role="alert">{clientCookieStatus().error}</p></Show>
+            <ul class="divide-y divide-border rounded-xl border border-border" aria-label="各平台音源账号">
+              <For each={providers}>{provider => (
+                <li class="flex items-center justify-between gap-3 px-4 py-3">
+                  <div class="min-w-0 grid gap-1">
+                    <span class="text-sm font-medium">{provider.cookie.label}</span>
+                    <span class="text-xs text-muted-foreground">{clientCookieStatus().modes[provider.name] === 'manual' ? '手动 Cookie' : anonymous ? '匿名取源' : '网站 Cookie'}</span>
+                  </div>
+                  <button type="button" class="border-btn h-8 px-3" aria-haspopup="dialog" aria-label={`设置${provider.cookie.label}账号`} onClick={() => setEditingAccount(provider)}>修改</button>
+                </li>
+              )}</For>
+            </ul>
+            <Dialog open={!!editingAccount()} aria-labelledby="source-account-title" onClose={closeAccount}>
+              <Show when={editingAccount()} keyed>{provider => (
+                <>
+                  <DialogHeader title={`${provider.cookie.label}账号`} titleId="source-account-title" onClose={closeAccount} />
+                  <DialogBody><PlatformCookieForm source={provider.name} config={provider.cookie} anonymous={anonymous} /></DialogBody>
+                </>
+              )}</Show>
+            </Dialog>
           </section>
         </div>
       </div>

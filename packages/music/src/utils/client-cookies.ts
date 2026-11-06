@@ -3,12 +3,17 @@ import { TARGET_EXTENSION } from './constants'
 import { normalizeClientCookie, clientCookieValue } from './cookie-header'
 export { normalizeClientCookie, clientCookieValue } from './cookie-header'
 import { providerCookieFilter } from './provider-request'
-import { getWebTransport, usesWebTransport } from './web-transport'
 import { providerDefinitions, getCookieProviders, websiteCookieUrls, websiteCookiePermissions } from './provider-definitions'
 
 export const CLIENT_COOKIE_PREFIX = 'mpart-client-cookie:'
 export const CLIENT_COOKIE_MODE_PREFIX = 'mpart-client-cookie-mode:'
 export type ClientCookieMode = 'manual' | 'website'
+type CookieRuleScope = 'tab' | 'worker'
+const workerSessions = new Map<ProviderName, { cookie: string, signal: AbortSignal }>()
+
+export function extensionWorkerSession(provider: ProviderName) {
+  return workerSessions.get(provider)
+}
 
 export function getStoredClientCookie(provider: ProviderName): string {
   try { return globalThis.localStorage?.getItem(CLIENT_COOKIE_PREFIX + provider) ?? '' }
@@ -28,6 +33,8 @@ export function getClientCookieMode(provider: ProviderName): ClientCookieMode {
 }
 /** Effective session only. Never fall back to a website account in manual mode. */
 export function getClientCookie(provider: ProviderName): string {
+  const workerSession = extensionWorkerSession(provider)
+  if (workerSession) return workerSession.cookie
   if (getClientCookieMode(provider) === 'website') return ''
   const cookie = getStoredClientCookie(provider)
   if (!cookie) throw new Error('尚未保存手动 Cookie，请先填写并保存，或切换为网站 Cookie')
@@ -36,7 +43,6 @@ export function getClientCookie(provider: ProviderName): string {
 
 /** Explicit host operation: export only declared login fields from the active session. */
 export async function getClientSessionCookie(provider: ProviderName): Promise<string> {
-  if (usesWebTransport() && getWebTransport() === 'extension') return ''
   const config = providerDefinitions[provider].cookie
   if (!config?.session) return ''
   const mode = getClientCookieMode(provider)
@@ -101,44 +107,64 @@ export interface CookieRule {
   id: number
   priority: number
   action: { type: 'modifyHeaders', requestHeaders: { header: string, operation: 'set', value: string }[] }
-  condition: { regexFilter: string, initiatorDomains: string[], excludedTabIds: number[], resourceTypes: ['xmlhttprequest'] }
+  condition: { regexFilter: string, initiatorDomains: string[], excludedTabIds?: number[], tabIds?: number[], resourceTypes: ['xmlhttprequest'] }
 }
 interface CookieBrowser {
   runtime?: { id?: string }
   declarativeNetRequest?: { updateSessionRules: (options: { removeRuleIds: number[], addRules: CookieRule[] }) => Promise<void> }
 }
-export function clientCookieRule(provider: ProviderName, cookie: string, extensionId: string): CookieRule {
+export function clientCookieRule(provider: ProviderName, cookie: string, extensionId: string, scope: CookieRuleScope = 'tab'): CookieRule {
   const config = providerDefinitions[provider].cookie
   if (!config) throw new Error('当前音源不支持手动 Cookie')
   return {
-    id: config.ruleId, priority: 100,
+    id: scope === 'worker' ? config.ruleId + 1000 : config.ruleId, priority: 100,
     action: { type: 'modifyHeaders', requestHeaders: [{ header: 'cookie', operation: 'set', value: cookie }] },
-    condition: { regexFilter: providerCookieFilter(config), initiatorDomains: [extensionId], excludedTabIds: [-1], resourceTypes: ['xmlhttprequest'] },
+    condition: {
+      regexFilter: providerCookieFilter(config), initiatorDomains: [extensionId], resourceTypes: ['xmlhttprequest'],
+      ...(scope === 'worker' ? { tabIds: [-1] } : { excludedTabIds: [-1] }),
+    },
   }
 }
 
 let updates: Promise<unknown> = Promise.resolve()
 /** Session rules are recreated before API requests after a browser / extension restart. */
-export function syncClientCookie(provider: ProviderName, cookie: string): Promise<void> {
+export function syncClientCookie(provider: ProviderName, cookie: string, scope: CookieRuleScope = 'tab'): Promise<void> {
   const config = providerDefinitions[provider].cookie
   if (!config) return cookie ? Promise.reject(new Error('当前音源不支持手动 Cookie')) : Promise.resolve()
   if (!TARGET_EXTENSION) return Promise.resolve()
   const browser = (globalThis as typeof globalThis & { chrome?: CookieBrowser }).chrome
   if (!browser?.declarativeNetRequest || !browser.runtime?.id) {
-    return cookie ? Promise.reject(new Error('当前扩展无法应用手动 Cookie，请重新加载扩展后重试')) : Promise.resolve()
+    return cookie || scope === 'worker' ? Promise.reject(new Error('当前扩展无法应用音源 Cookie，请重新加载扩展后重试')) : Promise.resolve()
   }
   const next = updates.then(async () => {
     try {
       // Rules are shared across extension tabs; a page-local cache can become stale.
+      const rule = clientCookieRule(provider, cookie, browser.runtime!.id!, scope)
       await browser.declarativeNetRequest!.updateSessionRules({
-        removeRuleIds: [config.ruleId],
-        addRules: cookie ? [clientCookieRule(provider, cookie, browser.runtime!.id!)] : [],
+        removeRuleIds: [rule.id],
+        addRules: cookie ? [rule] : [],
       })
     }
     catch { throw new Error('无法应用音源 Cookie，请重新加载扩展后重试') }
   })
   updates = next.catch(() => {})
   return next
+}
+
+/** One active bridge session per Provider, including its nested API requests and auth fields. */
+export async function withExtensionWorkerCookie<T>(provider: ProviderName, input: string | undefined, signal: AbortSignal, run: () => Promise<T>): Promise<T> {
+  const cookie = input === undefined ? '' : normalizeClientCookie(input)
+  if (input !== undefined && !cookie) throw new Error('尚未保存手动 Cookie')
+  return navigator.locks.request(`m-part:worker-cookie:${provider}`, { signal }, async () => {
+    // Clear any leftover rule before using a website session after a worker restart.
+    await syncClientCookie(provider, cookie, 'worker')
+    workerSessions.set(provider, { cookie, signal })
+    try { signal.throwIfAborted(); return await run() }
+    finally {
+      workerSessions.delete(provider)
+      if (cookie) await syncClientCookie(provider, '', 'worker')
+    }
+  })
 }
 
 async function updateClientCookie(provider: ProviderName, change: { cookie?: string, mode?: ClientCookieMode }) {

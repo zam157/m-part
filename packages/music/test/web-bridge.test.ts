@@ -2,6 +2,7 @@ import { Blob } from 'node:buffer'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { Provider } from '../src/types/provider'
 import type { BridgeReply, BridgeRequest } from '../src/utils/web-bridge'
+import { getClientSessionCookie, setClientCookie, setClientCookieMode } from '../src/utils/client-cookies'
 import { fetchBridgeMedia, withWebBridge } from '../src/utils/web-bridge'
 import { EXTENSION_ID, setWebTransport, WEB_BRIDGE_PORT } from '../src/utils/web-transport'
 
@@ -46,6 +47,34 @@ it('disconnects the extension media request when a track is cancelled', async ()
   controller.abort()
   await expect(result).rejects.toMatchObject({ name: 'AbortError' })
   expect(port.disconnect).toHaveBeenCalledOnce()
+})
+
+it('sends only the active manual Cookie and keeps website sessions local to the extension', async () => {
+  const provider = withWebBridge({ name: 'bili', getCurrentUser: async () => null })
+  const { port } = stubBridge((_request, reply) => reply({ type: 'result', value: null }))
+  setWebTransport('extension')
+  await setClientCookie('bili', 'SESSDATA=test-manual; extra=not-for-room')
+  await setClientCookieMode('bili', 'manual')
+  await provider.getCurrentUser!()
+  expect(port.postMessage).toHaveBeenLastCalledWith({ type: 'provider-manual', source: 'bili', method: 'getCurrentUser', args: [], cookie: 'SESSDATA=test-manual; extra=not-for-room' })
+  expect(await getClientSessionCookie('bili')).toBe('SESSDATA=test-manual')
+  await setClientCookieMode('bili', 'website')
+  await provider.getCurrentUser!()
+  expect(port.postMessage).toHaveBeenLastCalledWith({ type: 'provider', source: 'bili', method: 'getCurrentUser', args: [] })
+  expect(await getClientSessionCookie('bili')).toBe('')
+})
+
+it('discards a reply from an earlier Cookie selection', async () => {
+  let respond!: (reply: BridgeReply) => void
+  stubBridge((_request, reply) => { respond = reply })
+  const provider = withWebBridge({ name: 'bili', getCurrentUser: async () => null })
+  setWebTransport('extension')
+  await setClientCookie('bili', 'SESSDATA=test')
+  await setClientCookieMode('bili', 'manual')
+  const result = provider.getCurrentUser!()
+  await setClientCookieMode('bili', 'website')
+  respond({ type: 'result', value: { id: 'old-session' } })
+  await expect(result).rejects.toThrow('音源 Cookie 已更新')
 })
 
 it('reassembles binary chunks into the original media payload', async () => {

@@ -25,7 +25,7 @@ Cookie 是 `ProviderDefinition.cookie` 的可选能力，完整 `Provider` 继�
 
 扩展的 `host_permissions` 和读取前权限检查共用 `websiteCookiePermissions`：同时包含查询地址主机和 Cookie 所属域，使用 `*://精确主机/*` 覆盖 HTTP / HTTPS，不直接授予所有子域权限。Chrome 会根据 Cookie 自身的域与 Secure 标记检查访问权限；即使已允许 `https://www.bilibili.com/*` 与 API 主机，缺少 `bilibili.com` 权限时父域 Cookie 仍会被静默过滤；非 Secure Cookie 的检查地址使用 HTTP。不能仅检查查询 URL 的 HTTPS 权限后就把空数组视为未登录。详见 [Chrome Cookie API](https://developer.chrome.com/docs/extensions/reference/api/cookies) 与 [Chromium 的 Cookie 权限过滤](https://github.com/chromium/chromium/blob/main/extensions/browser/api/cookies/cookies_helpers.cc)。修改地址或域声明后重新加载扩展以更新权限；声明与检查仍由 Provider 通用能力驱动，不在客户端写平台分支。
 
-网站模式存在完整登录会话时，创建房间直接绑定该网站会话。读取失败、权限不足或检测到登录凭据但字段不完整时明确报错，不当作匿名状态；只有确认没有登录字段才匿名托管。普通 Web 页面无法读取其他网站 Cookie，仍需使用手动 Cookie 才能托管登录会话。
+网站模式存在完整登录会话时，创建房间直接绑定该网站会话。读取失败、权限不足或检测到登录凭据但字段不完整时明确报错，不当作匿名状态；只有确认没有登录字段才匿名托管。Web 形态托管登录会话时使用手动 Cookie 或房间专用 Cookie。扩展桥接可在后台使用网站 Cookie 取源，网站 Cookie 留在扩展侧。
 
 接入新音源时扩展 `ProviderName`，注册其轻量声明与 Provider 实现，并按需要配置扩展 host permissions；提供 `cookie` 即可自动接入设置表单、存储、规则和 Web 转发，不需要修改这些通用消费方。缺省 `cookie` 则不显示设置，也不接受手动会话。CSRF、token 等平台专有认证字段继续由各自 Provider 的会话代码解析。
 
@@ -35,7 +35,7 @@ Cookie 是 `ProviderDefinition.cookie` 的可选能力，完整 `Provider` 继�
 
 扩展使用 `declarativeNetRequest.updateSessionRules` 的会话规则替换 API Cookie，请求本身采用 `credentials: 'omit'`，不混入网站 Cookie，也不把响应的 `Set-Cookie` 写回网站。规则仅匹配当前扩展发起的 API 请求，不影响用户打开的平台网页。规则会在请求前重建，保存或应用失败会明确报错，不降级使用网站账号。网站 Cookie 始终不被设置或删除。
 
-Web 代理模式的音源请求经过本站 Nitro 的 `POST /api/provider-request`，只有手动模式会提交已保存的登录凭据。服务器只转发固定官方 API，禁止跳转，不保存 Cookie，不返回上游 `Set-Cookie`，响应为 `no-store`。部署者能够接触经过该服务的凭据，应使用自己信任的部署。Web 扩展模式在后台使用浏览器网站会话，网页保存的手动值不参与请求。具体见 [Web 取源与部署](./web.md)。
+Web 代理模式的音源请求经过本站 Nitro 的 `POST /api/provider-request`，只有手动模式会提交已保存的登录凭据。服务器只转发固定官方 API，禁止跳转，不保存 Cookie，不返回上游 `Set-Cookie`，响应为 `no-store`。部署者能够接触经过该服务的凭据，应使用自己信任的部署。Web 扩展模式由后台按平台使用所选的网站会话或手动 Cookie。手动值只随当前音源操作交给扩展后台，后台规则只匹配扩展发起的无标签页 API 请求，与扩展标签页的规则分开。同平台的操作串行应用会话，完成后移除手动规则。具体见 [Web 取源与部署](./web.md)。
 
 GM 入口在已有 `__tFetch` 传输中显式传递手动 Cookie；它是否支持该头取决于宿主能力。本次未进行 GM 宿主实测。
 

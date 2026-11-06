@@ -1,4 +1,5 @@
 import type { PlaylistTracksOptions, Provider, ProviderName } from '../types/provider'
+import { getClientCookie } from './client-cookies'
 import { LoginRequiredError } from './providers/login-required'
 import { EXTENSION_ID, getWebTransport, usesWebTransport, WEB_BRIDGE_PORT } from './web-transport'
 
@@ -13,6 +14,7 @@ export type BridgeMethod = typeof bridgeMethods[number]
 export type BridgeRequest =
   | { type: 'ping' }
   | { type: 'provider', source: ProviderName, method: BridgeMethod, args: unknown[] }
+  | { type: 'provider-manual', source: ProviderName, method: BridgeMethod, args: unknown[], cookie: string }
   | { type: 'media', url: string }
 export type BridgeReply =
   | { type: 'result', value: unknown }
@@ -58,7 +60,10 @@ function bridgeRequest(request: BridgeRequest, options?: { signal?: AbortSignal,
     port.onMessage.addListener((reply) => {
       if (reply.type === 'error') {
         finish()
-        reject(reply.loginRequired ? new LoginRequiredError(reply.message) : new Error(reply.message))
+        const message = request.type === 'provider-manual' && reply.message === '扩展收到不支持的取源请求'
+          ? '当前 m-part 扩展不支持网页手动 Cookie，请更新扩展后重试'
+          : reply.message
+        reject(reply.loginRequired ? new LoginRequiredError(message) : new Error(message))
       }
       else if (reply.type === 'result') { finish(); resolve(reply.value) }
       else {
@@ -82,16 +87,23 @@ export function withWebBridge(provider: Provider): Provider {
     const call = provider[method] as ((...args: any[]) => Promise<unknown>) | undefined
     if (!call) continue
     Object.assign(wrapped, {
-      [method](...args: unknown[]) {
+      async [method](...args: unknown[]) {
         if (getWebTransport() !== 'extension') return call.apply(provider, args)
         const hasOptions = method === 'getTrackParts' || method === 'getLyrics' || method === 'getAllPlaylistTracks'
         const options = hasOptions ? args[1] as PlaylistTracksOptions | undefined : undefined
         const payload = hasOptions ? args.slice(0, 1) : args
         if (method === 'getAllPlaylistTracks') payload.push(options?.knownItems)
-        return bridgeRequest({ type: 'provider', source: provider.name, method, args: payload }, {
+        const cookie = getClientCookie(provider.name)
+        const verifyCookie = () => {
+          if (getClientCookie(provider.name) !== cookie) throw new Error('音源 Cookie 已更新，请重试当前操作')
+        }
+        const operation = { source: provider.name, method, args: payload }
+        const value = await bridgeRequest(cookie ? { ...operation, type: 'provider-manual', cookie } : { ...operation, type: 'provider' }, {
           signal: options?.signal,
-          onMessage: (reply) => { if (reply.type === 'progress') options?.onProgress?.(reply.value) },
+          onMessage: (reply) => { if (reply.type === 'progress') { verifyCookie(); options?.onProgress?.(reply.value) } },
         })
+        verifyCookie()
+        return value
       },
     })
   }
