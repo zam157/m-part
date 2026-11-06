@@ -4,6 +4,14 @@ import { resolveAliases, sharedPlugins } from '@m-part/build-config/vite'
 import { websiteCookiePermissions } from '@m-part/music/provider-definitions'
 
 const publicDir = preparePublicDir(import.meta.dirname)
+const defaultWebOrigins = ['http://localhost:3333', 'http://127.0.0.1:3333', 'http://localhost:3000', 'http://127.0.0.1:3000']
+const webOrigins = (process.env.MPART_WEB_ORIGINS?.split(',') ?? defaultWebOrigins).map((value) => {
+  const url = new URL(value.trim())
+  const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+  if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && local)) || url.pathname !== '/' || url.search || url.hash || url.username || url.password)
+    throw new Error('MPART_WEB_ORIGINS 必须填写 HTTPS 网站源或 HTTP 本机源，不含路径')
+  return url
+})
 
 /** Extension shell: manifest, permissions and background script are owned here. */
 export default defineConfig({
@@ -22,6 +30,7 @@ export default defineConfig({
     minimum_chrome_version: '116',
     // 没有 popup，点击图标交给 background 里的 action.onClicked 处理
     action: { default_title: 'm-part' },
+    externally_connectable: { matches: [...new Set(webOrigins.map(url => `${url.protocol}//${url.hostname}/*`))] },
     permissions: ['declarativeNetRequestWithHostAccess', 'cookies'],
     // 音频 CDN 必须逐一列全：playurl 会返回 bilivideo.com（upos 镜像）或
     // mcdn.bilivideo.cn 之类的地址。**漏掉域名不会报权限错误**，而是该请求
@@ -61,6 +70,7 @@ export default defineConfig({
   vite: () => ({
     define: {
       'import.meta.env.VITE_TARGET': JSON.stringify('extension'),
+      'import.meta.env.VITE_WEB_BRIDGE_ORIGINS': JSON.stringify(webOrigins.map(url => url.origin).join(',')),
     },
     resolve: {
       alias: resolveAliases(),

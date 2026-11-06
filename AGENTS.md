@@ -45,7 +45,8 @@
 | 托管一起听 / 媒体票据 | `apps/rooms/server/utils/hosted-media.ts`、`apps/rooms/server/providers/`、`room-control` / `room-audio` 路由；客户端 `ListenRoomSources/` 与 `utils/room-http.ts` |
 | 取数实现（Provider） | `packages/music/src/utils/providers/` |
 | 图片缩放 | Provider `getImageUrl`、`@m-part/music/image`、`ProviderImage/`；按用途生成缩略图与 1x / 2x 候选，存储与协议中的 `coverUrl` 保留源地址 → [图片说明](./docs/images.md) |
-| 请求出口（含扩展策略） | `packages/music/src/utils/fetch.ts` |
+| 请求出口（含扩展策略） | `packages/music/src/utils/fetch.ts`；Web 默认同站 Nitro 代理，也可通过扩展桥接，详见 [Web 取源与部署](./docs/web.md) |
+| 设置页 | `packages/player/src/pages/settings.tsx`；集中放置外观、网页取源及音源账号，扩展应用页隐藏网页取源 |
 | 客户端 Cookie 设置 | `ProviderDefinition.cookie` 可选声明（`providers/*-definition.ts`）；设置页、存储、DNR 与 Web 转发共用 `@m-part/music/provider-definitions`，禁止通用层按平台写分支。轻量声明不能导入完整 Provider / fetch → [客户端 Cookie](./docs/client-cookies.md) |
 | 扩展入口 / manifest / DNR 规则 | `apps/extension/entrypoints/`、`apps/extension/wxt.config.ts`、`apps/extension/public/rules/` |
 | 构建别名与插件链（两套构建共用） | `packages/build-config/src/vite.ts` |
@@ -89,6 +90,11 @@
   ```
 
 - 验证时除了类型检查和客户端测试，还要刷新扩展页面，实际触发侧栏收放、跨断点缩放及 Tooltip 显隐，再检查控制台；Tooltip 的清理警告可能只在打开提示后出现。
+
+## Web 取源约定
+
+- Web 通过同站 Nitro 代理或扩展的只读 Provider 桥接取源。代理的 API 和音频目标由轻量 Provider 声明校验，音频保持 Range 流式响应；拒绝跨平台重定向，不转发浏览器请求自带的 Cookie 或上游 Set-Cookie。房间 API 及托管音频仍直连房间服务器。
+- 扩展桥接要求 `MPART_WEB_ORIGINS` 的精确来源（含端口），只允许主页面调用只读操作，不提供任意网址转发或 Cookie 导出。网站会话由扩展后台使用；扩展标签页手动 Cookie 的 DNR 规则排除后台请求。
 
 ## 一起听托管约定
 

@@ -2,6 +2,7 @@ import type { ProviderDefinition } from '../../types/provider'
 
 export const biliDefinition = {
   name: 'bili',
+  media: { domains: ['bilivideo.com', 'bilivideo.cn'], ports: ['8082'], referer: 'https://www.bilibili.com/' },
   cookie: {
     label: 'BiliBili',
     placeholder: 'SESSDATA=…; bili_jct=…',

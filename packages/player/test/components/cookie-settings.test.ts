@@ -7,6 +7,7 @@ const { definitions, save } = vi.hoisted(() => ({
   save: vi.fn(async () => {}),
 }))
 vi.mock('@m-part/music/provider-definitions', () => ({ getCookieProviders: () => definitions }))
+vi.mock('~/composables/dark', () => ({ colorMode: () => 'system', switchColorMode: vi.fn() }))
 vi.mock('~/composables/client-cookies', () => ({ clientCookieStatus: () => ({ configured: {}, modes: {}, error: '' }), saveClientCookie: save, selectClientCookieMode: vi.fn() }))
 import SettingsPage from '~/pages/settings'
 

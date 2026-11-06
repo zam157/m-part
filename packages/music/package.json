@@ -19,7 +19,8 @@
     "./constants": "./src/utils/constants.ts",
     "./url": "./src/utils/url.ts",
     "./image": "./src/utils/image.ts",
-    "./proxy-headers": "./src/proxy-headers.ts"
+    "./web-transport": "./src/utils/web-transport.ts",
+    "./web-bridge": "./src/utils/web-bridge.ts"
   },
   "dependencies": {
     "crypto-es": "catalog:shared",

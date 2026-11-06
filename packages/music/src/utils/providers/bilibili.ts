@@ -5,7 +5,7 @@ import type { TRequestErrorTuple } from '../fetch'
 import { generateWbiSignInfo } from './bilibili-wbi'
 import { biliPages, biliPartTrack, parseBiliTrackId, selectBiliPage } from './bilibili-parts'
 import type { BiliVideo } from './bilibili-parts'
-import { TARGET_EXTENSION, USE_GM_FETCH, USE_PROXY } from '../constants'
+import { TARGET_EXTENSION } from '../constants'
 import { tRequest } from '../fetch'
 import { toHttpsUrl } from '../url'
 import { biliImageUrl } from '../provider-images'
@@ -384,7 +384,7 @@ interface FavoritesResponse<T> {
 
 // #region constants
 // 扩展形态下请求由扩展页面直接发出（manifest 的 host_permissions 已覆盖），无需代理
-const API_HOST = USE_PROXY && !USE_GM_FETCH && !TARGET_EXTENSION ? '/api/proxy/bili' : 'https://api.bilibili.com'
+const API_HOST = 'https://api.bilibili.com'
 const DEFAULT_PAGE_SIZE = 20
 export const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36'
 const COMMON_HEADERS = {
@@ -428,7 +428,7 @@ async function getWbiKeys(SESSDATA = ''): Promise<WbiInfo> {
 function createAsyncCache<T>(key: string, fetcher: () => Promise<T>) {
   let cache: T | undefined
 
-  if (!import.meta.env.SSR) {
+  if (typeof localStorage !== 'undefined') {
     // 在客户端环境中，直接读取 localStorage 中的缓存
     const cacheStr = localStorage.getItem(key)
     if (cacheStr) {
@@ -447,7 +447,7 @@ function createAsyncCache<T>(key: string, fetcher: () => Promise<T>) {
       fetchPromise = fetcher()
       try {
         cache = await fetchPromise
-        if (!import.meta.env.SSR) {
+        if (typeof localStorage !== 'undefined') {
           localStorage.setItem(key, JSON.stringify(cache))
         }
       }

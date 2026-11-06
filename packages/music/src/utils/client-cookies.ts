@@ -3,6 +3,7 @@ import { TARGET_EXTENSION } from './constants'
 import { normalizeClientCookie, clientCookieValue } from './cookie-header'
 export { normalizeClientCookie, clientCookieValue } from './cookie-header'
 import { providerCookieFilter } from './provider-request'
+import { getWebTransport, usesWebTransport } from './web-transport'
 import { providerDefinitions, getCookieProviders, websiteCookieUrls, websiteCookiePermissions } from './provider-definitions'
 
 export const CLIENT_COOKIE_PREFIX = 'mpart-client-cookie:'
@@ -35,6 +36,7 @@ export function getClientCookie(provider: ProviderName): string {
 
 /** Explicit host operation: export only declared login fields from the active session. */
 export async function getClientSessionCookie(provider: ProviderName): Promise<string> {
+  if (usesWebTransport() && getWebTransport() === 'extension') return ''
   const config = providerDefinitions[provider].cookie
   if (!config?.session) return ''
   const mode = getClientCookieMode(provider)
@@ -99,7 +101,7 @@ export interface CookieRule {
   id: number
   priority: number
   action: { type: 'modifyHeaders', requestHeaders: { header: string, operation: 'set', value: string }[] }
-  condition: { regexFilter: string, initiatorDomains: string[], resourceTypes: ['xmlhttprequest'] }
+  condition: { regexFilter: string, initiatorDomains: string[], excludedTabIds: number[], resourceTypes: ['xmlhttprequest'] }
 }
 interface CookieBrowser {
   runtime?: { id?: string }
@@ -111,7 +113,7 @@ export function clientCookieRule(provider: ProviderName, cookie: string, extensi
   return {
     id: config.ruleId, priority: 100,
     action: { type: 'modifyHeaders', requestHeaders: [{ header: 'cookie', operation: 'set', value: cookie }] },
-    condition: { regexFilter: providerCookieFilter(config), initiatorDomains: [extensionId], resourceTypes: ['xmlhttprequest'] },
+    condition: { regexFilter: providerCookieFilter(config), initiatorDomains: [extensionId], excludedTabIds: [-1], resourceTypes: ['xmlhttprequest'] },
   }
 }
 

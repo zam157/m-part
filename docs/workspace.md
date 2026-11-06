@@ -18,7 +18,7 @@
 extension / web ──→ player ──→ music
                          └──→ listen-core ←── rooms（包括 lab）
 extension / web / player 的构建与测试 ──→ build-config
-web 的代理 ──→ music/proxy-headers（仅常量，不引入浏览器取源模块）
+web 的代理 ──→ music/provider-request（仅地址校验和转发元数据）
 rooms 的托管适配 ──→ music/providers/netease-crypto / qq-crypto / bilibili-wbi（纯签名逻辑）
 ```
 
@@ -41,7 +41,7 @@ import { ListenClock } from '@m-part/listen-core/clock'
 import { prepareMedia } from '@m-part/listen-core/browser/media'
 ```
 
-`listen-core/protocol` 和 `clock` 不依赖 DOM、Solid 或浏览器存储；`browser/media` 是显式的浏览器入口。`music/providers/netease-crypto`、`qq-crypto` 和 `bilibili-wbi` 是纯签名模块，不读浏览器登录态，`music/proxy-headers` 不读取 `import.meta.env`，可安全供 Nitro 服务端使用。不要建立会将 Node、浏览器或全部 Provider 混在一起的总入口。
+`listen-core/protocol` 和 `clock` 不依赖 DOM、Solid 或浏览器存储；`browser/media` 是显式的浏览器入口。`music/providers/netease-crypto`、`qq-crypto` 和 `bilibili-wbi` 是纯签名模块，不读浏览器登录态，`music/provider-request` 不读取 `import.meta.env`，可安全供 Nitro 服务端使用。不要建立会将 Node、浏览器或全部 Provider 混在一起的总入口。
 
 `~/` 仅映射到 `packages/player/src/`，用于播放器内部和其测试；跨包不要使用 `../../packages/...` 或恢复 `#shared/*` 别名。构建配置需定位工作区目录时使用相对于 `import.meta.dirname` 的绝对路径。
 
@@ -66,7 +66,7 @@ import { prepareMedia } from '@m-part/listen-core/browser/media'
 | `pnpm build:rooms` | `apps/rooms/dist` |
 | `pnpm build:listen` | `apps/rooms/dist-lab-client`、`apps/rooms/dist-lab` |
 
-Web 构建先运行 Vite，再将生成的 HTML 和静态资源交给 Nitro。Web 开发阶段仍是单独的 Vite UI，尚未接入开发代理；不要将迁移误认为这项限制已解决。
+Web 生产构建先运行 Vite，再将生成的 HTML 和静态资源交给 Nitro。开发时 Vite 的 Nitro 插件在同一端口提供页面和 API，详见 [Web 取源与部署](./web.md)。
 
 ## 测试和类型检查
 

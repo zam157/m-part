@@ -2,6 +2,7 @@ import type { ProviderDefinition } from '../../types/provider'
 
 export const neteaseDefinition = {
   name: 'netease',
+  media: { domains: ['music.126.net'], referer: 'https://music.163.com/' },
   cookie: {
     label: '网易云',
     placeholder: 'MUSIC_U=…; __csrf=…',

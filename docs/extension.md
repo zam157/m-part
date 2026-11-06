@@ -2,7 +2,7 @@
 
 ## 为什么有这一层
 
-纯 web 页面直连 `api.bilibili.com` 会被 CORS 拦掉，也读不到用户的登录 cookie。扩展页面在 manifest 里声明 `host_permissions` 后不受 CORS 限制，cookie 由 `credentials: 'include'` 自动携带 —— 这是当前的主线形态；`apps/web/server/` 那套 Nitro 代理是 web 形态的退路。
+纯 web 页面直连 `api.bilibili.com` 会被 CORS 拦掉，也读不到用户的登录 cookie。扩展页面在 manifest 里声明 `host_permissions` 后不受 CORS 限制，cookie 由 `credentials: 'include'` 自动携带 —— 网页可以通过授权的扩展桥接复用 Provider 与网站登录态，也可以用同站 Nitro 代理，见 [Web 取源与部署](./web.md)。
 
 ## 配置要点
 
@@ -68,7 +68,7 @@ in the response must not be the wildcard '*' when the request's credentials mode
 - CDN 的 Referer 由 DNR 设置，规则的 `resourceTypes` 必须包含 `media`，不能只覆盖 `xmlhttprequest`。BiliBili 和网易云均已配置。
 - 不设置 `audio.crossOrigin`，保留媒体元素默认的凭据行为；强行设置 anonymous 或 use-credentials 会改变 CDN 的 CORS 要求。
 - 切歌、清空队列时暂停并重置旧媒体，取消旧媒体下载；在途旧音源查询不能覆盖新歌曲。原生加载失败会显示错误与重试入口。
-- 非扩展入口为了兼容自定义 headers / GM fetch，仍保留传输层下载 Blob 的方式，并在替换或清空时回收 Object URL。
+- Web 代理模式同样使用原生音频与 Range 请求。Web 扩展桥接和 GM fetch 将数据交给 Blob，替换或清空时回收 Object URL。
 
 验证时可用 MCP `emulate` 设置 `networkConditions: "Slow 4G"`，观察开始播放时的 `audio.buffered`、`duration` 和 `currentTime`：播放进度已增加但缓冲区间尚未覆盖整首，即证明没有等待完整下载。网络面板应出现官方 CDN 的 `media` 请求而不是 `blob:` URL；支持 Range 的 CDN 通常返回 206，但返回 200 也可能支持渐进播放。继续跳转到未缓冲位置、切换音质并确认进度保持。结束后清除限速并暂停测试音频。
 

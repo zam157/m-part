@@ -4,7 +4,7 @@
 
 推荐使用扩展形态：复用浏览器登录态，由浏览器凭据机制和 DNR 规则处理跨域请求。音源接入说明见 [网易云](./docs/netease.md)、[QQ 音乐](./docs/qq.md)。
 
-侧栏「音源设置」可分别选择三个平台的「手动 Cookie」或「网站 Cookie」；切换来源保留已保存的手动值，「清除 Cookie」单独删除本地值。保存方式、Web 转发和一起听的区别见 [客户端 Cookie](./docs/client-cookies.md)。
+侧栏「设置」集中管理主题和各平台账号。网页还可选择「代理服务」或「浏览器扩展」取源。Cookie 的保存、转发与一起听规则见 [客户端 Cookie](./docs/client-cookies.md)。
 
 在音乐卡片或播放队列中右键选择「下载歌曲」，可保存默认可用音质的音频；多分 P 视频支持先选分 P，下载不影响当前播放。详见 [歌曲下载](./docs/downloads.md)。
 
@@ -25,7 +25,7 @@ pnpm build:ext         # 扩展生产构建
 pnpm dev:rooms         # 一起听服务，127.0.0.1:3410
 pnpm dev:rooms:lan     # 一起听服务，0.0.0.0:3410，供局域网设备访问
 pnpm build:rooms       # 独立房间服务产物
-pnpm dev               # Web UI，localhost:3333
+pnpm dev               # Web UI 与代理，localhost:3333
 pnpm build             # Web 客户端及 Nitro 服务
 pnpm preview           # 启动构建好的 Web 服务，默认端口 3000
 pnpm build:all         # Web、扩展和房间服务
@@ -38,7 +38,7 @@ pnpm build:all         # Web、扩展和房间服务
 
 开发模式使用独立 Chrome 配置，`apps/extension/web-ext.config.ts` 保留登录态。安装后点击扩展图标打开播放器页。
 
-Web 开发入口保留现有代理接入限制：Vite 开发服务器没有启用 Nitro 代理，`/api/proxy/*` 可能被 HTML fallback 接走。验证音乐取源优先使用扩展；这次 workspace 迁移没有补齐 Web 开发代理。
+Web 默认使用同站代理，可在「设置 → 网页取源」切换到扩展。生产部署与扩展允许的网页地址见 [Web 取源与部署](./docs/web.md)。
 
 ## 检查
 

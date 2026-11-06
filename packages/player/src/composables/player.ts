@@ -3,6 +3,7 @@ import type { ProviderName } from '@m-part/music/types/provider'
 import { TARGET_EXTENSION } from '@m-part/music/constants'
 import { insertQueueTracks, remapQueueOrder, trackKey, uniqueTracks } from '@m-part/listen-core/queue'
 import { tRequest } from '@m-part/music/fetch'
+import { webMediaProxyUrl } from '@m-part/music/web-transport'
 import { errorMessage } from '../utils/index'
 import { providers } from '@m-part/music/providers'
 import { createMemo, createRoot, createSignal } from 'solid-js'
@@ -226,16 +227,15 @@ async function loadQuality(sourceInfo: SourceInfo, quality?: MusicQuality) {
   if (!targetUrl)
     throw new Error('No valid URL found in qualities.')
 
-  if (TARGET_EXTENSION) {
-    // CDN 的 Referer 等头由 DNR 的 media 规则注入，Cookie 由浏览器管理。
-    // 不设 crossOrigin：保留媒体元素默认的凭据行为，不额外要求 CDN 支持 CORS。
-    // 原生媒体加载可在下载完成前播放，并由浏览器处理缓冲、Range 与拖动进度。
-    audio.src = targetUrl
+  const mediaProxy = webMediaProxyUrl(targetUrl)
+  if (TARGET_EXTENSION || mediaProxy) {
+    // Both transports support native buffering and Range requests.
+    audio.src = mediaProxy ?? targetUrl
     audio.load()
     return
   }
 
-  // 非扩展模式保留传输层，兼容需要自定义 headers / GM fetch 的旧入口。
+  // 网页的扩展桥接和 GM fetch 通过 Blob 把音频交给播放器。
   if (!abortController)
     abortController = new AbortController()
   const res = await tRequest(targetUrl, { headers, returnJson: false, signal: abortController.signal })

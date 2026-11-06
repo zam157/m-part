@@ -1,7 +1,6 @@
 import { useLocation, useNavigate } from '@solidjs/router'
 import { clsx } from 'cn/lite'
 import { createEffect, createSignal, For } from 'solid-js'
-import { colorMode, switchColorMode } from '~/composables/dark'
 import { playQueue, setShowPlayQueue, showPlayQueue } from '~/composables/player'
 import Tooltip from '~/components/Tooltip/Tooltip'
 
@@ -53,15 +52,8 @@ export default function Sidebar() {
         </Tooltip>
       </nav>
       <div class="shrink-0 flex flex-col gap-1 pt-3.5 border-t border-border">
-        <Tooltip content="音源设置" disabled={!collapsed()} placement="right">
-          {triggerProps => <button {...triggerProps} class={clsx('sidebar-item text-muted-foreground', location.pathname === '/settings' && 'bg-accent text-accent-foreground')} aria-label="音源设置" aria-current={location.pathname === '/settings' ? 'page' : undefined} onClick={() => navigate('/settings')}><span class="i-lucide:settings-2 text-4 shrink-0" /><span class="sidebar-label">音源设置</span></button>}
-        </Tooltip>
-        <Tooltip content="切换主题" disabled={!collapsed()} placement="right">
-          {triggerProps => (
-            <button {...triggerProps} class="sidebar-item text-muted-foreground" aria-label="切换主题" onClick={() => switchColorMode(colorMode() === 'dark' ? 'system' : colorMode() === 'system' ? 'light' : 'dark')}>
-              <span class={clsx('text-4 shrink-0', colorMode() === 'dark' ? 'i-lucide:moon' : colorMode() === 'system' ? 'i-lucide:monitor' : 'i-lucide:sun')} /><span class="sidebar-label">{colorMode() === 'dark' ? '深色外观' : colorMode() === 'system' ? '跟随系统' : '浅色外观'}</span>
-            </button>
-          )}
+        <Tooltip content="设置" disabled={!collapsed()} placement="right">
+          {triggerProps => <button {...triggerProps} class={clsx('sidebar-item text-muted-foreground', location.pathname === '/settings' && 'bg-accent text-accent-foreground')} aria-label="设置" aria-current={location.pathname === '/settings' ? 'page' : undefined} onClick={() => navigate('/settings')}><span class="i-lucide:settings-2 text-4 shrink-0" /><span class="sidebar-label">设置</span></button>}
         </Tooltip>
         <Tooltip content={collapsed() ? '展开侧栏' : '收起侧栏'} disabled={!collapsed()} placement="right">
           {triggerProps => (

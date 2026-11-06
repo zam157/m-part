@@ -4,7 +4,7 @@ import { tRequest } from '@m-part/music/fetch'
 /** Room bearer authentication never uses a music cookie or fetch credentials. */
 export async function sendRoomControl(server: string, token: string, control: RoomControl, signal?: AbortSignal): Promise<unknown> {
   const result = await tRequest<unknown>(`${server}/room-control`, {
-    method: 'POST', credentials: 'omit', acceptHttpErrors: true, signal,
+    method: 'POST', credentials: 'omit', acceptHttpErrors: true, direct: true, signal,
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: control,
   })
   if (!result[0]) throw new Error('房间音源操作失败，请检查服务器连接')

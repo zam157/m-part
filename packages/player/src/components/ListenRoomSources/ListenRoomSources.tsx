@@ -1,6 +1,7 @@
 import type { HostedPlatform } from '@m-part/listen-core/protocol'
 import { hostedPlatform } from '@m-part/listen-core/protocol'
 import { useNavigate } from '@solidjs/router'
+import { getWebTransport, usesWebTransport } from '@m-part/music/web-transport'
 import { clientCookieStatus } from '~/composables/client-cookies'
 import { roomCredentialProviders } from '~/utils/room-credentials'
 import { createEffect, createSignal, For, Show } from 'solid-js'
@@ -21,6 +22,14 @@ export default function ListenRoomSources() {
   const currentLabel = () => `${platforms.find(item => item.id === source()?.provider)?.name ?? '当前平台'}${source()?.credential === 'ready' ? '账号托管' : '匿名托管'}`
   const disabled = () => roomView().connection !== 'connected' || !!roomView().sourceBusy
   const overridden = () => roomView().sourceOverrides?.includes(platform())
+  const web = usesWebTransport()
+  const extensionBridge = web && getWebTransport() === 'extension'
+  function sessionSource() {
+    if (overridden()) return '房间单独设置'
+    if (extensionBridge) return '匿名托管'
+    if (clientCookieStatus().modes[platform()] === 'manual') return '音源设置 · 手动 Cookie'
+    return web ? '音源设置 · 匿名取源' : '音源设置 · 网站 Cookie'
+  }
   async function bind() {
     const supplied = cookie()
     setCookie('')
@@ -70,10 +79,10 @@ export default function ListenRoomSources() {
                 <p class="text-xs text-muted-foreground">未绑定账号时，服务器取源使用匿名权限。</p>
               </div>
               <div class="grid gap-3">
-                <p class="text-sm">当前会话来源：{overridden() ? '房间单独设置' : clientCookieStatus().modes[platform()] === 'manual' ? '音源设置 · 手动 Cookie' : '音源设置 · 网站 Cookie'}</p>
-                <p class="text-xs text-muted-foreground">默认跟随房主音源设置中的当前会话；单独绑定后，此平台使用房间专用 Cookie，不受音源设置变化影响。无网站登录态时匿名取源，成员不会收到 Cookie。</p>
+                <p class="text-sm">当前会话来源：{sessionSource()}</p>
+                <p class="text-xs text-muted-foreground">{extensionBridge ? '网页通过扩展使用网站登录状态。房间服务器默认匿名取源，可在下方绑定房间专用 Cookie。' : '默认跟随房主音源设置中的当前会话；单独绑定后，此平台使用房间专用 Cookie，不受音源设置变化影响。无登录会话时匿名取源，成员不会收到 Cookie。'}</p>
                 <div class="flex gap-2 flex-wrap">
-                  <button class="btn px-3 h-8" disabled={disabled()} onClick={() => void syncRoomCredentials(platform())}>使用音源设置 Cookie</button>
+                  <button class="btn px-3 h-8" disabled={disabled()} onClick={() => void syncRoomCredentials(platform())}>{extensionBridge ? '使用匿名取源' : '使用音源设置 Cookie'}</button>
                   <button class="border-btn px-3 h-8" onClick={() => { closeSettings(); navigate('/settings') }}>前往音源设置</button>
                 </div>
               </div>

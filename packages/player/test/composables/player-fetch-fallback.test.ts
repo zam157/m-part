@@ -2,7 +2,7 @@ import { flush } from 'solid-js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { request } = vi.hoisted(() => ({ request: vi.fn() }))
-vi.mock('@m-part/music/constants', () => ({ TARGET_EXTENSION: false }))
+vi.mock('@m-part/music/constants', () => ({ TARGET_EXTENSION: false, USE_GM_FETCH: false }))
 vi.mock('@m-part/music/fetch', () => ({ tRequest: request }))
 vi.mock('@m-part/music/providers', () => ({ providers: {
   bili: { getSourceInfo: async () => ({ url: 'https://cdn.example/audio.m4s', headers: { referer: 'https://www.bilibili.com/' } }) },

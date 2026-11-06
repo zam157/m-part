@@ -2,6 +2,7 @@ import path from 'node:path'
 import { defineConfig } from 'nitro'
 
 export default defineConfig({
+  builder: 'rolldown',
   serverDir: './server',
   renderer: { template: './dist/client/index.html', static: true },
   alias: { '#server/': `${path.resolve(import.meta.dirname, 'server')}/` },

@@ -38,6 +38,8 @@ export interface ProviderDefinition {
   name: ProviderName
   /** Omit when this provider does not support manually supplied Cookie sessions. */
   cookie?: ProviderCookieConfig
+  /** Official audio CDN destinations that Web transports may relay. */
+  media?: { domains: readonly string[], ports?: readonly string[], referer: `https://${string}` }
 }
 
 export type ImageUsage = 'queue' | 'player' | 'list' | 'card' | 'collection' | 'detail' | 'expanded' | 'background' | 'media-session'

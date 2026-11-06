@@ -1,7 +1,8 @@
-import { TARGET_EXTENSION, USE_GM_FETCH, USE_PROXY } from './constants'
-import { CUSTOM_HEADER_PREFIX } from '../proxy-headers'
+import { TARGET_EXTENSION, USE_GM_FETCH } from './constants'
 import { getClientCookie, syncClientCookie } from './client-cookies'
-import { providerRequest } from './provider-request'
+import { providerMedia, providerRequest } from './provider-request'
+import { fetchBridgeMedia } from './web-bridge'
+import { getWebTransport, usesWebTransport, webMediaProxyUrl } from './web-transport'
 
 export type TRequestErrorTuple = [isOk: false, status: number, statusText: string]
 export type TRequestSuccessTuple<T> = [isOk: true, data: T]
@@ -14,12 +15,11 @@ type TRequestOptions = Omit<RequestInit, 'body'> & {
   returnJson?: boolean
   /** Read structured error payloads from controlled APIs without discarding their body. */
   acceptHttpErrors?: boolean
+  /** Requests to a room server must stay on its own transport. */
+  direct?: boolean
   /** Provider auth fields must be derived from the same cookie selection as the HTTP request. */
   cookieContext?: string
 }
-
-export { CUSTOM_HEADER_PREFIX } from '../proxy-headers'
-const CUSTOM_HEADER_KEY_NAME_WHITE_LIST = ['cookie', 'origin', 'referer', 'user-agent']
 
 const globalWindow = (globalThis as any).window
 
@@ -66,10 +66,9 @@ function applyExtensionPolicy(fetchOptions: Record<string, any>) {
 export async function tRequest(url: string, options?: Omit<TRequestOptions, 'returnJson'> & { returnJson: false }): Promise<TRequestResult<Response>>
 export async function tRequest<T = unknown>(url: string, options?: Omit<TRequestOptions, 'returnJson'> & { returnJson?: true | undefined }): Promise<TRequestResult<T>>
 export async function tRequest(url: string, options?: TRequestOptions): Promise<TRequestResult<any>> {
-  const legacyBiliProxy = url.startsWith('/api/proxy/bili/')
-  let
-    body: string | undefined
+  let body: string | undefined
   let fetchFn: typeof fetch = fetch
+  let bridgedResponse: Promise<Response> | undefined
 
   if (options) {
     if (options.body)
@@ -91,6 +90,7 @@ export async function tRequest(url: string, options?: TRequestOptions): Promise<
   delete fetchOptions.searchParams
   delete fetchOptions.url
   delete fetchOptions.acceptHttpErrors
+  delete fetchOptions.direct
   delete fetchOptions.cookieContext
 
   if (USE_GM_FETCH && globalWindow?.__tFetch) {
@@ -102,32 +102,45 @@ export async function tRequest(url: string, options?: TRequestOptions): Promise<
     applyExtensionPolicy(fetchOptions)
   }
 
-  // 如果启用了代理，则将特定的 header 转换为约定前缀的 header，供代理服务器使用
-  else if (USE_PROXY) {
-    if (fetchOptions.headers) {
-      const newHeaders = new Headers(fetchOptions.headers)
-      for (const [key, value] of newHeaders) {
-        if (!CUSTOM_HEADER_KEY_NAME_WHITE_LIST.includes(key))
-          continue
-        newHeaders.set(CUSTOM_HEADER_PREFIX + key, value)
-        newHeaders.delete(key)
-      }
-      fetchOptions.headers = newHeaders
-    }
-  }
-
   if (body)
     fetchOptions.body = body
 
-  // The legacy Web Bili entry uses a relative proxy URL; classify its official destination.
-  const proxyUrl = legacyBiliProxy ? new URL(url, globalWindow?.location.origin) : undefined
-  const target = providerRequest(proxyUrl ? `https://api.bilibili.com${proxyUrl.pathname.slice('/api/proxy/bili'.length)}${proxyUrl.search}` : url)
+  const target = options?.direct ? undefined : providerRequest(url)
   const cookie = target ? getClientCookie(target.provider) : ''
+  const verifyCookie = () => {
+    if (target && getClientCookie(target.provider) !== cookie) throw new Error('音源 Cookie 已更新，请重试当前操作')
+  }
   if (target && options?.cookieContext !== undefined && options.cookieContext !== cookie) throw new Error('音源 Cookie 已更新，请重试当前操作')
   if (target) fetchOptions.credentials ??= 'include'
-  if (target && TARGET_EXTENSION) await syncClientCookie(target.provider, cookie)
+  // The bridge runs inside the extension worker with the website account.
+  // Only extension tabs update their manual Cookie rules.
+  if (target && TARGET_EXTENSION && globalWindow) await syncClientCookie(target.provider, cookie)
   fetchOptions.signal?.throwIfAborted()
-  if (cookie) {
+
+  if (target && usesWebTransport()) {
+    if (getWebTransport() === 'extension') throw new Error('请通过扩展音源获取音乐数据')
+    const headers = new Headers(options?.headers)
+    // Providers can supply anonymous visitor Cookies, such as the BiliBili device ID.
+    const forwardedCookie = cookie || headers.get('cookie') || undefined
+    headers.delete('cookie')
+    url = '/api/provider-request'
+    fetchOptions.method = 'POST'
+    fetchOptions.credentials = 'omit'
+    fetchOptions.headers = { 'content-type': 'application/json' }
+    fetchOptions.body = JSON.stringify({ url: target.url.href, method: options?.method ?? 'GET', headers: Object.fromEntries(headers), body, cookie: forwardedCookie })
+  }
+  else if (!options?.direct && usesWebTransport() && providerMedia(url)) {
+    const proxyUrl = webMediaProxyUrl(url)
+    if (proxyUrl) {
+      url = proxyUrl
+      fetchOptions.credentials = 'omit'
+      fetchOptions.headers = new Headers()
+    }
+    else {
+      bridgedResponse = fetchBridgeMedia(url, options?.signal ?? undefined)
+    }
+  }
+  else if (cookie) {
     // Never mix website cookies or write the response's Set-Cookie into that website's jar.
     fetchOptions.credentials = 'omit'
     if (USE_GM_FETCH && globalWindow?.__tFetch) {
@@ -135,24 +148,19 @@ export async function tRequest(url: string, options?: TRequestOptions): Promise<
       headers.set('cookie', cookie)
       fetchOptions.headers = headers
     }
-    else if (!TARGET_EXTENSION) {
-      const headers = Object.fromEntries(new Headers(options?.headers))
-      fetchOptions.method = 'POST'
-      fetchOptions.headers = { 'content-type': 'application/json' }
-      fetchOptions.body = JSON.stringify({ url: target!.url.href, method: options?.method ?? 'GET', headers, body, cookie })
-      url = '/api/provider-request'
-    }
   }
-  if (target && getClientCookie(target.provider) !== cookie) throw new Error('音源 Cookie 已更新，请重试当前操作')
-  const res = await fetchFn(url, fetchOptions)
-  if (target && getClientCookie(target.provider) !== cookie) { void res.body?.cancel(); throw new Error('音源 Cookie 已更新，请重试当前操作') }
+
+  verifyCookie()
+  const res = await (bridgedResponse ?? fetchFn(url, fetchOptions))
+  try { verifyCookie() }
+  catch (error) { void res.body?.cancel(); throw error }
 
   if (!res.ok && !options?.acceptHttpErrors)
     return [false, res.status, res.statusText]
 
   if (options?.returnJson ?? true) {
     const data = await res.json()
-    if (target && getClientCookie(target.provider) !== cookie) throw new Error('音源 Cookie 已更新，请重试当前操作')
+    verifyCookie()
     return [true, data]
   }
 

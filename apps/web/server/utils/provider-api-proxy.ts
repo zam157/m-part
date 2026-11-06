@@ -1,13 +1,17 @@
 import { normalizeClientCookie } from '@m-part/music/cookie-header'
 import { providerRequest } from '@m-part/music/provider-request'
+import { getRequestURL } from 'nitro/h3'
 
 const fail = (status: number, message: string) => Response.json({ message }, { status, headers: { 'cache-control': 'no-store' } })
 
-/** Explicit Web-client credentials, forwarded only to fixed music API origins. Nothing is retained. */
-export async function clientCookieProxy(request: Request, fetcher: typeof fetch = fetch): Promise<Response> {
+/** Proxy anonymous and explicitly configured sessions to fixed music API origins. */
+export async function providerApiProxy(request: Request, fetcher: typeof fetch = fetch): Promise<Response> {
   if (request.method !== 'POST' || !request.headers.get('content-type')?.startsWith('application/json')) return fail(415, '请使用 JSON 请求')
   const origin = request.headers.get('origin')
-  if (origin && origin !== new URL(request.url).origin) return fail(403, '不允许跨站提交音源 Cookie')
+  const site = request.headers.get('sec-fetch-site')
+  const publicUrl = getRequestURL({ req: request }, { xForwardedHost: true, xForwardedProto: true })
+  if ((site && site !== 'same-origin' && site !== 'none') || (origin && origin !== publicUrl.origin))
+    return fail(403, '不允许跨站请求音源代理')
   let payload: Record<string, unknown>
   try {
     const reader = request.body?.getReader()
@@ -34,8 +38,8 @@ export async function clientCookieProxy(request: Request, fetcher: typeof fetch 
   let cookie: string
   try { cookie = typeof payload.cookie === 'string' ? normalizeClientCookie(payload.cookie) : '' }
   catch { return fail(400, 'Cookie 格式无效') }
-  if (!cookie) return fail(400, '缺少手动 Cookie')
-  const headers = new Headers({ cookie, origin: target.cookie.requestOrigin, referer: `${target.cookie.requestOrigin}/` })
+  const headers = new Headers({ origin: target.cookie.requestOrigin, referer: `${target.cookie.requestOrigin}/` })
+  if (cookie) headers.set('cookie', cookie)
   try {
     if (payload.headers && typeof payload.headers === 'object') {
       for (const [key, value] of Object.entries(payload.headers)) {
@@ -43,11 +47,12 @@ export async function clientCookieProxy(request: Request, fetcher: typeof fetch 
       }
     }
     const upstream = await fetcher(target.url, {
-      method: payload.method, headers, redirect: 'error', signal: request.signal,
+      method: payload.method, headers, redirect: 'error', signal: AbortSignal.any([request.signal, AbortSignal.timeout(20_000)]),
       body: payload.method === 'POST' && typeof payload.body === 'string' ? payload.body : undefined,
     })
     return new Response(upstream.body, { status: upstream.status, headers: {
-      'content-type': upstream.headers.get('content-type') ?? 'application/json',
+      'content-type': 'application/json',
+      'x-content-type-options': 'nosniff',
       'cache-control': 'no-store',
     } })
   }

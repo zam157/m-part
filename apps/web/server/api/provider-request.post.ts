@@ -1,4 +1,4 @@
 import { defineHandler } from 'nitro'
-import { clientCookieProxy } from '../utils/client-cookie-proxy'
+import { providerApiProxy } from '../utils/provider-api-proxy'
 
-export default defineHandler(event => clientCookieProxy(event.req))
+export default defineHandler(event => providerApiProxy(event.req))

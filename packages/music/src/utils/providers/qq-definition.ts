@@ -2,6 +2,7 @@ import type { ProviderDefinition } from '../../types/provider'
 
 export const qqDefinition = {
   name: 'qq',
+  media: { domains: ['stream.qqmusic.qq.com', 'aqqmusic.tc.qq.com'], referer: 'https://y.qq.com/' },
   cookie: {
     label: 'QQ 音乐',
     placeholder: 'qqmusic_uin=…; qqmusic_key=…',

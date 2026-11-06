@@ -6,8 +6,9 @@ import { errorMessage } from '~/utils/index'
 import Select from '~/components/Select/Select'
 
 const cookieModes = [{ value: 'manual', label: '手动 Cookie' }, { value: 'website', label: '网站 Cookie' }] as const
+const proxyCookieModes = [{ value: 'manual', label: '手动 Cookie' }, { value: 'website', label: '匿名取源' }] as const
 
-export default function PlatformCookieForm(props: { source: ProviderName, config: ProviderCookieConfig }) {
+export default function PlatformCookieForm(props: { source: ProviderName, config: ProviderCookieConfig, anonymous?: boolean }) {
   const [value, setValue] = createSignal('')
   const [busy, setBusy] = createSignal(false)
   const [error, setError] = createSignal('')
@@ -38,7 +39,7 @@ export default function PlatformCookieForm(props: { source: ProviderName, config
       </header>
       <div class="grid gap-3">
         <label class="grid gap-3 text-sm"><span>Cookie 来源</span>
-          <Select options={cookieModes} aria-label={`${props.config.label} Cookie 来源`} value={mode()} disabled={busy()} triggerClass="w-full" onValueChange={next => { void selectMode(next) }} />
+          <Select options={props.anonymous ? proxyCookieModes : cookieModes} aria-label={`${props.config.label} Cookie 来源`} value={mode()} disabled={busy()} triggerClass="w-full" onValueChange={next => { void selectMode(next) }} />
         </label>
         <Show when={mode() === 'manual' && !configured()}><p class="text-sm text-muted-foreground">请先填写并保存手动 Cookie。</p></Show>
       </div>

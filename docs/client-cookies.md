@@ -1,10 +1,10 @@
 # 客户端音源 Cookie
 
-侧栏「音源设置」允许为网易云、QQ 音乐、BiliBili 分别填写 Cookie 请求头内容（`name=value; name2=value2`，可带 `Cookie:` 前缀）。三个平台互不影响；输入框不会回显已保存的内容，保存成功后清空。登录提示中的「填写 Cookie」也可进入设置。
+「设置 → 音源账号」允许为网易云、QQ 音乐、BiliBili 分别填写 Cookie 请求头内容（`name=value; name2=value2`，可带 `Cookie:` 前缀）。三个平台互不影响；输入框不会回显已保存的内容，保存成功后清空。登录提示中的「填写 Cookie」也可进入设置。
 
 ## 来源选择与保存
 
-- 每个平台通过选择器独立选择「手动 Cookie」或「网站 Cookie」。切换来源不会修改或删除已保存的手动值，切回手动模式直接复用。填写或更新 Cookie 也不自动切换来源。
+- 每个平台通过选择器独立选择「手动 Cookie」或「网站 Cookie」。Web 代理模式将「网站 Cookie」显示为「匿名取源」。切换来源不会修改或删除已保存的手动值，切回手动模式直接复用。填写或更新 Cookie 也不自动切换来源。
 - 手动模式：该平台 API 使用保存的整套会话，不与网站 Cookie 混合。网易云的 `__csrf`、QQ 的账号与认证 key 也只从手动值提取；缺字段时不会补读网站账号。没有保存值时提示先填写，失效或权限不足时显示平台的未登录 / 错误状态，均不静默切换网站账号。
 - 网站模式：请求使用现有浏览器网站登录态，保留的手动值不会参与 Cookie 头、CSRF、QQ token 或 Web 转发。
 - 「清除」仅删除当前平台保存在本地的手动值，不改变已选来源，也不清理平台网站的 Cookie。手动模式清除后需重新填写，或主动切换网站模式。
@@ -35,7 +35,7 @@ Cookie 是 `ProviderDefinition.cookie` 的可选能力，完整 `Provider` 继�
 
 扩展使用 `declarativeNetRequest.updateSessionRules` 的会话规则替换 API Cookie，请求本身采用 `credentials: 'omit'`，不混入网站 Cookie，也不把响应的 `Set-Cookie` 写回网站。规则仅匹配当前扩展发起的 API 请求，不影响用户打开的平台网页。规则会在请求前重建，保存或应用失败会明确报错，不降级使用网站账号。网站 Cookie 始终不被设置或删除。
 
-Web 形态不能直接设置浏览器禁止的 Cookie 头，因此手动模式的 Cookie 请求经过本站 Nitro 的 `POST /api/provider-request`。服务器只转发固定官方 API，禁止跳转，不保存 Cookie，不返回上游 `Set-Cookie`，响应为 `no-store`；错误不包含原始异常或凭据。部署者能够接触经过该服务的凭据，应使用自己信任的部署。需要运行 Web 的 Nitro 服务（例如构建后 `node apps/web/dist/server/index.mjs`）；仅有 Vite 静态开发资源不足以提供此接口。网站模式沿用已有请求方式，纯 Web 仍受 CORS / 第三方 Cookie 策略限制，不能保证复用其他网站登录态。
+Web 代理模式的音源请求经过本站 Nitro 的 `POST /api/provider-request`，只有手动模式会提交已保存的登录凭据。服务器只转发固定官方 API，禁止跳转，不保存 Cookie，不返回上游 `Set-Cookie`，响应为 `no-store`。部署者能够接触经过该服务的凭据，应使用自己信任的部署。Web 扩展模式在后台使用浏览器网站会话，网页保存的手动值不参与请求。具体见 [Web 取源与部署](./web.md)。
 
 GM 入口在已有 `__tFetch` 传输中显式传递手动 Cookie；它是否支持该头取决于宿主能力。本次未进行 GM 宿主实测。
 
