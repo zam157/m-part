@@ -46,6 +46,7 @@
 | 取数实现（Provider） | `packages/music/src/utils/providers/` |
 | 图片缩放 | Provider `getImageUrl`、`@m-part/music/image`、`ProviderImage/`；按用途生成缩略图与 1x / 2x 候选，存储与协议中的 `coverUrl` 保留源地址 → [图片说明](./docs/images.md) |
 | 请求出口（含扩展策略） | `packages/music/src/utils/fetch.ts`；Web 默认同站 Nitro 代理，也可通过扩展桥接，详见 [Web 取源与部署](./docs/web.md) |
+| m-part 账号与房间预设 | `apps/web/server/account/`、`apps/web/drizzle/`、`AccountSettings/`、`RoomProfiles/`；预设按用户与版本更新 → [账号服务](./docs/account.md) |
 | 设置页 | `packages/player/src/pages/settings.tsx`；集中放置外观、网页取源及音源账号，扩展应用页隐藏网页取源 |
 | 客户端 Cookie 设置 | `ProviderDefinition.cookie` 可选声明（`providers/*-definition.ts`）；设置页、存储、DNR 与 Web 转发共用 `@m-part/music/provider-definitions`，禁止通用层按平台写分支。轻量声明不能导入完整 Provider / fetch → [客户端 Cookie](./docs/client-cookies.md) |
 | 扩展入口 / manifest / DNR 规则 | `apps/extension/entrypoints/`、`apps/extension/wxt.config.ts`、`apps/extension/public/rules/` |

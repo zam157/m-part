@@ -6,13 +6,20 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3411",
     "build": "vite build && nitro build",
-    "preview": "node dist/server/index.mjs",
+    "preview": "node --env-file-if-exists=.env.local dist/server/index.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@m-part/player": "workspace:*",
     "@m-part/music": "workspace:*",
+    "@m-part/listen-core": "workspace:*",
+    "better-auth": "catalog:backend",
+    "drizzle-orm": "catalog:backend",
+    "pg": "catalog:backend",
+    "valibot": "catalog:shared",
     "nitro": "catalog:backend",
     "solid-js": "catalog:frontend",
     "@solidjs/web": "catalog:frontend",
@@ -23,6 +30,8 @@
     "typescript": "catalog:dev",
     "vitest": "catalog:dev",
     "@types/node": "catalog:dev",
+    "@types/pg": "catalog:dev",
+    "drizzle-kit": "catalog:dev",
     "vite": "catalog:build",
     "@types/chrome": "catalog:dev"
   }

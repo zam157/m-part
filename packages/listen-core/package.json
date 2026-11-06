@@ -10,6 +10,8 @@
   "exports": {
     "./protocol": "./src/protocol.ts",
     "./clock": "./src/clock.ts",
+    "./room-server": "./src/room-server.ts",
+    "./room-profile": "./src/room-profile.ts",
     "./queue": "./src/queue.ts",
     "./browser/media": "./src/browser/media.ts"
   },

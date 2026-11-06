@@ -11,6 +11,10 @@ import ListenPage from '~/pages/listen'
 
 vi.mock('@solidjs/router', () => ({ useNavigate: () => vi.fn() }))
 vi.mock('@m-part/music/providers', () => ({ providers: {} }))
+vi.mock('~/utils/account', async (importOriginal) => ({
+  ...await importOriginal<typeof import('~/utils/account')>(),
+  readAccountSession: async () => ({ enabled: false, user: null }),
+}))
 vi.mock('~/components/Tooltip/Tooltip', () => ({ default: (props: TooltipProps) => props.children({} as TooltipTriggerProps) }))
 
 const initialView = { connection: 'idle', status: 'loading' as const, error: '', away: false, inSync: false, isHost: false }

@@ -1,4 +1,6 @@
 import { createSignal, For, Show } from 'solid-js'
+import { TARGET_EXTENSION } from '@m-part/music/constants'
+import RoomProfiles from '~/components/RoomProfiles/RoomProfiles'
 import { clsx } from 'cn/lite'
 import { createListenRoom, joiningRoom, joinListenRoom, leaveListenRoom, pauseRoomLocally, resumeRoomPlayback, roomPlayerActive, roomServer, roomView, setRoomServer, setRoomMemberRole } from '~/composables/listen-room'
 import { playing, playQueue, prevNext, setPlaying, setShowPlayQueue } from '~/composables/player'
@@ -28,6 +30,9 @@ export default function ListenPage() {
         <header class="grid gap-2"><h1 class="text-8 font-bold">一起听</h1><p class="text-muted-foreground text-sm">在同一个房间听同一首歌。房主与管理员控制播放和队列，各平台默认服务器托管，也可切换各自取源。</p></header>
         <Show when={roomPlayerActive()} fallback={(
           <section class="rounded-2xl border border-border p-5 grid gap-5">
+            <Show when={!TARGET_EXTENSION}>
+              <RoomProfiles serverUrl={roomServer()} nickname={name()} onApply={profile => { setRoomServer(profile.serverUrl); setName(profile.nickname) }} />
+            </Show>
             <div class="grid gap-3">
               <label class="grid gap-3 text-sm"><span>房间服务器</span>
                 <input class="input" type="url" value={roomServer()} onInput={e => setRoomServer(e.currentTarget.value)} placeholder="https://rooms.example.com" autocomplete="url" />

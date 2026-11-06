@@ -1,0 +1,13 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: mpart
+      POSTGRES_USER: mpart
+      POSTGRES_PASSWORD: mpart-local-dev
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - account-db:/var/lib/postgresql/data
+volumes:
+  account-db:

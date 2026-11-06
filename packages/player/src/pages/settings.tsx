@@ -1,3 +1,5 @@
+import { TARGET_EXTENSION } from '@m-part/music/constants'
+import AccountSettings from '~/components/AccountSettings/AccountSettings'
 import { getCookieProviders } from '@m-part/music/provider-definitions'
 import { checkWebExtension } from '@m-part/music/web-bridge'
 import { getWebTransport, setWebTransport, usesWebTransport } from '@m-part/music/web-transport'
@@ -92,6 +94,7 @@ export default function SettingsPage() {
               <Select aria-labelledby="theme-label" options={colorModes} value={colorMode()} triggerClass="w-full" onValueChange={switchColorMode} />
             </div>
           </section>
+          <Show when={!TARGET_EXTENSION}><AccountSettings /></Show>
           <Show when={web}><WebTransportSettings mode={transport} /></Show>
           <section class="grid gap-4" aria-labelledby="source-settings-title">
             <div class="grid gap-3">
