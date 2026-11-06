@@ -5,6 +5,7 @@ import { createEffect, onCleanup, Show } from 'solid-js'
 export interface DialogProps {
   open: boolean
   onClose: () => void
+  closeOnOutsideClick?: boolean
   children?: JSX.Element
   size?: 'sm' | 'md' | 'lg'
   fullScreen?: boolean
@@ -25,9 +26,26 @@ const widths = {
 
 /** Controlled native modal. The browser owns focus trapping and focus restoration. */
 export default function Dialog(props: DialogProps) {
+  const nativeLightDismiss = typeof HTMLDialogElement !== 'undefined' && 'closedBy' in HTMLDialogElement.prototype
   let dialog!: HTMLDialogElement
   let disposing = false
+  let outsidePointer: number | undefined
+  function isBackdrop(event: PointerEvent) {
+    if (event.target !== dialog) return false
+    const { left, top, right, bottom } = dialog.getBoundingClientRect()
+    return event.clientX < left || event.clientX >= right || event.clientY < top || event.clientY >= bottom
+  }
+  function trackOutsidePress(event: PointerEvent) {
+    if (!event.isPrimary) return
+    outsidePointer = props.closeOnOutsideClick !== false && event.button === 0 && isBackdrop(event) ? event.pointerId : undefined
+  }
+  function releaseOutsidePress(event: PointerEvent) {
+    if (outsidePointer === undefined || outsidePointer !== event.pointerId) return
+    outsidePointer = undefined
+    if (dialog.open && props.closeOnOutsideClick !== false && isBackdrop(event)) props.onClose()
+  }
   function closeNative() {
+    outsidePointer = undefined
     for (const popover of dialog.querySelectorAll<HTMLElement>('[popover]'))
       popover.hidePopover?.()
     dialog.close()
@@ -48,6 +66,7 @@ export default function Dialog(props: DialogProps) {
       aria-labelledby={props['aria-labelledby']}
       aria-describedby={props['aria-describedby']}
       aria-modal="true"
+      closedby={nativeLightDismiss && props.closeOnOutsideClick !== false ? 'any' : 'closerequest'}
       inert={!props.open}
       class={clsx('fixed m-0 flex-col overflow-hidden bg-background p-0 text-foreground outline-none',
         props.fullScreen
@@ -56,6 +75,9 @@ export default function Dialog(props: DialogProps) {
         props.class)}
       onCancel={event => { event.preventDefault(); props.onClose() }}
       onClose={() => { if (!disposing && !dialog.open && props.open) props.onClose() }}
+      onPointerDown={nativeLightDismiss ? undefined : trackOutsidePress}
+      onPointerUp={nativeLightDismiss ? undefined : releaseOutsidePress}
+      onPointerCancel={nativeLightDismiss ? undefined : (event) => { if (outsidePointer === event.pointerId) outsidePointer = undefined }}
       onKeyDown={event => props.onKeyDown?.(event)}
     >
       {props.children}

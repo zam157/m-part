@@ -15,6 +15,7 @@ import Dialog, { DialogBody, DialogFooter, DialogHeader } from '~/components/Dia
 ```
 
 - `open` 是受控状态，`onClose` 负责更新该状态。Escape 和原生关闭事件统一通知调用方；父组件主动关闭时不重复回调，组件卸载时释放原生模态状态。焦点约束和焦点恢复由浏览器负责，关闭前也会收起内部 popover。
+- 点击弹窗外部默认触发 `onClose`。传 `closeOnOutsideClick={false}` 可关闭此行为，Escape 仍可关闭弹窗。支持原生 `closedby` 的浏览器负责外部点击；旧浏览器通过同一次指针按下和抬起的位置判断。[HTMLDialogElement.closedBy](https://developer.mozilla.org/en-US/docs/Web/API/HTMLDialogElement/closedBy)
 - `size` 可选 `sm` / `md` / `lg`，对应最大宽度 28 / 32 / 42rem，默认 `sm`。普通弹窗用 fixed + translate 居中，视口四周至少保留 16px；仅 `DialogBody` 滚动，标题与已有底部操作区不收缩。
 - `DialogHeader` 的 `titleId` 与根节点 `aria-labelledby` 对应；可用 `description` / `descriptionId` 以及根节点 `aria-describedby` 关联说明。各弹窗应使用不同的 ID。
 - 关闭按钮仅出现在标题右上角，图标距离顶部和右侧内容边缘均为 16px，24px 点击区域向外延伸，不额外挤占标题高度。按钮固定 `type="button"`，不会误提交表单。

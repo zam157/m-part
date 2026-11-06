@@ -13,14 +13,14 @@ beforeEach(() => {
 })
 afterEach(() => { dispose?.(); dispose = undefined; container.remove(); vi.restoreAllMocks(); restore() })
 
-function mount(initial = false, target: HTMLElement = container) {
+function mount(initial = false, target: HTMLElement = container, closeOnOutsideClick?: boolean) {
   const [open, setOpen] = createSignal(initial)
   const [title, setTitle] = createSignal('设置')
   const onClose = vi.fn(() => setOpen(false))
   const input = document.createElement('input')
   const save = document.createElement('button'); save.type = 'submit'; save.textContent = '保存'
   dispose = render(() => createComponent(Dialog, {
-    get open() { return open() }, onClose,
+    get open() { return open() }, onClose, closeOnOutsideClick,
     'aria-labelledby': 'dialog-test-title', 'aria-describedby': 'dialog-test-description',
     get children() { return [
       createComponent(DialogHeader, { get title() { return title() }, titleId: 'dialog-test-title', description: '修改本机设置', descriptionId: 'dialog-test-description', onClose }),
@@ -30,6 +30,11 @@ function mount(initial = false, target: HTMLElement = container) {
   }), target)
   flush()
   return { setOpen, setTitle, onClose, save, dialog: target.querySelector('dialog')! }
+}
+
+function pointer(target: HTMLElement, type: 'pointerdown' | 'pointerup' | 'pointercancel', x: number) {
+  target.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 1, isPrimary: true, button: 0, clientX: x, clientY: 120 }))
+  flush()
 }
 
 describe('Dialog', () => {
@@ -54,6 +59,34 @@ describe('Dialog', () => {
     expect(cancel.defaultPrevented).toBe(true)
     expect(view.onClose).toHaveBeenCalledOnce()
     expect(view.dialog.open).toBe(false)
+  })
+
+  it('requests one controlled close when a press begins and ends on the backdrop', () => {
+    const { dialog, onClose } = mount(true)
+    vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 100, 200, 100))
+    pointer(dialog, 'pointerdown', 110); pointer(dialog, 'pointerup', 110)
+    pointer(dialog, 'pointerdown', 110); pointer(dialog, 'pointerup', 30)
+    pointer(dialog, 'pointerdown', 30); pointer(dialog, 'pointerup', 110)
+    pointer(dialog, 'pointerdown', 30); pointer(dialog, 'pointercancel', 30); pointer(dialog, 'pointerup', 30)
+    expect(dialog.open).toBe(true)
+    expect(onClose).not.toHaveBeenCalled()
+
+    pointer(dialog, 'pointerdown', 30); pointer(dialog, 'pointerup', 30)
+    expect(dialog.open).toBe(false)
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('keeps Escape enabled when outside click dismissal is disabled', () => {
+    const { dialog, onClose } = mount(true, container, false)
+    vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 100, 200, 100))
+    expect(dialog.getAttribute('closedby')).toBe('closerequest')
+    pointer(dialog, 'pointerdown', 30); pointer(dialog, 'pointerup', 30)
+    expect(dialog.open).toBe(true)
+    expect(onClose).not.toHaveBeenCalled()
+
+    dialog.dispatchEvent(new Event('cancel', { cancelable: true })); flush()
+    expect(dialog.open).toBe(false)
+    expect(onClose).toHaveBeenCalledOnce()
   })
 
   it('syncs a native close and ignores a stale close event after reopening', () => {
