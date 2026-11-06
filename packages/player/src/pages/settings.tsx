@@ -3,6 +3,7 @@ import { checkWebExtension } from '@m-part/music/web-bridge'
 import { getWebTransport, setWebTransport, usesWebTransport } from '@m-part/music/web-transport'
 import type { WebTransport } from '@m-part/music/web-transport'
 import { createSignal, For, Show } from 'solid-js'
+import Dialog, { DialogBody, DialogHeader } from '~/components/Dialog/Dialog'
 import PlatformCookieForm from '~/components/PlatformCookieForm/PlatformCookieForm'
 import Select from '~/components/Select/Select'
 import { clientCookieStatus } from '~/composables/client-cookies'
@@ -75,6 +76,9 @@ export default function SettingsPage() {
   const web = usesWebTransport()
   const transport = web ? getWebTransport() : 'extension'
   const usesWebsiteSession = web && transport === 'extension'
+  const providers = getCookieProviders()
+  const [editingAccount, setEditingAccount] = createSignal<(typeof providers)[number]>()
+  const closeAccount = () => setEditingAccount(undefined)
 
   return (
     <div class="flex-1 min-w-0 overflow-auto px-9 py-8 max-[760px]:px-4.5 max-[760px]:py-6">
@@ -103,7 +107,25 @@ export default function SettingsPage() {
             </div>
             <Show when={!usesWebsiteSession}>
               <Show when={clientCookieStatus().error}><p class="text-sm text-destructive" role="alert">{clientCookieStatus().error}</p></Show>
-              <For each={getCookieProviders()}>{provider => <PlatformCookieForm source={provider.name} config={provider.cookie} anonymous={web} />}</For>
+              <ul class="divide-y divide-border rounded-xl border border-border" aria-label="各平台音源账号">
+                <For each={providers}>{provider => (
+                  <li class="flex items-center justify-between gap-3 px-4 py-3">
+                    <div class="min-w-0 grid gap-1">
+                      <span class="text-sm font-medium">{provider.cookie.label}</span>
+                      <span class="text-xs text-muted-foreground">{clientCookieStatus().modes[provider.name] === 'manual' ? '手动 Cookie' : web ? '匿名取源' : '网站 Cookie'}</span>
+                    </div>
+                    <button type="button" class="border-btn h-8 px-3" aria-haspopup="dialog" aria-label={`设置${provider.cookie.label}账号`} onClick={() => setEditingAccount(provider)}>修改</button>
+                  </li>
+                )}</For>
+              </ul>
+              <Dialog open={!!editingAccount()} aria-labelledby="source-account-title" onClose={closeAccount}>
+                <Show when={editingAccount()} keyed>{provider => (
+                  <>
+                    <DialogHeader title={`${provider.cookie.label}账号`} titleId="source-account-title" onClose={closeAccount} />
+                    <DialogBody><PlatformCookieForm source={provider.name} config={provider.cookie} anonymous={web} /></DialogBody>
+                  </>
+                )}</Show>
+              </Dialog>
             </Show>
           </section>
         </div>

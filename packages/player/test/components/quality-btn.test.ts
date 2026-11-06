@@ -19,10 +19,13 @@ it('uses the shared Select for mapped qualities and follows active-quality updat
   trigger.click(); flush()
   expect(document.querySelector('[role="option"][aria-selected="true"]')?.textContent).toBe('高音质')
   expect(document.getElementById(trigger.getAttribute('aria-activedescendant')!)?.textContent).toBe('高音质')
+  const options = [...document.querySelectorAll('[role="option"]')]
   trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true })); flush()
   trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); flush()
   expect(select).toHaveBeenCalledExactlyOnceWith(low)
   setQualities([{ ...high, active: false }, { ...low, active: true }]); flush()
   trigger.click(); flush()
   expect(document.querySelector('[role="option"][aria-selected="true"]')?.textContent).toBe('标准')
+  for (const [index, option] of document.querySelectorAll('[role="option"]').entries())
+    expect(option).toBe(options[index])
 })
