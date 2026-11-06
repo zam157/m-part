@@ -23,6 +23,7 @@ export interface SelectProps<T> {
   'aria-labelledby'?: string
   'aria-describedby'?: string
   size?: 'sm' | 'default'
+  triggerVariant?: 'default' | 'ghost'
   triggerClass?: string
   contentClass?: string
   portalMount?: HTMLElement
@@ -220,7 +221,11 @@ export default function Select<T>(props: SelectProps<T>) {
         aria-label={props['aria-label'] ?? (props['aria-labelledby'] ? undefined : props.placeholder ?? '选择选项')} aria-labelledby={props['aria-labelledby']} aria-describedby={props['aria-describedby']}
         aria-haspopup="listbox" aria-controls={contentId} aria-expanded={open() ? 'true' : 'false'} aria-activedescendant={open() && active() ? optionId(active()!) : undefined}
         aria-required={props.required ? 'true' : 'false'} aria-invalid={invalid() ? 'true' : 'false'} data-state={open() ? 'open' : 'closed'} data-placeholder={!selected() ? '' : undefined} data-size={props.size ?? 'default'}
-        class={clsx('inline-flex min-w-0 shrink-0 cursor-default items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 dark:bg-input/30', props.size === 'sm' ? 'h-7' : 'h-8', !selected() && 'text-muted-foreground', invalid() && 'border-destructive ring-destructive/20', props.triggerClass)}
+        class={clsx(
+          props.triggerVariant === 'ghost' ? 'ghost-btn' : 'inline-flex min-w-0 shrink-0 cursor-default items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 dark:bg-input/30',
+          props.size === 'sm' ? 'h-7' : props.triggerVariant !== 'ghost' && 'h-8',
+          !selected() && 'text-muted-foreground', invalid() && 'border-destructive ring-destructive/20', props.triggerClass,
+        )}
         onPointerDown={event => { pointerType = event.pointerType }} onKeyDown={keyDown} onClick={() => opened ? close(true) : show()}>
         <span class="min-w-0 truncate">{props.renderValue ? props.renderValue(selected()) : selected()?.label ?? props.placeholder ?? '请选择'}</span>
         <Show when={!props.renderValue}><span class="i-lucide:chevron-down shrink-0 text-4 text-muted-foreground" /></Show>

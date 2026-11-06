@@ -29,7 +29,7 @@ import Select from '~/components/Select/Select'
 - 点击、Enter、Space 或方向键展开；方向键、Home / End、PageUp / PageDown 移动高亮，Enter / Space 确认。Tab 确认高亮并继续正常焦点导航，Escape 放弃导航并关闭。输入文字按标签前缀定位，重复同一字符轮换匹配项。键盘移动不提前修改选中值，也不会提交父表单。
 - 使用 combobox / listbox / option 语义，DOM 焦点留在按钮上，通过 `aria-activedescendant` 指向高亮项，并只滚动内部列表。滚动箭头支持点击和悬停；窗口缩放及页面滚动时重新定位，监听器与计时器在关闭 / 卸载时清理。
 - 默认尝试将选中项与按钮对齐；触摸操作或空间不足时回退到边缘定位。`alignItemWithTrigger={false}` 强制按边缘定位，`side`、`align`、`sideOffset` 控制方向、对齐与间隔，碰撞时翻转并限制在视口内。RTL 的 start / end 随方向反转。
-- 原生 dialog 内会自动把浮层挂在该 dialog 中，也可以显式传 `portalMount`。音质按钮保留原有 36px 槽位，用 `renderValue` 展示图标；它仍是同一个可用键盘操作的 Select。
+- 原生 dialog 内会自动把浮层挂在该 dialog 中，也可以显式传 `portalMount`。音质按钮用 `triggerVariant="ghost"` 复用 `ghost-btn` 的居中与悬停样式，保留 36px 槽位，并用 `renderValue` 展示图标。
 - `triggerClass` / `contentClass` 用 `cn/lite` 拼接。覆盖内置同类工具规则时使用明确的 `!`，例如 40px 筛选栏使用 `triggerClass="!h-10"`；不要依赖类名的文本先后顺序，也不要恢复各调用方的定位行内样式。
 - 触发器默认不带投影，下拉浮层使用 `shadow-md`，保留边框与键盘焦点环。
 - 搜索栏由外层容器统一提供边框、圆角和 focus-within 焦点环，内部两项 Select 与输入框去掉自身边框和阴影，仅由间隔容器画分隔线；窄屏输入框换到第二行，但仍共用同一个外框。不能依赖旧 btn-group 的 shortcut 层规则覆盖 Select 的默认工具类。
