@@ -5,16 +5,21 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Pool } from 'pg'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { adminId } from '../server/account/credentials'
 import { roomProfiles } from '../server/account/profiles'
-import { getAccountService, profileCsrfToken } from '../server/account/service'
+import { accountCsrfToken, getAccountService } from '../server/account/service'
+import { createAccountUser } from '../server/api/account/users.post'
+import { handleAccountAuth } from '../server/api/auth/[...].ts'
 
 const databaseUrl = process.env.ACCOUNT_TEST_DATABASE_URL
 const origin = 'http://localhost:3411'
 const secret = randomBytes(32).toString('hex')
+const administratorPassword = randomBytes(24).toString('base64url')
+const userPassword = randomBytes(24).toString('base64url')
 const database = `test_account_${randomUUID().replaceAll('-', '')}`
 let admin: Pool
 let pool: Pool
-let service: ReturnType<typeof getAccountService>
+let service: Awaited<ReturnType<typeof getAccountService>>
 
 describe.skipIf(!databaseUrl)('account profiles with PostgreSQL', () => {
   beforeAll(async () => {
@@ -28,9 +33,9 @@ describe.skipIf(!databaseUrl)('account profiles with PostgreSQL', () => {
     vi.stubEnv('DATABASE_URL', url.href)
     vi.stubEnv('BETTER_AUTH_URL', origin)
     vi.stubEnv('BETTER_AUTH_SECRET', secret)
-    vi.stubEnv('GITHUB_CLIENT_ID', 'test-github-client')
-    vi.stubEnv('GITHUB_CLIENT_SECRET', 'test-github-secret')
-    service = getAccountService()
+    vi.stubEnv('MPART_ADMIN_PASSWORD', administratorPassword)
+    vi.stubEnv('ACCOUNT_CLIENT_IP_HEADER', '')
+    service = await getAccountService()
   })
   afterAll(async () => {
     vi.unstubAllEnvs()
@@ -42,46 +47,57 @@ describe.skipIf(!databaseUrl)('account profiles with PostgreSQL', () => {
     }
   })
 
-  async function loginAs(id: number) {
-    const auth = getAccountService()!.auth
-    const response = await auth.handler(new Request(origin + '/api/auth/sign-in/social', {
+  function authRequest(path: string, body: object, cookie?: string) {
+    return new Request(origin + '/api/auth/' + path, {
       method: 'POST',
-      headers: { origin, 'content-type': 'application/json' },
-      body: JSON.stringify({ provider: 'github', callbackURL: '/settings', disableRedirect: true }),
-    }))
-    expect(response.status).toBe(200)
-    const authorize = new URL((await response.json()).url)
-    expect(authorize.origin + authorize.pathname).toBe('https://github.com/login/oauth/authorize')
-    expect(authorize.searchParams.get('redirect_uri')).toBe(origin + '/api/auth/callback/github')
-    const state = authorize.searchParams.get('state')
-    expect(state).toBeTruthy()
-    const stateCookie = response.headers.getSetCookie().map(value => value.split(';')[0]).join('; ')
-    const email = `test-${id}@example.test`
-    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => {
-      const url = input instanceof Request ? input.url : String(input)
-      if (url === 'https://github.com/login/oauth/access_token') return Response.json({ access_token: `fixture-token-${id}`, token_type: 'bearer' })
-      if (url === 'https://api.github.com/user') return Response.json({ id, login: `fixture-${id}`, email })
-      if (url === 'https://api.github.com/user/emails') return Response.json([{ email, verified: true, primary: true }])
-      throw new Error('Unexpected OAuth fixture request')
-    }))
-    try {
-      const callback = new URL('/api/auth/callback/github', origin)
-      callback.searchParams.set('state', state!)
-      callback.searchParams.set('code', 'fixture-code')
-      const signedIn = await auth.handler(new Request(callback, { headers: { cookie: stateCookie } }))
-      expect(new URL(signedIn.headers.get('location')!, origin).href).toBe(origin + '/settings')
-      const cookie = signedIn.headers.getSetCookie().find(value => value.startsWith('m-part.session_token='))?.split(';')[0]
-      expect(cookie).toBeTruthy()
-      const active = await auth.api.getSession({ headers: new Headers({ cookie: cookie! }) })
-      expect(active?.user.email).toBe(email)
-      return { cookie: cookie!, csrf: profileCsrfToken(secret, active!.session.id) }
-    }
-    finally { vi.unstubAllGlobals() }
+      headers: { origin, 'content-type': 'application/json', ...(cookie && { cookie }) },
+      body: JSON.stringify(body),
+    })
   }
 
-  it('signs in through Better Auth and isolates revisioned presets by user', async () => {
-    const alice = await loginAs(1)
-    const bob = await loginAs(2)
+  async function loginAs(username: string, password: string) {
+    const response = await handleAccountAuth(authRequest('sign-in', { username, password }))
+    expect(response.status, await response.clone().text()).toBe(200)
+    expect(await response.json()).toEqual({ success: true })
+    const sessionCookie = response.headers.getSetCookie().find(value => value.startsWith('m-part.session_token='))
+    expect(sessionCookie).toMatch(/HttpOnly/i)
+    const cookie = sessionCookie!.split(';')[0]!
+    const active = await service!.auth.api.getSession({ headers: new Headers({ cookie }) })
+    expect(active?.user.name).toBe(username.trim().toLowerCase())
+    return { cookie, csrf: accountCsrfToken(secret, active!.session.id), userId: active!.user.id }
+  }
+
+  function createUser(username: string, active?: Awaited<ReturnType<typeof loginAs>>, originOverride = origin) {
+    return createAccountUser(new Request(origin + '/api/account/users', {
+      method: 'POST',
+      headers: {
+        origin: originOverride,
+        'content-type': 'application/json',
+        ...(active && { cookie: active.cookie, 'x-mpart-csrf': active.csrf }),
+      },
+      body: JSON.stringify({ username, password: userPassword }),
+    }))
+  }
+
+  it('restricts account creation to the fixed administrator and isolates revisioned presets', async () => {
+    expect((await handleAccountAuth(authRequest('sign-up/email', {}))).status).toBe(404)
+    expect((await handleAccountAuth(authRequest('sign-in', { username: 'admin', password: userPassword }))).status).toBe(401)
+    const administrator = await loginAs('admin', administratorPassword)
+    expect(administrator.userId).toBe(adminId)
+    expect((await createUser('alice')).status).toBe(401)
+    expect((await createUser('alice', administrator, 'https://other.example')).status).toBe(403)
+    expect((await createUser('alice', { ...administrator, csrf: 'wrong' })).status).toBe(403)
+    expect((await createUser('ADMIN', administrator)).status).toBe(409)
+
+    const creations = await Promise.all(['Alice', 'alice'].map(username => createUser(username, administrator)))
+    expect(creations.map(response => response.status).sort()).toEqual([201, 409])
+    expect(await creations.find(response => response.ok)!.json()).toEqual({ username: 'alice' })
+    expect((await createUser('bob', administrator)).status).toBe(201)
+    const alice = await loginAs('ALICE', userPassword)
+    const bob = await loginAs('bob', userPassword)
+    expect(alice.userId).not.toBe(adminId)
+    expect((await createUser('another-user', alice)).status).toBe(403)
+
     const preset = { label: '家里', serverUrl: 'http://192.168.1.10:3410/', nickname: 'Alice' }
     const request = (method: string, user?: typeof alice, body?: object, originOverride = origin) => new Request(origin + '/api/account/room-profiles', {
       method,
@@ -108,13 +124,11 @@ describe.skipIf(!databaseUrl)('account profiles with PostgreSQL', () => {
     expect((await roomProfiles(request('DELETE', alice, { revision: 2 }), profile.id)).status).toBe(200)
     expect(await (await roomProfiles(request('GET', alice))).json()).toEqual([])
 
-    const rows = await getAccountService()!.db.execute(sql`select "accessToken" from account`)
-    expect(rows.rows).toHaveLength(2)
-    expect(rows.rows.every(row => typeof row.accessToken === 'string' && !row.accessToken.includes('fixture-token'))).toBe(true)
+    const rows = await service!.db.execute(sql`select password from account`)
+    expect(rows.rows).toHaveLength(3)
+    expect(rows.rows.every(row => typeof row.password === 'string' && ![administratorPassword, userPassword].includes(row.password))).toBe(true)
 
-    await getAccountService()!.auth.handler(new Request(origin + '/api/auth/sign-out', {
-      method: 'POST', headers: { origin, cookie: alice.cookie, 'content-type': 'application/json' }, body: '{}',
-    }))
+    expect((await handleAccountAuth(authRequest('sign-out', {}, alice.cookie))).status).toBe(200)
     expect((await roomProfiles(request('GET', alice))).status).toBe(401)
   })
 })

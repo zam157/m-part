@@ -1,6 +1,6 @@
 import type { RoomProfile, RoomProfileInput } from '@m-part/listen-core/room-profile'
 
-type AccountUser = { id: string, name: string }
+type AccountUser = { id: string, name: string, isAdmin: boolean }
 export type AccountSession = { enabled: boolean, user: null } | { enabled: true, user: AccountUser, csrfToken: string }
 
 export class AccountError extends Error {
@@ -17,15 +17,19 @@ async function accountRequest<T>(url: string, init: RequestInit = {}): Promise<T
 
 export const readAccountSession = (signal?: AbortSignal) => accountRequest<AccountSession>('/api/account/session', { signal })
 
-export async function signInWithGitHub() {
-  const result = await accountRequest<{ url: string }>('/api/auth/sign-in/social', {
+export async function signInAccount(username: string, password: string) {
+  await accountRequest('/api/auth/sign-in', {
     method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ provider: 'github', callbackURL: '/settings', errorCallbackURL: '/settings?login=failed', disableRedirect: true }),
+    body: JSON.stringify({ username, password }),
   })
-  const destination = new URL(result.url)
-  if (destination.origin !== 'https://github.com' || destination.pathname !== '/login/oauth/authorize')
-    throw new Error('登录地址无效')
-  window.location.assign(destination)
+}
+
+export function createAccountUser(username: string, password: string, csrfToken: string) {
+  return accountRequest<{ username: string }>('/api/account/users', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-mpart-csrf': csrfToken },
+    body: JSON.stringify({ username, password }),
+  })
 }
 
 export async function signOutAccount() {

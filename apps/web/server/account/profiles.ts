@@ -3,7 +3,7 @@ import { assertBodySize, HTTPError, readBody } from 'nitro/h3'
 import * as v from 'valibot'
 import { roomProfileInput, roomProfileRevision, roomProfileUpdate } from '@m-part/listen-core/room-profile'
 import { roomProfile, user } from './schema'
-import { accountError, accountJson, getAccountService, validProfileWrite } from './service'
+import { accountError, accountJson, getAccountService, validAccountWrite } from './service'
 
 const MAX_PROFILES = 30
 const projection = { id: roomProfile.id, label: roomProfile.label, serverUrl: roomProfile.serverUrl, nickname: roomProfile.nickname, revision: roomProfile.revision }
@@ -14,7 +14,7 @@ export async function roomProfiles(request: Request, id?: string) {
   const { method } = request
   if (!(id === undefined ? ['GET', 'POST'] : ['PUT', 'DELETE']).includes(method)) return accountError(405, '不支持的请求方法')
   try {
-    const service = getAccountService()
+    const service = await getAccountService()
     if (!service) return accountError(503, '账号服务未配置')
     const session = await service.auth.api.getSession({ headers: request.headers })
     if (!session) return accountError(401, '请先登录 m-part')
@@ -27,7 +27,7 @@ export async function roomProfiles(request: Request, id?: string) {
       return accountJson(profiles)
     }
 
-    if (!validProfileWrite(request, service.origin, service.secret, session.session.id)) return accountError(403, '请求来源无效，请刷新后重试')
+    if (!validAccountWrite(request, service.origin, service.secret, session.session.id)) return accountError(403, '请求来源无效，请刷新后重试')
     if (!/^application\/json(?:;|$)/i.test(request.headers.get('content-type') ?? '')) return accountError(415, '请使用 JSON 请求')
     if (id !== undefined && !v.is(idSchema, id)) return accountError(404, '房间预设不存在')
     const event = { req: request }

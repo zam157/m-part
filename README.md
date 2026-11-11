@@ -38,7 +38,7 @@ pnpm build:all         # Web、扩展和房间服务
 
 开发模式使用独立 Chrome 配置，`apps/extension/web-ext.config.ts` 保留登录态。安装后点击扩展图标打开播放器页。
 
-Web 默认使用同站代理，可在「设置 → 网页取源」切换到扩展。生产部署与扩展允许的网页地址见 [Web 取源与部署](./docs/web.md)。 网页的 GitHub 登录和跨设备房间预设见 [账号服务](./docs/account.md)。
+Web 默认使用同站代理，可在「设置 → 网页取源」切换到扩展。生产部署与扩展允许的网页地址见 [Web 取源与部署](./docs/web.md)。网页账号、管理员建号和跨设备房间预设见 [账号服务](./docs/account.md)。
 
 ## 检查
 
