@@ -3,6 +3,7 @@ import { useNavigate } from '@solidjs/router'
 import { createEffect, createMemo, createSignal, Show } from 'solid-js'
 import Dialog, { DialogBody, DialogHeader } from '~/components/Dialog/Dialog'
 import Select from '~/components/Select/Select'
+import AccountRoomList from '~/components/AccountRoomList/AccountRoomList'
 import type { AccountSession } from '~/utils/account'
 import { AccountError, createRoomProfile, deleteRoomProfile, readAccountSession, readRoomProfiles, updateRoomProfile } from '~/utils/account'
 import { errorMessage } from '~/utils/index'
@@ -11,6 +12,9 @@ interface RoomProfilesProps {
   serverUrl: string
   nickname: string
   onApply: (profile: RoomProfile) => void
+  joining: boolean
+  onSelectServer: (server: string) => void
+  onJoin: (server: string, code: string) => void
 }
 
 export default function RoomProfiles(props: RoomProfilesProps) {
@@ -26,6 +30,10 @@ export default function RoomProfiles(props: RoomProfilesProps) {
   const [writeError, setWriteError] = createSignal('')
   const options = createMemo(() => profiles().map(profile => ({ value: profile.id, label: profile.label })))
   const selected = () => profiles().find(profile => profile.id === selectedId())
+  const listenServer = () => {
+    const current = session()
+    return current?.user ? current.listenServer : undefined
+  }
 
   async function load(signal?: AbortSignal) {
     setLoadError('')
@@ -104,6 +112,9 @@ export default function RoomProfiles(props: RoomProfilesProps) {
             <p class="text-sm text-destructive" role="alert">{loadError()}</p>
             <button type="button" class="border-btn h-8 px-3 justify-self-start" onClick={() => void load()}>重试</button>
           </Show>
+          <Show when={listenServer()} keyed>{server => (
+            <AccountRoomList server={server} selectedServer={props.serverUrl} joining={props.joining} onSelectServer={props.onSelectServer} onJoin={props.onJoin} />
+          )}</Show>
         </div>
       </Show>
       <Dialog open={!!draft()} onClose={close} aria-labelledby="room-profile-dialog-title">

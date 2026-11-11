@@ -10,6 +10,7 @@ import { currentRoomCredentials } from '~/utils/room-credentials'
 import { CLIENT_SESSION_CHANGED } from './client-cookies'
 import { ListenClient, publicTrack } from '~/utils/listen-client'
 import { normalizeRoomServer } from '~/utils/listen-server'
+import { requestRoomAccount } from '~/utils/account'
 import { applyRoomQueue, audio, cancelRoomSource, currentIndex, currentTime, loadRoomSource, playQueue, resetPlayer, restorePlayerSession } from './player'
 import { isRoomPlayer, roomPlayerActive, setRoomControlsWritable, setRoomPlayerHandler } from './player-context'
 import { savePersonalPlayerSession } from './player-persistence'
@@ -59,6 +60,7 @@ async function setup(server: string, resume = false, cancelled = () => false) {
       const url = new URL(server)
       if (!await chrome.permissions.request({ origins: [`${url.protocol}//${url.hostname}/*`] })) throw new Error('未授予房间服务器的访问权限')
     }
+    const accountProof = resume || TARGET_EXTENSION ? undefined : await requestRoomAccount(server)
     const saved = await savePersonalPlayerSession()
     if (cancelled() || version !== setupVersion) throw new Error('房间恢复已取消')
     backup = saved
@@ -84,13 +86,13 @@ async function setup(server: string, resume = false, cancelled = () => false) {
       load: (track, index, signal, quality, hostedUrl) => loadRoomSource(track, index, signal, quality, hostedUrl),
       cancelLoad: cancelRoomSource,
       empty: resetPlayer,
-    }, update, identity, exit, currentRoomCredentials)
+    }, update, identity, exit, currentRoomCredentials, TARGET_EXTENSION ? undefined : requestRoomAccount)
     unregisterRoom = setRoomPlayerHandler(action => client?.control(action))
     cancelRoomSource()
     localStorage.setItem('m-part:room-server', server)
     setRoomServer(server)
     update()
-    return { client, items, selected, time }
+    return { client, items, selected, time, accountProof }
   }
   catch (error) { if (version === setupVersion) exit(); throw error }
   finally { if (version === setupVersion) { joining = false; setJoiningRoom(false) } }
@@ -102,7 +104,7 @@ export async function createListenRoom(serverInput: string, name: string) {
     if (playQueue().length > 1_000) throw new Error('房间最多支持 1000 首歌曲，请先缩减当前队列')
     const prepared = await setup(server)
     prepared.client.open(server, { type: 'create', kind: 'music', protocol: LISTEN_PROTOCOL, name: name.trim().slice(0, 80) || '房主',
-      tracks: prepared.items.slice(0, 1_000).map(track => publicTrack(track)), index: prepared.selected ?? 0, position: prepared.time, autoplay: prepared.items.length > 0,
+      tracks: prepared.items.slice(0, 1_000).map(track => publicTrack(track)), index: prepared.selected ?? 0, position: prepared.time, autoplay: prepared.items.length > 0, accountProof: prepared.accountProof,
     })
   }
   catch (error) { setRoomView(v => ({ ...v, error: error instanceof Error ? error.message : String(error) })) }
@@ -112,7 +114,7 @@ export async function joinListenRoom(serverInput: string, name: string, code: st
     if (!/^[\dA-F]{8}$/i.test(code.trim())) throw new Error('请输入 8 位房间码')
     const server = normalizeRoomServer(serverInput)
     const prepared = await setup(server)
-    prepared.client.open(server, { type: 'join', kind: 'music', protocol: LISTEN_PROTOCOL, name: name.trim().slice(0, 80) || '听众', code: code.trim() })
+    prepared.client.open(server, { type: 'join', kind: 'music', protocol: LISTEN_PROTOCOL, name: name.trim().slice(0, 80) || '听众', code: code.trim(), accountProof: prepared.accountProof })
   }
   catch (error) { setRoomView(v => ({ ...v, error: error instanceof Error ? error.message : String(error) })) }
 }
@@ -125,6 +127,7 @@ export async function sendRoomChat(text: string) { return await client?.sendChat
 export async function setRoomMemberRole(memberId: string, role: 'admin' | 'member') { return await client?.setMemberRole(memberId, role) ?? false }
 export function usePersonalRoomSource(personal: boolean) { client?.usePersonalSource(personal) }
 export function leaveListenRoom() { client?.leave() }
+export async function endListenRoom() { return await client?.endRoom() ?? false }
 export function resumeRoomPlayback() { client?.follow() }
 export function pauseRoomLocally() { client?.pauseLocal() }
 

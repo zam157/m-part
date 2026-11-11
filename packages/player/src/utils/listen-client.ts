@@ -8,7 +8,7 @@ import { uniqueTracks } from '@m-part/listen-core/queue'
 import { needsTrackParts } from './track-parts'
 import { sendRoomControl } from './room-http'
 
-export interface RoomIdentity { server: string, token: string, roomId: string, away: boolean, personalSource?: boolean, sourceOverrides?: HostedPlatform[] }
+export interface RoomIdentity { server: string, token: string, roomId: string, away: boolean, accountBound?: true, personalSource?: boolean, sourceOverrides?: HostedPlatform[] }
 export interface RoomPlayback {
   audio: HTMLAudioElement
   queue: (state: RoomSnapshot) => void
@@ -72,6 +72,7 @@ export class ListenClient {
     private persist: (identity?: RoomIdentity) => void,
     private exited: () => void,
     private credentials?: RoomCredentials,
+    private accountProof?: (server: string) => Promise<string | undefined>,
   ) {
     playback.audio.addEventListener('waiting', this.onWaiting)
     playback.audio.addEventListener('error', this.onError)
@@ -125,7 +126,20 @@ export class ListenClient {
     const socket = new WebSocket(`${server.replace(/^http/, 'ws')}/ws`)
     this.socket = socket
     const opened = performance.now()
-    socket.onopen = () => socket.send(JSON.stringify(hello))
+    socket.onopen = async () => {
+      try {
+        let message = hello
+        if (hello.type === 'resume' && this.identity?.accountBound) {
+          const accountProof = await this.accountProof?.(server)
+          if (!accountProof) throw new Error('请登录原账号后重新加入长期房间')
+          message = { ...hello, accountProof }
+        }
+        if (this.socket === socket && !this.stopped && socket.readyState === WebSocket.OPEN) this.send(message)
+      }
+      catch (error) {
+        if (this.socket === socket && !this.stopped) this.fail(error instanceof Error ? error.message : '房间账号验证失败')
+      }
+    }
     socket.onmessage = async (event) => {
       if (this.socket !== socket || this.stopped) return
       try {
@@ -140,7 +154,7 @@ export class ListenClient {
           this.snapshot = message.snapshot
           if (!await this.lock(message.snapshot.roomId, server)) { this.send({ type: 'leave' }); this.fail('这个房间已在另一个窗口播放'); return }
           if (this.stopped || this.socket !== socket) return
-          this.identity = { server, token: message.token, roomId: message.snapshot.roomId, away: this.away, personalSource: this.personalSource, ...(this.credentialOverrides.size ? { sourceOverrides: this.hostedCredentialOverrides } : {}) }
+          this.identity = { server, token: message.token, roomId: message.snapshot.roomId, away: this.away, accountBound: message.accountBound, personalSource: this.personalSource, ...(this.credentialOverrides.size ? { sourceOverrides: this.hostedCredentialOverrides } : {}) }
           this.persist(this.identity)
           this.connection = 'connected'; this.attempts = 0; this.activeRevision = -1
           if (this.isHost) void this.refreshHostedCredentials()
@@ -344,8 +358,10 @@ export class ListenClient {
       const previous = new Map(this.snapshot.members.map(member => [member.id, member]))
       state.members = state.members.map(member => {
         const old = previous.get(member.id)
-        return old && old.name === member.name && old.role === member.role && old.generation === member.generation && old.online === member.online && old.status === member.status && old.message === member.message ? old : member
+        return old && old.name === member.name && old.accountName === member.accountName && old.role === member.role && old.generation === member.generation && old.online === member.online && old.status === member.status && old.message === member.message ? old : member
       })
+      const admins = new Map(this.snapshot.accountAdmins?.map(admin => [admin.id, admin]))
+      state.accountAdmins = state.accountAdmins?.map(admin => admins.get(admin.id)?.name === admin.name ? admins.get(admin.id)! : admin)
     }
     this.snapshot = state
     if (!this.canControl) { this.commands = []; this.pending = undefined }
@@ -358,8 +374,8 @@ export class ListenClient {
     pending?.finish(ok)
   }
 
-  private interact(message: Extract<ClientMessage, { type: 'chat' | 'role' }>) {
-    if (this.connection !== 'connected' || this.interaction) { this.error = this.interaction ? '请等待当前发送或授权完成' : '连接恢复后才能发送消息或授权'; this.changed(); return Promise.resolve(false) }
+  private interact(message: Extract<ClientMessage, { type: 'chat' | 'role' | 'end-room' }>) {
+    if (this.connection !== 'connected' || this.interaction) { this.error = this.interaction ? '请等待当前房间操作完成' : '连接恢复后才能操作房间'; this.changed(); return Promise.resolve(false) }
     const parsed = v.safeParse(clientMessage, message)
     if (!parsed.success) { this.error = '消息不能为空且最多 500 字'; this.changed(); return Promise.resolve(false) }
     this.error = ''
@@ -370,6 +386,7 @@ export class ListenClient {
   }
 
   sendChat(text: string) { return this.interact({ type: 'chat', commandId: crypto.randomUUID(), text }) }
+  endRoom() { return this.interact({ type: 'end-room', commandId: crypto.randomUUID() }) }
   setMemberRole(memberId: string, role: 'admin' | 'member') {
     if (!this.isHost) { this.error = '仅房主可授权或撤销管理员'; this.changed(); return Promise.resolve(false) }
     return this.interact({ type: 'role', commandId: crypto.randomUUID(), memberId, role })
@@ -443,6 +460,10 @@ export class ListenClient {
     this.playback.queue(state)
     const track = state.currentIndex === null ? undefined : state.queue[state.currentIndex]
     if (!track) { this.loadedKey = undefined; this.failedKey = undefined; this.playback.empty(); this.report('ready'); return }
+    if (state.persistent && state.pauseReason === 'host-disconnected') {
+      audio.pause(); this.playback.cancelLoad(); this.loadedKey = undefined
+      this.report(this.away ? 'away' : 'ready', undefined, state); return
+    }
     const source = state.source
     const key = `${track.provider}:${track.id}:${this.quality ?? ''}:${this.personalSource ? 'personal' : source?.mode ?? 'independent'}:${this.personalSource ? 0 : source?.version ?? 0}:${source?.mode === 'hosted' && !this.personalSource ? state.playbackId : ''}`
     if (this.away || this.status === 'blocked' || this.failedKey === key) {

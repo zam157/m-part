@@ -9,6 +9,7 @@
   },
   "exports": {
     "./protocol": "./src/protocol.ts",
+    "./account-proof": "./src/account-proof.ts",
     "./clock": "./src/clock.ts",
     "./room-server": "./src/room-server.ts",
     "./room-profile": "./src/room-profile.ts",

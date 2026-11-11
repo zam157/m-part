@@ -25,3 +25,4 @@ apps/rooms/lab/public/scripts/color-mode-bootstrap.js
 apps/rooms/lab/public/assets/fonts/
 dist-lab
 dist-lab-client
+apps/rooms/.data/

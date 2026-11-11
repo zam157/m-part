@@ -46,11 +46,11 @@ export class HostedMedia {
       const member = state.members.find(m => m.id === ticket.memberId)
       if ((ticket.roomId === state.roomId && (invalid || !member?.online || member.generation !== ticket.generation)) || ticket.expires <= this.now()) this.dropTicket(id)
     }
-    if (state.status === 'ended') {
+    if (state.status === 'ended' || (state.persistent && !state.members.some(member => member.id === state.hostId))) {
       this.credentials.delete(state.roomId)
       for (const [key, controller] of this.pending) if (key.startsWith(`${state.roomId}:`)) { controller.abort(); this.pending.delete(key) }
-      this.states.delete(state.roomId); this.budgets.delete(state.roomId)
     }
+    if (state.status === 'ended') { this.states.delete(state.roomId); this.budgets.delete(state.roomId) }
     for (const [key, value] of this.requests) if (this.now() - value.at >= 60_000) this.requests.delete(key)
   }
 

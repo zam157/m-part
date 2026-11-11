@@ -1,7 +1,9 @@
 import type { RoomProfile, RoomProfileInput } from '@m-part/listen-core/room-profile'
+import { accountRoomList } from '@m-part/listen-core/protocol'
+import * as v from 'valibot'
 
 type AccountUser = { id: string, name: string, isAdmin: boolean }
-export type AccountSession = { enabled: boolean, user: null } | { enabled: true, user: AccountUser, csrfToken: string }
+export type AccountSession = { enabled: boolean, user: null } | { enabled: true, user: AccountUser, csrfToken: string, listenServer?: string }
 
 export class AccountError extends Error {
   constructor(readonly status: number, message: string) { super(message) }
@@ -16,6 +18,25 @@ async function accountRequest<T>(url: string, init: RequestInit = {}): Promise<T
 }
 
 export const readAccountSession = (signal?: AbortSignal) => accountRequest<AccountSession>('/api/account/session', { signal })
+
+export async function requestRoomAccount(server: string, signal?: AbortSignal) {
+  const { proof } = await accountRequest<{ proof: string | null }>('/api/account/room-proof', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ server }), signal,
+  })
+  return proof ?? undefined
+}
+
+export async function readAccountRooms(server: string, signal?: AbortSignal) {
+  const proof = await requestRoomAccount(server, signal)
+  if (!proof) return []
+  const response = await fetch(`${server}/account-rooms`, {
+    headers: { authorization: `Bearer ${proof}` }, credentials: 'omit', cache: 'no-store', redirect: 'error', signal,
+  })
+  if (!response.ok) throw new Error('无法读取长期房间，请检查房间服务器后重试')
+  const parsed = v.safeParse(accountRoomList, await response.json())
+  if (!parsed.success) throw new Error('房间列表格式无效，请更新房间服务')
+  return parsed.output
+}
 
 export async function signInAccount(username: string, password: string) {
   await accountRequest('/api/auth/sign-in', {

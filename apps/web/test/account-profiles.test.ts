@@ -4,16 +4,19 @@ import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Pool } from 'pg'
+import { verifyListenAccount } from '@m-part/listen-core/account-proof'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { adminId } from '../server/account/credentials'
 import { roomProfiles } from '../server/account/profiles'
 import { accountCsrfToken, getAccountService } from '../server/account/service'
 import { createAccountUser } from '../server/api/account/users.post'
+import { issueRoomProof } from '../server/api/account/room-proof.post'
 import { handleAccountAuth } from '../server/api/auth/[...].ts'
 
 const databaseUrl = process.env.ACCOUNT_TEST_DATABASE_URL
 const origin = 'http://localhost:3411'
 const secret = randomBytes(32).toString('hex')
+const pairing = { audience: 'http://localhost:3410', secret: randomBytes(32).toString('hex') }
 const administratorPassword = randomBytes(24).toString('base64url')
 const userPassword = randomBytes(24).toString('base64url')
 const database = `test_account_${randomUUID().replaceAll('-', '')}`
@@ -35,6 +38,8 @@ describe.skipIf(!databaseUrl)('account profiles with PostgreSQL', () => {
     vi.stubEnv('BETTER_AUTH_SECRET', secret)
     vi.stubEnv('MPART_ADMIN_PASSWORD', administratorPassword)
     vi.stubEnv('ACCOUNT_CLIENT_IP_HEADER', '')
+    vi.stubEnv('LISTEN_ACCOUNT_SERVER_URL', pairing.audience)
+    vi.stubEnv('LISTEN_ACCOUNT_SECRET', pairing.secret)
     service = await getAccountService()
   })
   afterAll(async () => {
@@ -97,6 +102,16 @@ describe.skipIf(!databaseUrl)('account profiles with PostgreSQL', () => {
     const bob = await loginAs('bob', userPassword)
     expect(alice.userId).not.toBe(adminId)
     expect((await createUser('another-user', alice)).status).toBe(403)
+
+    const roomProof = (server: string, cookie?: string, requestOrigin = origin) => issueRoomProof(new Request(origin + '/api/account/room-proof', {
+      method: 'POST', headers: { origin: requestOrigin, 'content-type': 'application/json', ...(cookie && { cookie }) },
+      body: JSON.stringify({ server, account: adminId }),
+    }))
+    expect(await (await roomProof(pairing.audience)).json()).toEqual({ proof: null })
+    expect(await (await roomProof('https://other.example', alice.cookie)).json()).toEqual({ proof: null })
+    expect((await roomProof(pairing.audience, alice.cookie, 'https://other.example')).status).toBe(403)
+    const { proof } = await (await roomProof(pairing.audience, alice.cookie)).json()
+    expect(verifyListenAccount(pairing, proof)).toEqual({ id: alice.userId, username: 'alice' })
 
     const preset = { label: '家里', serverUrl: 'http://192.168.1.10:3410/', nickname: 'Alice' }
     const request = (method: string, user?: typeof alice, body?: object, originOverride = origin) => new Request(origin + '/api/account/room-profiles', {
