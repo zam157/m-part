@@ -7,6 +7,11 @@ services:
       POSTGRES_PASSWORD: mpart-local-dev
     ports:
       - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "mpart", "-d", "mpart"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
     volumes:
       - account-db:/var/lib/postgresql/data
 volumes:

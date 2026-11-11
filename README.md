@@ -20,6 +20,8 @@
 
 ```bash
 pnpm install --frozen-lockfile
+pnpm dev:all           # 启动 PostgreSQL、Web 和一起听，并执行账号数据库迁移
+pnpm dev:all --ext     # 同时启动扩展开发
 pnpm dev:ext           # 扩展开发，终端日志显示 dev server 端口
 pnpm build:ext         # 扩展生产构建
 pnpm dev:rooms         # 一起听服务，监听 0.0.0.0:3410
@@ -30,6 +32,8 @@ pnpm build             # Web 客户端及 Nitro 服务
 pnpm preview           # 启动构建好的 Web 服务，监听 0.0.0.0:3411
 pnpm build:all         # Web、扩展和房间服务
 ```
+
+默认使用 Docker Compose 启动本机 PostgreSQL。打开 [Web 开发页](http://localhost:3411)，在设置页用 `admin` 和本机生成的密码登录。一起听服务默认监听 `3410`。已有 PostgreSQL 时可通过 `DATABASE_URL` 使用自己的本机数据库。 [完整开发环境说明](./docs/account.md#一键启动)
 
 加载扩展：Chrome → 扩展程序 → 开发者模式 → 加载已解压的扩展程序，选择：
 
@@ -80,7 +84,7 @@ node apps/rooms/dist/server/index.mjs
 
 将 `apps/rooms/dist/` 整个目录复制到服务器即可运行，不需要同时部署播放器。服务默认监听 `0.0.0.0:3410`，可用 `NITRO_HOST` 和 `NITRO_PORT` 覆盖。默认不校验 Origin；仅设置 `LISTEN_ALLOWED_ORIGINS` 时按允许列表校验，本机、局域网和公网使用相同规则。HTTP / HTTPS 地址均支持；公网建议 HTTPS / WSS。详见 [一起听使用与部署](./docs/listen-together-usage.md)。
 
-客户端与服务需要同时更新至协议 7。取源由房主按平台选择，Cookie 按平台选填，无需服务器开关，HTTP / HTTPS 地址均可绑定；真实服务器会话与风控仍待使用者实测，详见使用说明。
+客户端与服务需要同时更新至协议 8。取源由房主按平台选择，Cookie 按平台选填，无需服务器开关，HTTP / HTTPS 地址均可绑定；真实服务器会话与风控仍待使用者实测，详见使用说明。
 
 实验工具可比较 seek 与倍速微调，通过 `pnpm dev:listen`、`pnpm build:listen` 运行，见 [同步实验](./docs/listen-together-lab.md)。
 
@@ -96,4 +100,4 @@ node apps/rooms/dist/server/index.mjs
 
 - `pnpm lint` 仍受 TypeScript 7 与 typescript-eslint 兼容问题影响，暂不作为验证命令。
 - 扩展图标未配置；关闭播放器页面会停止播放，尚未使用 offscreen 后台播放。
-- 一起听房间保存在单个服务进程内存中，重启后清空；多实例共享状态需另行实现。
+- 一起听由单实例管理。临时房间在重启后清空，长期房间由本机 SQLite 保存。

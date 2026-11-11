@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter @m-part/web dev",
+    "dev:all": "node scripts/dev-all.mjs",
     "build": "pnpm --filter @m-part/web build",
     "build:all": "pnpm build && pnpm build:ext && pnpm build:rooms",
     "dev:ext": "pnpm --filter @m-part/extension dev",

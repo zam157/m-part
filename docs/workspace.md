@@ -60,6 +60,7 @@ import { prepareMedia } from '@m-part/listen-core/browser/media'
 
 | 命令 | 输出 |
 | --- | --- |
+| `pnpm dev:all` | 本机 PostgreSQL、Web 和一起听。加 `--ext` 同时启动扩展开发 |
 | `pnpm build:ext` | `apps/extension/.output/chrome-mv3` |
 | `pnpm dev:ext` | `apps/extension/.output/chrome-mv3-dev` |
 | `pnpm build` | `apps/web/dist/client`、`apps/web/dist/public`、`apps/web/dist/server` |

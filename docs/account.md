@@ -8,6 +8,16 @@ Web 服务在同一个 Nitro 进程提供用户名密码登录和云端房间预
 
 ## 本地启动
 
+### 一键启动
+
+安装依赖并启动 Docker 后，在仓库根目录执行 `pnpm dev:all`。命令启动本机 PostgreSQL，等待数据库就绪并执行迁移，再启动 Web 和一起听服务。使用 `pnpm dev:all --ext` 可同时启动扩展开发。 [Docker Compose 等待选项](https://docs.docker.com/reference/cli/docker/compose/up/)
+
+打开 [设置页](http://localhost:3411/settings)，用 `admin` 登录。首次启动会在 `apps/web/.env.dev-all.local` 生成开发密钥和 `MPART_ADMIN_PASSWORD`。环境变量及 `apps/web/.env.local` 中已有的值优先。命令会配对默认的一起听服务 `http://127.0.0.1:3410`，长期房间默认保存在 `apps/rooms/.data/listen.sqlite`。
+
+已有本机 PostgreSQL 时，可用 `DATABASE_URL=postgresql://用户:密码@127.0.0.1:端口/数据库 pnpm dev:all` 跳过 Docker。按 Ctrl+C 停止开发服务，PostgreSQL 容器可继续用于下次启动。需要停止容器时执行 `docker compose -f apps/web/compose.db.yaml stop`。
+
+### 分开启动
+
 安装依赖，然后启动本机开发数据库并复制配置样例。
 
 ```bash
