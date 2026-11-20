@@ -76,6 +76,7 @@ export default defineConfig({
       alias: resolveAliases(),
       dedupe: ['solid-js', '@solidjs/web', '@solidjs/router'],
     },
-    plugins: sharedPlugins({ publicDir }),
+    // WXT serves app.html from the extension origin, where Solid's injected Vite module cannot resolve.
+    plugins: sharedPlugins({ publicDir, performanceTracks: false }),
   }),
 })

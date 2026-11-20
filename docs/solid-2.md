@@ -1,6 +1,6 @@
 # Solid 2 使用笔记
 
-仓库用的是 Solid 2 的 RC（`solid-js` / `@solidjs/web` `2.0.0-rc.8`，`@solidjs/router` `2.0.0-next.24`）。
+仓库使用 Solid 2 正式版，各包版本通过 `pnpm-workspace.yaml` 中的 catalog 统一管理。
 它与 Solid 1 差异不小，而且 dev 模式会把「写法看着没问题、但根本不会更新」的情况直接报出来。
 下面每一条都在本仓库踩过，改代码前先扫一眼。
 
@@ -8,10 +8,10 @@
 
 | 包 | 版本 | 备注 |
 | --- | --- | --- |
-| `solid-js` / `@solidjs/web` | `2.0.0-rc.8` | 控制流组件来自 `solid-js`，DOM API 来自 `@solidjs/web` |
-| `@solidjs/router` | `2.0.0-next.24` | 预发布版本，catalog 里按精确版本锁定 |
-| `@solidjs/vite-plugin` | `3.0.0-next.43` | 旧的 `vite-plugin-solid` 已更名，v3 只是再导出新包 |
-| `filesystem-routing` | `0.3.1` | 生成 `virtual:file-routes` |
+| `solid-js` / `@solidjs/web` | `2.0.3` | 控制流组件来自 `solid-js`，DOM API 来自 `@solidjs/web` |
+| `@solidjs/router` | `2.0.1` | 文件路由通过 `@solidjs/router/fs` 接入 |
+| `@solidjs/vite-plugin` | `3.0.1` | 在 Vite 中编译 Solid JSX |
+| `filesystem-routing` | `0.4.0` | 生成 `virtual:file-routes` |
 
 - JSX 类型来自 `@solidjs/web`（`packages/player/tsconfig.json` 的 `jsxImportSource`），不要写 `import { h } from 'solid-js'`
 - **`solid-js/web` 与 `solid-js/store` 子路径已删除**：`render` / `Portal` / `Dynamic` / `isServer` 从 `@solidjs/web` 导入；`createStore` 仍在 `solid-js` 根导出
@@ -102,7 +102,7 @@ Write into reactive state inside an owned scope (component, computation) is not 
 
 ## 6. 测试
 
-- Vitest 不需要手工配置：`@solidjs/vite-plugin` 会自动注入（jsdom 默认环境、客户端姿态、jest-dom setupFiles）；它在 `config` hook 里读 `userConfig.test.environment` 判断姿态
+- 播放器的 Vitest 配置显式选择 `jsdom`。共享的 `@solidjs/vite-plugin` 根据该环境选择 Solid 的客户端构建。
 - 遇到「`createSignal` 写不进去」先怀疑暂存 / flush，而不是解析到了 SSR 构建（SSR 的 setter 会走 `warnServerWrite`，同样是静默忽略）
 - 断言前 `flush()`；`pnpm test:backend` 需要先构建并启动 Web 生产服务
 - `pnpm test` 退出码是 0，但结尾会打印 `close timed out after 10000ms`（jsdom + vitest 4 的既有现象）

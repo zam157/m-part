@@ -13,10 +13,10 @@ export function resolveAliases() {
 }
 
 /** Both client shells compile the same player source, including routes and CSS. */
-export function sharedPlugins(options: { publicDir?: string, routes?: boolean, styles?: boolean } = {}): PluginOption[] {
+export function sharedPlugins(options: { publicDir?: string, routes?: boolean, styles?: boolean, performanceTracks?: boolean } = {}): PluginOption[] {
   return [
     // Required for UnoCSS to extract single-token classes from Solid's output.
-    solid({ extensions: ['.jsx', '.tsx'], solid: { omitQuotes: false } }),
+    solid({ extensions: ['.jsx', '.tsx'], solid: { omitQuotes: false }, performanceTracks: options.performanceTracks }),
     options.routes !== false && fileRoutes({
       dir: path.join(playerDir, 'pages'),
       extensions: ['ts', 'tsx'],
