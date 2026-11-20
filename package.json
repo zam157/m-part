@@ -10,7 +10,6 @@
     "dev:ext": "pnpm --filter @m-part/extension dev",
     "build:ext": "pnpm --filter @m-part/extension build",
     "dev:rooms": "pnpm --filter @m-part/rooms dev",
-    "dev:rooms:lan": "pnpm --filter @m-part/rooms dev:lan",
     "build:rooms": "pnpm --filter @m-part/rooms build",
     "dev:listen": "pnpm --filter @m-part/rooms dev:lab",
     "build:listen": "pnpm --filter @m-part/rooms build:lab",

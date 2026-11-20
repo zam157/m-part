@@ -42,7 +42,6 @@ pnpm dev              # Web UI 与代理，监听 0.0.0.0:3411
 pnpm build            # Web 客户端及 Nitro 生产服务
 pnpm preview          # 先 build，启动 apps/web/dist/server/index.mjs
 pnpm dev:rooms
-pnpm dev:rooms:lan
 pnpm build:rooms
 pnpm test:frontend    # player + music
 pnpm test:listen      # listen-core + rooms + listen-lab

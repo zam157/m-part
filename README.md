@@ -23,7 +23,6 @@ pnpm install --frozen-lockfile
 pnpm dev:ext           # 扩展开发，终端日志显示 dev server 端口
 pnpm build:ext         # 扩展生产构建
 pnpm dev:rooms         # 一起听服务，监听 0.0.0.0:3410
-pnpm dev:rooms:lan     # 与 pnpm dev:rooms 相同
 pnpm build:rooms       # 独立房间服务产物
 pnpm dev               # Web UI 与代理，监听 0.0.0.0:3411
 pnpm build             # Web 客户端及 Nitro 服务
